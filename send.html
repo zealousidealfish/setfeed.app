@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Send — Setfeed</title>
+  <meta name="description" content="Send an end-to-end encrypted message to Setfeed." />
+  <meta name="theme-color" content="#0B0B0C" />
+  <style>
+    :root{
+      --bg:#0B0B0C;
+      --card:#121214;
+      --text:#F2F2F3;
+      --muted:#A7A7AD;
+      --line:#232326;
+      --hover: rgba(255,255,255,0.06);
+      --link: #B7C5FF;
+      --pill: rgba(255,255,255,0.05);
+      --good: #86efac;
+      --warn: #fecaca;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: radial-gradient(1200px 700px at 20% 0%, #141418 0%, var(--bg) 55%);
+      color:var(--text);
+    }
+    a{ color: var(--link); }
+    a:hover{ text-decoration: underline; }
+
+    .wrap{ max-width: 860px; margin:0 auto; padding: 26px 20px 72px; }
+
+    /* Header / footer (shared pattern) */
+    .site-header{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      border-bottom: 1px solid var(--line);
+    }
+    .header-inner{
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 14px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+    .brand{
+      font-weight:600;
+      letter-spacing:-0.1px;
+    }
+    .brand a{
+      color: var(--text);
+      text-decoration:none;
+    }
+    .nav{
+      display:flex;
+      gap:10px;
+      color:var(--muted);
+      font-size:14px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .nav a{
+      color:var(--muted);
+      text-decoration:none;
+      padding:8px 10px;
+      border-radius:12px;
+    }
+    .nav a:hover{
+      background: var(--hover);
+      color: var(--text);
+      text-decoration:none;
+    }
+
+    .card{
+      margin-top: 18px;
+      background: rgba(18,18,20,0.78);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 22px;
+      backdrop-filter: blur(10px);
+    }
+
+    h1{ margin:0 0 8px 0; font-size: 28px; letter-spacing:-0.2px; }
+    .lead{ margin:0 0 12px 0; color:var(--muted); font-size: 14.8px; line-height:1.7; }
+
+    h2{ margin: 18px 0 10px 0; font-size: 16px; color: var(--text); }
+    p, li, label{ color: var(--muted); line-height: 1.7; font-size: 14.5px; }
+    ul{ margin: 0 0 0 18px; padding:0; }
+
+    .note{
+      border-left: 3px solid var(--line);
+      padding-left: 12px;
+      margin-top: 12px;
+    }
+
+    .row{
+      display:flex;
+      gap:14px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .col{
+      flex: 1 1 280px;
+      min-width: 280px;
+    }
+
+    .pills{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--pill);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .dot{
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--muted);
+    }
+    .dot.good{ background: var(--good); }
+    .dot.warn{ background: var(--warn); }
+
+    .tabs{
+      display:flex;
+      gap:10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .tab{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+      text-decoration:none;
+      cursor:pointer;
+      user-select:none;
+      font-size: 13.5px;
+    }
+    .tab[aria-selected="true"]{
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+    }
+
+    .field{
+      display:flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 12px;
+    }
+    input, textarea{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 14.5px;
+      outline: none;
+    }
+    textarea{ min-height: 120px; resize: vertical; }
+
+    input:focus, textarea:focus{
+      border-color: rgba(183,197,255,0.45);
+    }
+
+    .actions{
+      display:flex;
+      flex-wrap: wrap;
+      gap:10px;
+      margin-top: 14px;
+      align-items:center;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      text-decoration:none;
+      font-size: 14px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .btn:hover{
+      background: var(--hover);
+      text-decoration:none;
+    }
+    .btn:disabled{
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .status{
+      margin-top: 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      padding: 12px;
+    }
+    .status-title{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-bottom: 6px;
+      color: var(--text);
+      font-size: 14px;
+      letter-spacing: -0.1px;
+    }
+    .status-line{
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    footer{
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      display:flex;
+      gap:12px;
+      justify-content:space-between;
+      align-items:center;
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+      flex-wrap: wrap;
+    }
+    footer a{ color: var(--muted); text-decoration:none; }
+    footer a:hover{ color: var(--text); text-decoration:none; }
+    .sep{ color: var(--muted); }
+
+    .hidden{ display:none !important; }
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand"><a href="./">Setfeed</a></div>
+      <nav class="nav" aria-label="Primary">
+        <a href="./">Home</a>
+        <a href="./send.html" style="color: var(--text);">Send</a>
+        <a href="./security.html">Security</a>
+        <a href="./privacy.html">Privacy</a>
+        <a href="mailto:support@setfeed.app">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="card">
+      <h1>Send</h1>
+      <p class="lead">
+        Messages are encrypted before they reach Setfeed servers. The server stores ciphertext only.
+      </p>
+
+      <div class="pills" aria-label="Send highlights">
+        <div class="pill"><span class="dot good"></span> End-to-end encrypted</div>
+        <div class="pill"><span class="dot good"></span> Ciphertext-only storage</div>
+        <div class="pill"><span class="dot warn"></span> Rolling is constrained</div>
+      </div>
+
+      <h2>Choose a send type</h2>
+      <div class="tabs" role="tablist" aria-label="Send type">
+        <button class="tab" id="tab-signed" role="tab" aria-selected="true" aria-controls="panel-signed" type="button">
+          Signed (Secure / Personal)
+        </button>
+        <button class="tab" id="tab-rolling" role="tab" aria-selected="false" aria-controls="panel-rolling" type="button">
+          Rolling (no sign-in)
+        </button>
+      </div>
+
+      <!-- Signed panel -->
+      <div id="panel-signed" role="tabpanel" aria-labelledby="tab-signed">
+        <div class="row">
+          <div class="col">
+            <div class="field">
+              <label for="signed-email">Email</label>
+              <input id="signed-email" type="email" autocomplete="email" placeholder="you@example.com" />
+            </div>
+
+            <div class="actions">
+              <button class="btn" id="btn-send-link" type="button">Send sign-in link</button>
+              <button class="btn" id="btn-sign-out" type="button" disabled>Sign out</button>
+            </div>
+
+            <div class="note">
+              <p style="margin:0;">
+                Signed send uses email-link sign-in. It is required for Secure and Personal codes.
+              </p>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="field">
+              <label for="signed-code">Secure or Personal code</label>
+              <input id="signed-code" type="text" inputmode="text" placeholder="Paste a Secure (SFS-…) or Personal (SF-…) code" />
+            </div>
+
+            <div class="field">
+              <label for="signed-body">Message</label>
+              <textarea id="signed-body" maxlength="1200" placeholder="Write your message…"></textarea>
+            </div>
+
+            <div class="actions">
+              <button class="btn" id="btn-signed-send" type="button" disabled>Encrypt & send</button>
+              <button class="btn" id="btn-signed-clear" type="button">Clear</button>
+            </div>
+
+            <div class="note">
+              <p style="margin:0;">
+                Your message will be encrypted in the browser. Only the recipient device can decrypt.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rolling panel -->
+      <div id="panel-rolling" role="tabpanel" aria-labelledby="tab-rolling" class="hidden">
+        <div class="row">
+          <div class="col">
+            <div class="field">
+              <label for="rolling-code">Rolling code</label>
+              <input id="rolling-code" type="text" inputmode="text" placeholder="Paste a Rolling code (SFR-…)" />
+            </div>
+
+            <div class="field">
+              <label for="rolling-body">Message</label>
+              <textarea id="rolling-body" maxlength="1200" placeholder="Write your message…"></textarea>
+            </div>
+
+            <div class="actions">
+              <button class="btn" id="btn-rolling-send" type="button">Encrypt & send</button>
+              <button class="btn" id="btn-rolling-clear" type="button">Clear</button>
+            </div>
+
+            <div class="note">
+              <p style="margin:0;">
+                Rolling is meant for temporary sharing. It may expire or become invalid after use.
+              </p>
+            </div>
+          </div>
+
+          <div class="col">
+            <h2 style="margin-top:0;">What to expect</h2>
+            <ul>
+              <li>Rolling does not require sign-in.</li>
+              <li>We apply strict guardrails (validity, usage limits, rate limiting).</li>
+              <li>If a code is invalid, you will be told explicitly.</li>
+            </ul>
+            <div class="note">
+              <p style="margin:0;">
+                If you want a stable link, use Secure (signed) for yourself.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h2>Status</h2>
+      <div class="status" role="status" aria-live="polite">
+        <div class="status-title">
+          <span class="dot" id="status-dot"></span>
+          <span id="status-title">Not connected</span>
+        </div>
+        <p class="status-line" id="status-line">
+          This page is ready for Firebase + encryption wiring. No data is sent yet.
+        </p>
+      </div>
+
+      <footer>
+        <div>© <span id="y"></span> Setfeed</div>
+        <div>
+          <a href="./security.html">Security</a>
+          <span class="sep">·</span>
+          <a href="./privacy.html">Privacy</a>
+          <span class="sep">·</span>
+          <a href="mailto:security@setfeed.app">security@setfeed.app</a>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    // Year
+    document.getElementById("y").textContent = new Date().getFullYear();
+
+    // Tabs (deterministic: no side effects besides visibility + aria)
+    const tabSigned = document.getElementById("tab-signed");
+    const tabRolling = document.getElementById("tab-rolling");
+    const panelSigned = document.getElementById("panel-signed");
+    const panelRolling = document.getElementById("panel-rolling");
+
+    function setTab(which) {
+      const signed = which === "signed";
+      tabSigned.setAttribute("aria-selected", signed ? "true" : "false");
+      tabRolling.setAttribute("aria-selected", signed ? "false" : "true");
+      panelSigned.classList.toggle("hidden", !signed);
+      panelRolling.classList.toggle("hidden", signed);
+    }
+
+    tabSigned.addEventListener("click", () => setTab("signed"));
+    tabRolling.addEventListener("click", () => setTab("rolling"));
+
+    // Status helper (quiet, explicit)
+    const statusDot = document.getElementById("status-dot");
+    const statusTitle = document.getElementById("status-title");
+    const statusLine = document.getElementById("status-line");
+
+    function setStatus(kind, title, line) {
+      statusDot.className = "dot";
+      if (kind === "good") statusDot.classList.add("good");
+      if (kind === "warn") statusDot.classList.add("warn");
+      statusTitle.textContent = title;
+      statusLine.textContent = line;
+    }
+
+    // Buttons (stubs for now; no network calls)
+    const signedEmail = document.getElementById("signed-email");
+    const signedCode = document.getElementById("signed-code");
+    const signedBody = document.getElementById("signed-body");
+    const btnSendLink = document.getElementById("btn-send-link");
+    const btnSignOut = document.getElementById("btn-sign-out");
+    const btnSignedSend = document.getElementById("btn-signed-send");
+    const btnSignedClear = document.getElementById("btn-signed-clear");
+
+    const rollingCode = document.getElementById("rolling-code");
+    const rollingBody = document.getElementById("rolling-body");
+    const btnRollingSend = document.getElementById("btn-rolling-send");
+    const btnRollingClear = document.getElementById("btn-rolling-clear");
+
+    // Local-only state (no silent mutation across refresh; no storage)
+    let signedAuthed = false;
+
+    function refreshSignedSendEnabled() {
+      const canSend = signedAuthed
+        && signedCode.value.trim().length > 0
+        && signedBody.value.trim().length > 0;
+      btnSignedSend.disabled = !canSend;
+    }
+
+    signedCode.addEventListener("input", refreshSignedSendEnabled);
+    signedBody.addEventListener("input", refreshSignedSendEnabled);
+
+    btnSendLink.addEventListener("click", () => {
+      const email = signedEmail.value.trim();
+      if (!email) {
+        setStatus("warn", "Email needed", "Enter your email to request a sign-in link.");
+        return;
+      }
+      // Stub: later this triggers Firebase email-link auth.
+      setStatus("good", "Sign-in link requested", "When Firebase is wired, a sign-in link will be sent to your email.");
+      // Simulate "signed in" for UI wiring preview:
+      signedAuthed = true;
+      btnSignOut.disabled = false;
+      refreshSignedSendEnabled();
+    });
+
+    btnSignOut.addEventListener("click", () => {
+      signedAuthed = false;
+      btnSignOut.disabled = true;
+      refreshSignedSendEnabled();
+      setStatus("warn", "Signed out", "Signed sending is unavailable until you sign in again.");
+    });
+
+    btnSignedSend.addEventListener("click", () => {
+      const code = signedCode.value.trim();
+      const body = signedBody.value.trim();
+      if (!signedAuthed) {
+        setStatus("warn", "Sign-in required", "Secure and Personal sending require email-link sign-in.");
+        return;
+      }
+      if (!code || !body) {
+        setStatus("warn", "Missing details", "Add a code and a message, then try again.");
+        return;
+      }
+      // Stub: later this will encrypt + call Cloud Function.
+      setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the signed send function.");
+    });
+
+    btnSignedClear.addEventListener("click", () => {
+      signedCode.value = "";
+      signedBody.value = "";
+      refreshSignedSendEnabled();
+      setStatus("warn", "Cleared", "Signed send fields cleared.");
+    });
+
+    btnRollingSend.addEventListener("click", () => {
+      const code = rollingCode.value.trim();
+      const body = rollingBody.value.trim();
+      if (!code || !body) {
+        setStatus("warn", "Missing details", "Add a rolling code and a message, then try again.");
+        return;
+      }
+      // Stub: later this will encrypt + call Cloud Function (App Check required).
+      setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the rolling send function.");
+    });
+
+    btnRollingClear.addEventListener("click", () => {
+      rollingCode.value = "";
+      rollingBody.value = "";
+      setStatus("warn", "Cleared", "Rolling send fields cleared.");
+    });
+  </script>
+</body>
+</html>
