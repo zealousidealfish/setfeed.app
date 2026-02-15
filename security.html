@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Security — Setfeed</title>
+  <meta name="description" content="Setfeed security model, encryption boundaries, and responsible disclosure policy." />
+  <meta name="theme-color" content="#0B0B0C" />
+  <style>
+    :root{
+      --bg:#0B0B0C;
+      --card:#121214;
+      --text:#F2F2F3;
+      --muted:#A7A7AD;
+      --line:#232326;
+      --hover: rgba(255,255,255,0.06);
+      --link: #B7C5FF;
+      --pill: rgba(255,255,255,0.05);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: radial-gradient(1200px 700px at 20% 0%, #141418 0%, var(--bg) 55%);
+      color:var(--text);
+    }
+    a{ color: var(--link); }
+    a:hover{ text-decoration: underline; }
+
+    .wrap{ max-width: 860px; margin:0 auto; padding: 26px 20px 72px; }
+
+    /* Header / footer (shared pattern with privacy.html) */
+    .site-header{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      border-bottom: 1px solid var(--line);
+    }
+    .header-inner{
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 14px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+    .brand{
+      font-weight:600;
+      letter-spacing:-0.1px;
+    }
+    .brand a{
+      color: var(--text);
+      text-decoration:none;
+    }
+    .nav{
+      display:flex;
+      gap:10px;
+      color:var(--muted);
+      font-size:14px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .nav a{
+      color:var(--muted);
+      text-decoration:none;
+      padding:8px 10px;
+      border-radius:12px;
+    }
+    .nav a:hover{
+      background: var(--hover);
+      color: var(--text);
+      text-decoration:none;
+    }
+
+    .card{
+      margin-top: 18px;
+      background: rgba(18,18,20,0.78);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 22px;
+      backdrop-filter: blur(10px);
+    }
+
+    h1{ margin:0 0 6px 0; font-size: 28px; letter-spacing:-0.2px; }
+    .meta{ margin:0 0 18px 0; color:var(--muted); font-size: 14px; }
+    h2{ margin: 22px 0 10px 0; font-size: 16px; color: var(--text); }
+    h3{ margin: 18px 0 8px 0; font-size: 14px; color: var(--text); }
+    p, li{ color: var(--muted); line-height: 1.7; font-size: 14.5px; }
+    ul{ margin: 0 0 0 18px; padding:0; }
+
+    .note{
+      border-left: 3px solid var(--line);
+      padding-left: 12px;
+      margin-top: 14px;
+    }
+
+    .pills{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--pill);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .dot{
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--muted);
+    }
+    .dot.ok{ background: #86efac; }     /* green */
+    .dot.warn{ background: #fecaca; }   /* soft red */
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin-top: 12px;
+    }
+    @media (min-width: 760px){
+      .grid{ grid-template-columns: 1fr 1fr; }
+    }
+
+    pre{
+      margin: 10px 0 0 0;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+      overflow:auto;
+      font-size: 12.5px;
+      line-height: 1.6;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    footer{
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      display:flex;
+      gap:12px;
+      justify-content:space-between;
+      align-items:center;
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+      flex-wrap: wrap;
+    }
+    footer a{ color: var(--muted); text-decoration:none; }
+    footer a:hover{ color: var(--text); text-decoration:none; }
+
+    .sep{ color: var(--muted); }
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand"><a href="/">Setfeed</a></div>
+      <nav class="nav" aria-label="Primary">
+        <a href="/">Home</a>
+        <a href="/security.html" style="color: var(--text);">Security</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="mailto:support@setfeed.app">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="card">
+      <h1>Security</h1>
+      <p class="meta">Last updated: <strong>2026-02-15</strong></p>
+
+      <p>
+        Setfeed is local-first and end-to-end encrypted. The web bridge (setfeed.app) is a ciphertext transport layer:
+        it enforces policy and delivers encrypted messages without access to message content.
+      </p>
+
+      <div class="pills" aria-label="Security highlights">
+        <div class="pill"><span class="dot ok"></span> End-to-end encrypted</div>
+        <div class="pill"><span class="dot ok"></span> Ciphertext-only storage</div>
+        <div class="pill"><span class="dot ok"></span> Device-held private keys</div>
+        <div class="pill"><span class="dot warn"></span> Rolling is constrained by design</div>
+      </div>
+
+      <h2>Encryption boundary</h2>
+      <p>
+        Messages sent through setfeed.app are encrypted in the browser to the recipient’s public key.
+        Only the recipient device holds the private key required to decrypt.
+      </p>
+
+      <div class="grid">
+        <div>
+          <h3>What we store</h3>
+          <ul>
+            <li>Encrypted message ciphertext</li>
+            <li>Key version and delivery metadata (timestamps, routing)</li>
+            <li>Abuse-prevention counters and hashed operational identifiers</li>
+          </ul>
+        </div>
+        <div>
+          <h3>What we do not store</h3>
+          <ul>
+            <li>Message plaintext</li>
+            <li>Recipient private keys</li>
+            <li>Content-derived analytics</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note">
+        <p style="margin:0;">
+          If a design change requires server-side plaintext, we treat it as a bug.
+        </p>
+      </div>
+
+      <h2>Web bridge flow</h2>
+      <pre>Browser encrypts → Cloud Functions validate policy → Ciphertext stored → Push ping → App fetches + decrypts</pre>
+
+      <h2>Receive codes and sending rules</h2>
+      <p>
+        Setfeed supports three receive code types. Two are signed; one is capability-based and strictly limited.
+      </p>
+
+      <h3>Secure and Personal (signed)</h3>
+      <ul>
+        <li><strong>Secure</strong> and <strong>Personal</strong> sends require email-link sign-in.</li>
+        <li>Rate limits apply to reduce abuse and protect recipient devices.</li>
+      </ul>
+
+      <h3>Rolling (capability-based)</h3>
+      <ul>
+        <li>Rolling sends do not require sign-in.</li>
+        <li>They are short-lived, rate-limited, and typically single-use.</li>
+        <li>App Check is required to reduce automated abuse.</li>
+      </ul>
+
+      <h2>Abuse prevention (high level)</h2>
+      <p>
+        We enforce strict controls to keep Setfeed usable without becoming an open inbox.
+        Controls include short validity windows, usage limits, payload size caps, App Check, and rate limiting.
+      </p>
+      <p class="note">
+        We intentionally do not publish exact thresholds on this page. Guardrails may change as we observe real-world abuse.
+      </p>
+
+      <h2>Responsible disclosure</h2>
+      <p>
+        If you believe you’ve found a security vulnerability, we appreciate responsible reporting.
+      </p>
+
+      <h3>Report by email</h3>
+      <p>
+        <a href="mailto:security@setfeed.app">security@setfeed.app</a>
+      </p>
+
+      <h3>Please include</h3>
+      <ul>
+        <li>A clear description of the issue</li>
+        <li>Steps to reproduce</li>
+        <li>Potential impact</li>
+        <li>Proof-of-concept (if available)</li>
+      </ul>
+
+      <h3>Guidelines</h3>
+      <ul>
+        <li>Do not access or modify other users’ data.</li>
+        <li>Do not perform denial-of-service tests.</li>
+        <li>Share only what’s necessary to demonstrate the issue.</li>
+      </ul>
+
+      <p class="note">
+        We aim to acknowledge reports within 72 hours and coordinate a disclosure timeline.
+      </p>
+
+      <h2>FAQ</h2>
+
+      <h3>Can Setfeed read my messages?</h3>
+      <p>No. Messages are encrypted before they reach our servers. We store ciphertext only.</p>
+
+      <h3>What happens if the server is breached?</h3>
+      <p>
+        An attacker could access encrypted ciphertext. Without device private keys, messages cannot be decrypted.
+      </p>
+
+      <h3>Is Setfeed a chat app?</h3>
+      <p>No. Setfeed is intentionally one-way, scheduled, and local-first.</p>
+
+      <footer>
+        <div>© <span id="y"></span> Setfeed</div>
+        <div>
+          <a href="/security.html">Security</a>
+          <span class="sep">·</span>
+          <a href="/privacy.html">Privacy</a>
+          <span class="sep">·</span>
+          <a href="mailto:security@setfeed.app">security@setfeed.app</a>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("y").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
