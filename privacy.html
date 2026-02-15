@@ -1,181 +1,227 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Privacy Policy — Setfeed</title>
   <meta name="description" content="Privacy Policy for Setfeed" />
   <meta name="theme-color" content="#0B0B0C" />
-
   <style>
-    :root {
-      --bg: #0B0B0C;
-      --card: #121214;
-      --text: #F2F2F3;
-      --muted: #A7A7AD;
-      --line: #232326;
-      --accent: #3A8DFF;
+    :root{
+      --bg:#0B0B0C;
+      --card:#121214;
+      --text:#F2F2F3;
+      --muted:#A7A7AD;
+      --line:#232326;
+      --hover: rgba(255,255,255,0.06);
+      --link: #B7C5FF;
     }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
+    *{box-sizing:border-box}
+    body{
+      margin:0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       background: radial-gradient(1200px 700px at 20% 0%, #141418 0%, var(--bg) 55%);
-      color: var(--text);
+      color:var(--text);
     }
+    a{ color: var(--link); }
+    a:hover{ text-decoration: underline; }
 
-    a {
-      color: var(--accent);
-      text-decoration: none;
+    .wrap{ max-width: 860px; margin:0 auto; padding: 26px 20px 72px; }
+
+    /* Header / footer (shared pattern) */
+    .site-header{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      border-bottom: 1px solid var(--line);
     }
-
-    a:hover {
-      text-decoration: underline;
-    }
-
-    .wrap {
+    .header-inner{
       max-width: 860px;
       margin: 0 auto;
-      padding: 56px 20px 72px;
+      padding: 14px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+    .brand{
+      font-weight:600;
+      letter-spacing:-0.1px;
+    }
+    .brand a{
+      color: var(--text);
+      text-decoration:none;
+    }
+    .nav{
+      display:flex;
+      gap:10px;
+      color:var(--muted);
+      font-size:14px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .nav a{
+      color:var(--muted);
+      text-decoration:none;
+      padding:8px 10px;
+      border-radius:12px;
+    }
+    .nav a:hover{
+      background: var(--hover);
+      color: var(--text);
+      text-decoration:none;
     }
 
-    .top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 26px;
-    }
-
-    .brand {
-      font-weight: 600;
-    }
-
-    .nav a {
-      margin-left: 16px;
-      font-size: 14px;
-      color: var(--muted);
-    }
-
-    .card {
-      background: var(--card);
+    .card{
+      margin-top: 18px;
+      background: rgba(18,18,20,0.78);
       border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 28px;
+      border-radius: 22px;
+      padding: 22px;
+      backdrop-filter: blur(10px);
+    }
+    h1{ margin:0 0 6px 0; font-size: 28px; letter-spacing:-0.2px; }
+    .meta{ margin:0 0 18px 0; color:var(--muted); font-size: 14px; }
+    h2{ margin: 22px 0 10px 0; font-size: 16px; color: var(--text); }
+    p, li{ color: var(--muted); line-height: 1.7; font-size: 14.5px; }
+    ul{ margin: 0 0 0 18px; padding:0; }
+
+    .note{
+      border-left: 3px solid var(--line);
+      padding-left: 12px;
+      margin-top: 14px;
     }
 
-    h1 {
-      margin-top: 0;
-      font-size: 28px;
-    }
-
-    h2 {
-      margin-top: 28px;
-      font-size: 18px;
-    }
-
-    p, li {
+    footer{
+      margin-top: 18px;
       color: var(--muted);
-      line-height: 1.6;
-      font-size: 14px;
+      font-size: 13px;
+      display:flex;
+      gap:12px;
+      justify-content:space-between;
+      align-items:center;
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+      flex-wrap: wrap;
     }
+    footer a{ color: var(--muted); text-decoration:none; }
+    footer a:hover{ color: var(--text); text-decoration:none; }
 
-    ul {
-      padding-left: 18px;
-    }
-
-    footer {
-      margin-top: 40px;
-      font-size: 12px;
-      color: var(--muted);
-      text-align: center;
-    }
+    .dot{ color: var(--muted); }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="top">
-      <div class="brand">Setfeed</div>
-      <div class="nav">
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand"><a href="/">Setfeed</a></div>
+      <nav class="nav" aria-label="Primary">
         <a href="/">Home</a>
+        <a href="/security.html">Security</a>
+        <a href="/privacy.html" style="color: var(--text);">Privacy</a>
         <a href="mailto:support@setfeed.app">Contact</a>
-      </div>
+      </nav>
     </div>
+  </header>
 
+  <div class="wrap">
     <div class="card">
       <h1>Privacy Policy</h1>
-      <p><strong>Effective date:</strong> 2026-02-13</p>
+      <p class="meta">Effective date: <strong>2026-02-15</strong></p>
 
       <p>
-        Setfeed (“we”, “us”, “our”) respects your privacy. This Privacy Policy explains how
-        Setfeed handles information when you use the Setfeed mobile application.
+        Setfeed (“we”, “us”, “our”) respects your privacy. This policy explains what Setfeed stores
+        and processes when you use the Setfeed app and the Setfeed web bridge (setfeed.app).
       </p>
 
-      <h2>Information we handle</h2>
+      <h2>Message content</h2>
+      <p>
+        Setfeed is designed to be local-first and end-to-end encrypted.
+        When you send a message through setfeed.app, the message is encrypted in your browser before it reaches our servers.
+        We store encrypted ciphertext only and cannot read message contents.
+      </p>
+      <p class="note">
+        Private encryption keys are stored only on recipient devices and are never uploaded to our servers.
+      </p>
+
+      <h2>Information we store</h2>
+      <p>
+        To operate Setfeed, we store the minimum needed for scheduling, delivery, and abuse prevention:
+      </p>
       <ul>
-        <li>Messages you create and schedule.</li>
-        <li>Scheduling metadata (delivery time, status, and related app state).</li>
-        <li>Notification preferences and delivery settings.</li>
-        <li>Basic device/app information required for functionality and stability.</li>
-        <li>Receive codes used to validate inbound messages (when applicable).</li>
+        <li><strong>Encrypted message ciphertext</strong> and encryption metadata (for example, key version).</li>
+        <li><strong>Delivery metadata</strong> (timestamps, message identifiers, and routing to the recipient).</li>
+        <li><strong>Authentication state</strong> for signed sends (Secure and Personal), such as a Firebase user ID.</li>
+        <li><strong>Abuse-prevention signals</strong> like rate-limit counters and hashed operational identifiers.</li>
+        <li><strong>Device delivery tokens</strong> (for example, an FCM token) needed to notify a recipient device.</li>
+      </ul>
+
+      <h2>Information we do not store</h2>
+      <ul>
+        <li>Message plaintext.</li>
+        <li>Recipient private keys.</li>
+        <li>Content-based advertising profiles.</li>
       </ul>
 
       <h2>How we use information</h2>
       <ul>
-        <li>To schedule and deliver messages at the time you choose.</li>
-        <li>To enable inbound message receipt and validation.</li>
-        <li>To provide notifications you’ve enabled.</li>
-        <li>To maintain app reliability, performance, and safety.</li>
+        <li>To deliver messages at the time you chose (or at the recipient’s preferred time window for inbound).</li>
+        <li>To validate receive codes and enforce usage limits (for example, Rolling single-use).</li>
+        <li>To provide notifications you have enabled.</li>
+        <li>To maintain reliability, performance, and safety (including abuse prevention).</li>
       </ul>
 
-      <h2>Data storage</h2>
+      <h2>Rolling codes</h2>
       <p>
-        Setfeed is currently designed to be calm and local-first. Depending on features you use,
-        data may be stored locally on your device.
-      </p>
-      <p>
-        If network features are introduced in the future, data may be processed via secure
-        server infrastructure strictly to provide delivery and syncing functionality.
+        Rolling codes are designed for temporary sharing. They may allow sending without sign-in.
+        To prevent abuse, we apply strict constraints such as short validity windows, single-use limits, App Check validation,
+        and rate limiting.
       </p>
 
       <h2>Third-party services</h2>
       <p>
-        Setfeed may rely on platform services such as Google Play Services. If push notifications
-        or analytics are used, they may be provided by services such as Firebase. These services
-        may collect technical data necessary for functionality.
+        Setfeed uses Firebase services to operate the web bridge and delivery pipeline, including:
+        Authentication, Cloud Functions, Firestore, Cloud Messaging, and App Check.
+        These services process limited technical data required to provide their functionality.
       </p>
 
-      <h2>Retention and deletion</h2>
+      <h2>Retention</h2>
       <p>
-        Messages remain available until you cancel or delete them within the app.
-        You can remove the app at any time to stop local data storage.
+        The web bridge is a transport layer. Encrypted ciphertext may be retained for a limited period to support delivery and retries.
+        The Setfeed app is the primary long-term store for messages on your device.
       </p>
 
-      <h2>Children’s privacy</h2>
-      <p>
-        Setfeed is not directed toward children under 13. We do not knowingly collect
-        personal information from children.
-      </p>
-
-      <h2>Changes to this policy</h2>
-      <p>
-        We may update this Privacy Policy as the app evolves. Updates will be reflected
-        by revising the effective date above.
-      </p>
+      <h2>Your choices</h2>
+      <ul>
+        <li>You control notifications through app settings and system settings.</li>
+        <li>You can cancel scheduled items and remove items from your feed within the app.</li>
+        <li>You can avoid using setfeed.app and send only through in-app flows if preferred.</li>
+      </ul>
 
       <h2>Contact</h2>
       <p>
-        If you have questions about this Privacy Policy, you can contact us at:
-        <br />
-        <a href="mailto:support@setfeed.app">support@setfeed.app</a>
+        Privacy questions: <a href="mailto:privacy@setfeed.app">privacy@setfeed.app</a><br />
+        Security reports: <a href="mailto:security@setfeed.app">security@setfeed.app</a><br />
+        General support: <a href="mailto:support@setfeed.app">support@setfeed.app</a>
       </p>
-    </div>
 
-    <footer>
-      © 2026 Setfeed. All rights reserved.
-    </footer>
+      <footer>
+        <div>© <span id="y"></span> Setfeed</div>
+        <div>
+          <a href="/security.html">Security</a>
+          <span class="dot">·</span>
+          <a href="/privacy.html">Privacy</a>
+          <span class="dot">·</span>
+          <a href="mailto:security@setfeed.app">security@setfeed.app</a>
+        </div>
+      </footer>
+    </div>
   </div>
+
+  <script>
+    document.getElementById("y").textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
