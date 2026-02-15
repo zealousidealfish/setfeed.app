@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Privacy Policy — Setfeed</title>
-  <meta name="description" content="Privacy Policy for Setfeed" />
+  <title>Setfeed</title>
+  <meta name="description" content="Setfeed is a calm, local-first scheduled messaging app." />
   <meta name="theme-color" content="#0B0B0C" />
   <style>
     :root{
@@ -13,6 +13,9 @@
       --text:#F2F2F3;
       --muted:#A7A7AD;
       --line:#232326;
+      --hover: rgba(255,255,255,0.06);
+      --link: #B7C5FF;
+      --pill: rgba(255,255,255,0.05);
     }
     *{box-sizing:border-box}
     body{
@@ -21,26 +24,121 @@
       background: radial-gradient(1200px 700px at 20% 0%, #141418 0%, var(--bg) 55%);
       color:var(--text);
     }
-    a{color:inherit}
-    .wrap{ max-width: 860px; margin:0 auto; padding: 56px 20px 72px; }
-    .top{ display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom: 26px; }
-    .brand{ font-weight:600; }
-    .nav{ display:flex; gap:12px; color:var(--muted); font-size:14px; }
-    .nav a{ text-decoration:none; padding:8px 10px; border-radius:12px; }
-    .nav a:hover{ background: rgba(255,255,255,0.06); color: var(--text); }
+    a{ color: var(--link); }
+    a:hover{ text-decoration: underline; }
+
+    .wrap{ max-width: 860px; margin:0 auto; padding: 26px 20px 72px; }
+
+    /* Header / footer (shared pattern) */
+    .site-header{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      border-bottom: 1px solid var(--line);
+    }
+    .header-inner{
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 14px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+    .brand{
+      font-weight:600;
+      letter-spacing:-0.1px;
+    }
+    .brand a{
+      color: var(--text);
+      text-decoration:none;
+    }
+    .nav{
+      display:flex;
+      gap:10px;
+      color:var(--muted);
+      font-size:14px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .nav a{
+      color:var(--muted);
+      text-decoration:none;
+      padding:8px 10px;
+      border-radius:12px;
+    }
+    .nav a:hover{
+      background: var(--hover);
+      color: var(--text);
+      text-decoration:none;
+    }
 
     .card{
+      margin-top: 18px;
       background: rgba(18,18,20,0.78);
       border: 1px solid var(--line);
       border-radius: 22px;
       padding: 22px;
       backdrop-filter: blur(10px);
     }
-    h1{ margin:0 0 6px 0; font-size: 28px; letter-spacing:-0.2px; }
-    .meta{ margin:0 0 18px 0; color:var(--muted); font-size: 14px; }
+
+    h1{ margin:0 0 8px 0; font-size: 30px; letter-spacing:-0.25px; }
+    .lead{ margin:0 0 14px 0; color:var(--muted); font-size: 14.8px; line-height:1.7; }
     h2{ margin: 22px 0 10px 0; font-size: 16px; color: var(--text); }
     p, li{ color: var(--muted); line-height: 1.7; font-size: 14.5px; }
     ul{ margin: 0 0 0 18px; padding:0; }
+
+    .pills{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top: 14px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--pill);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .dot{
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--muted);
+    }
+    .dot.ok{ background: #86efac; }   /* green */
+
+    .actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top: 16px;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      text-decoration:none;
+      font-size: 14px;
+    }
+    .btn:hover{
+      background: var(--hover);
+      text-decoration:none;
+    }
+
     footer{
       margin-top: 18px;
       color: var(--muted);
@@ -48,84 +146,77 @@
       display:flex;
       gap:12px;
       justify-content:space-between;
+      align-items:center;
       border-top: 1px solid var(--line);
       padding-top: 14px;
+      flex-wrap: wrap;
     }
+    footer a{ color: var(--muted); text-decoration:none; }
+    footer a:hover{ color: var(--text); text-decoration:none; }
+    .sep{ color: var(--muted); }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="top">
-      <div class="brand"><a href="/index.html" style="text-decoration:none">Setfeed</a></div>
-      <div class="nav">
-        <a href="/index.html">Home</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand"><a href="./">Setfeed</a></div>
+      <nav class="nav" aria-label="Primary">
+        <a href="./" style="color: var(--text);">Home</a>
+        <a href="./security.html">Security</a>
+        <a href="./privacy.html">Privacy</a>
         <a href="mailto:support@setfeed.app">Contact</a>
-      </div>
+      </nav>
     </div>
+  </header>
 
+  <div class="wrap">
     <div class="card">
-      <h1>Privacy Policy</h1>
-      <p class="meta">Effective date: <strong>2026-02-13</strong></p>
-
-      <p>
-        Setfeed (“we”, “us”, “our”) respects your privacy. This Privacy Policy explains how Setfeed
-        handles information when you use the Setfeed mobile application.
+      <h1>Scheduled messages. Kept simple.</h1>
+      <p class="lead">
+        Setfeed is a calm, local-first scheduled messaging app.
+        It favors correctness over cleverness: predictable behavior, explicit actions, and no surprise state changes.
       </p>
 
-      <h2>Information we handle</h2>
-      <ul>
-        <li>Messages you create and schedule.</li>
-        <li>Scheduling metadata (delivery time, status, and related app state).</li>
-        <li>Notification preferences and delivery settings.</li>
-        <li>Basic device/app information required for functionality and stability.</li>
-        <li>Receive codes used to validate inbound messages (when applicable).</li>
-      </ul>
+      <div class="pills" aria-label="Product principles">
+        <div class="pill"><span class="dot ok"></span> Local-first</div>
+        <div class="pill"><span class="dot ok"></span> Deterministic</div>
+        <div class="pill"><span class="dot ok"></span> End-to-end encrypted web send</div>
+      </div>
 
-      <h2>How we use information</h2>
-      <ul>
-        <li>To schedule and deliver messages at the time you chose.</li>
-        <li>To enable inbound message receipt and validation.</li>
-        <li>To provide notifications you’ve enabled.</li>
-        <li>To maintain app reliability, performance, and safety.</li>
-      </ul>
+      <div class="actions">
+        <a class="btn" href="./security.html">Read security</a>
+        <a class="btn" href="./privacy.html">Read privacy</a>
+      </div>
 
-      <h2>Data storage</h2>
+      <h2>Web send</h2>
       <p>
-        Setfeed is currently designed to be calm and local-first. Depending on features you use,
-        data may be stored on your device. If network features are enabled in the future, data may
-        be processed via server infrastructure to provide delivery and syncing.
+        setfeed.app supports sending messages to the app through an encrypted bridge.
+        Messages are encrypted before they reach our servers. The server stores ciphertext only.
       </p>
-
-      <h2>Third-party services</h2>
-      <p>
-        Setfeed may rely on platform services such as Google Play Services. If push notifications or
-        analytics are used, they may be provided by services like Firebase. These services may
-        collect technical data needed to provide their functionality.
-      </p>
-
-      <h2>Retention and deletion</h2>
-      <p>
-        Messages remain available until you cancel or delete them within the app. You can also remove
-        the app to stop local storage.
-      </p>
-
-      <h2>Your choices</h2>
-      <ul>
-        <li>You can control notifications in app settings and system settings.</li>
-        <li>You can cancel scheduled items and remove items from your feed within the app.</li>
-      </ul>
 
       <h2>Contact</h2>
       <p>
-        If you have questions about privacy, contact:
-        <a href="mailto:support@setfeed.app">support@setfeed.app</a>
+        Support: <a href="mailto:support@setfeed.app">support@setfeed.app</a><br />
+        Security: <a href="mailto:security@setfeed.app">security@setfeed.app</a><br />
+        Privacy: <a href="mailto:privacy@setfeed.app">privacy@setfeed.app</a>
       </p>
 
       <footer>
-        <div>Setfeed</div>
-        <div><a href="/index.html" style="text-decoration:none">Home</a></div>
+        <div>© <span id="y"></span> Setfeed</div>
+        <div>
+          <a href="./security.html">Security</a>
+          <span class="sep">·</span>
+          <a href="./privacy.html">Privacy</a>
+          <span class="sep">·</span>
+          <a href="mailto:security@setfeed.app">security@setfeed.app</a>
+        </div>
       </footer>
     </div>
   </div>
+
+  <script>
+    document.getElementById("y").textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
