@@ -6,169 +6,143 @@
   <title>Security — Setfeed</title>
   <meta name="description" content="Setfeed security model, encryption boundaries, and responsible disclosure policy." />
   <meta name="theme-color" content="#0F1114" />
+
+  <!-- Favicons -->
+  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="./favicon-16.png" sizes="16x16">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180">
+
   <link rel="stylesheet" href="./styles.css" />
 </head>
 
-<body>
-  <div class="page-bg">
-    <header class="site-header">
-      <div class="header-inner">
-        <div class="brand"><a href="./">Setfeed</a></div>
-        <nav class="nav" aria-label="Primary">
-          <a href="./">Home</a>
-          <a href="./send.html">Send</a>
-          <a href="./receive.html">Get a code</a>
-          <a href="./security.html" aria-current="page">Security</a>
-          <a href="./privacy.html">Privacy</a>
-          <a href="mailto:support@setfeed.app">Contact</a>
-        </nav>
-      </div>
-    </header>
+<body class="page-bg">
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand-mark" href="./" aria-label="Setfeed home">
+        <img class="logo" src="./logo.png" alt="" aria-hidden="true" />
+      </a>
 
-    <div class="wrap">
-      <div class="card">
-        <div class="hero">
-          <div>
-            <h1>Security</h1>
-            <p class="lead">
-              The web bridge is a ciphertext transport layer. Messages are encrypted in the browser to the recipient’s public key.
-              Only the recipient device can decrypt.
-            </p>
+      <a class="brand-title" href="./">Setfeed</a>
 
-            <div class="pills" aria-label="Security highlights">
-              <div class="pill"><span class="dot ok"></span> End-to-end encrypted</div>
-              <div class="pill"><span class="dot ok"></span> Ciphertext-only storage</div>
-              <div class="pill"><span class="dot ok"></span> Device-held private keys</div>
-              <div class="pill"><span class="dot warn"></span> Rolling is constrained</div>
-            </div>
-
-            <h2>Encryption boundary</h2>
-            <p>
-              Messages sent through setfeed.app are encrypted in the browser to the recipient’s public key.
-              The server never receives plaintext.
-            </p>
-
-            <div class="note">
-              <p style="margin:0;">
-                If a design change requires server-side plaintext, we treat it as a bug.
-              </p>
-            </div>
-          </div>
-
-          <aside class="panel">
-            <p class="panel-title">Send flow (high level)</p>
-            <p class="panel-sub">
-              Browser encrypts → policy validated → ciphertext stored → device fetches → decrypts locally
-            </p>
-            <div class="actions">
-              <a class="btn btn-primary" href="./send.html">Send to a code</a>
-              <a class="btn btn-quiet" href="./receive.html">Get a code</a>
-            </div>
-            <small class="help">
-              Responsible disclosure: <a href="mailto:security@setfeed.app">security@setfeed.app</a>
-            </small>
-          </aside>
-        </div>
-
-        <h2>What we store</h2>
-        <ul>
-          <li>Encrypted message ciphertext</li>
-          <li>Key version and delivery metadata (timestamps, routing)</li>
-          <li>Abuse-prevention counters and hashed operational identifiers</li>
-        </ul>
-
-        <h2>What we do not store</h2>
-        <ul>
-          <li>Message plaintext</li>
-          <li>Recipient private keys</li>
-          <li>Content-derived analytics</li>
-        </ul>
-
-        <h2>Receive codes and sending rules</h2>
-        <p>
-          Setfeed supports three receive code types. Two are signed; one is capability-based and strictly limited.
-        </p>
-
-        <h3>Secure and Personal (signed)</h3>
-        <ul>
-          <li><strong>Secure</strong> and <strong>Personal</strong> sends require email-link sign-in.</li>
-          <li>Rate limits apply to reduce abuse and protect recipient devices.</li>
-        </ul>
-
-        <h3>Rolling (capability-based)</h3>
-        <ul>
-          <li>Rolling sends do not require sign-in.</li>
-          <li>They are short-lived, rate-limited, and typically single-use.</li>
-          <li>App Check is required to reduce automated abuse.</li>
-        </ul>
-
-        <h2>Abuse prevention (high level)</h2>
-        <p>
-          We enforce strict controls to keep Setfeed usable without becoming an open inbox:
-          validity windows, usage limits, payload size caps, App Check, and rate limiting.
-        </p>
-        <div class="note">
-          <p style="margin:0;">
-            We intentionally do not publish exact thresholds here. Guardrails may change as we observe real-world abuse.
-          </p>
-        </div>
-
-        <h2>Responsible disclosure</h2>
-        <p>
-          If you believe you’ve found a security vulnerability:
-          email <a href="mailto:security@setfeed.app">security@setfeed.app</a>.
-        </p>
-
-        <h3>Please include</h3>
-        <ul>
-          <li>A clear description of the issue</li>
-          <li>Steps to reproduce</li>
-          <li>Potential impact</li>
-          <li>Proof-of-concept (if available)</li>
-        </ul>
-
-        <h3>Guidelines</h3>
-        <ul>
-          <li>Do not access or modify other users’ data.</li>
-          <li>Do not perform denial-of-service tests.</li>
-          <li>Share only what’s necessary to demonstrate the issue.</li>
-        </ul>
-
-        <div class="note">
-          <p style="margin:0;">
-            We aim to acknowledge reports within 72 hours and coordinate a disclosure timeline.
-          </p>
-        </div>
-
-        <h2>FAQ</h2>
-
-        <h3>Can Setfeed read my messages?</h3>
-        <p>No. Messages are encrypted before they reach the server. We store ciphertext only.</p>
-
-        <h3>What happens if the server is breached?</h3>
-        <p>
-          An attacker could access encrypted ciphertext. Without device private keys, messages cannot be decrypted.
-        </p>
-
-        <h3>Is Setfeed a chat app?</h3>
-        <p>No. Setfeed is intentionally one-way, scheduled, and local-first.</p>
-
-        <footer>
-          <div>© <span id="y"></span> Setfeed</div>
-          <div>
-            <a href="./receive.html">Get a code</a>
-            <span class="sep">·</span>
-            <a href="./privacy.html">Privacy</a>
-            <span class="sep">·</span>
-            <a href="mailto:security@setfeed.app">security@setfeed.app</a>
-          </div>
-        </footer>
-      </div>
+      <nav class="nav" aria-label="Primary">
+        <a href="./">Home</a>
+        <a href="./send.html">Send</a>
+        <a href="./receive.html">Receive</a>
+        <a href="./security.html" aria-current="page">Security</a>
+        <a href="./privacy.html">Privacy</a>
+      </nav>
     </div>
+  </header>
 
-    <script>
-      document.getElementById("y").textContent = new Date().getFullYear();
-    </script>
+  <div class="wrap">
+    <div class="card">
+      <div class="hero">
+        <div>
+          <h1>Security</h1>
+          <p class="lead">
+            The web bridge is a ciphertext transport layer. Messages are encrypted in the browser to the recipient’s key.
+            Only the recipient device can decrypt.
+          </p>
+
+          <div class="pills" aria-label="Security highlights">
+            <div class="pill"><span class="dot ok"></span> End-to-end encrypted</div>
+            <div class="pill"><span class="dot ok"></span> Ciphertext-only storage</div>
+            <div class="pill"><span class="dot ok"></span> Device-held private keys</div>
+            <div class="pill"><span class="dot warn"></span> Rolling is constrained</div>
+          </div>
+
+          <h2>Encryption boundary</h2>
+          <p>
+            Messages sent through setfeed.app are encrypted in the browser. The server never receives plaintext.
+          </p>
+
+          <div class="note">
+            <p style="margin:0;">
+              If a design change requires server-side plaintext, we treat it as a bug.
+            </p>
+          </div>
+        </div>
+
+        <aside class="panel">
+          <p class="panel-title">Send flow (high level)</p>
+          <p class="panel-sub">
+            Browser encrypts → policy validated → ciphertext stored → device fetches → decrypts locally
+          </p>
+          <div class="actions">
+            <a class="btn btn-primary" href="./send.html">Send to a code</a>
+            <a class="btn btn-quiet" href="./receive.html">Get a code</a>
+          </div>
+          <small class="help">
+            Responsible disclosure: <a href="mailto:security@setfeed.app">security@setfeed.app</a>
+          </small>
+        </aside>
+      </div>
+
+      <h2>What we store</h2>
+      <ul>
+        <li>Encrypted message ciphertext</li>
+        <li>Key version and delivery metadata (timestamps, routing)</li>
+        <li>Abuse-prevention counters and hashed operational identifiers</li>
+      </ul>
+
+      <h2>What we do not store</h2>
+      <ul>
+        <li>Message plaintext</li>
+        <li>Recipient private keys</li>
+        <li>Content-derived analytics</li>
+      </ul>
+
+      <h2>Receive codes and sending rules</h2>
+      <p>
+        Setfeed supports three receive code types. Two are signed; one is capability-based and strictly limited.
+      </p>
+
+      <h3>Secure and Personal (signed)</h3>
+      <ul>
+        <li><strong>Secure</strong> and <strong>Personal</strong> sends require email-link sign-in.</li>
+        <li>Rate limits apply to reduce abuse and protect recipient devices.</li>
+      </ul>
+
+      <h3>Rolling (capability-based)</h3>
+      <ul>
+        <li>Rolling sends do not require sign-in.</li>
+        <li>They are short-lived, rate-limited, and typically single-use.</li>
+        <li>App Check is required to reduce automated abuse.</li>
+      </ul>
+
+      <h2>Abuse prevention (high level)</h2>
+      <p>
+        We enforce strict controls to keep Setfeed usable without becoming an open inbox:
+        validity windows, usage limits, payload size caps, App Check, and rate limiting.
+      </p>
+      <div class="note">
+        <p style="margin:0;">
+          We intentionally do not publish exact thresholds here. Guardrails may change as we observe real-world abuse.
+        </p>
+      </div>
+
+      <h2>Responsible disclosure</h2>
+      <p>
+        If you believe you’ve found a security vulnerability:
+        email <a href="mailto:security@setfeed.app">security@setfeed.app</a>.
+      </p>
+
+      <footer>
+        <div>© <span id="y"></span> Setfeed</div>
+        <div>
+          <a href="./receive.html">Receive</a>
+          <span class="sep">·</span>
+          <a href="./privacy.html">Privacy</a>
+          <span class="sep">·</span>
+          <a href="mailto:security@setfeed.app">security@setfeed.app</a>
+        </div>
+      </footer>
+    </div>
   </div>
+
+  <script>
+    document.getElementById("y").textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
