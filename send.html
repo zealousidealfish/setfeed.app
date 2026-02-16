@@ -18,11 +18,12 @@
        FIREBASE + APP CHECK
        ========================= -->
 
- <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 
 <script>
+  // Your Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",
     authDomain: "setfeed-fcd7a.firebaseapp.com",
@@ -34,27 +35,13 @@
 
   firebase.initializeApp(firebaseConfig);
 
-  // Functions region (safe to set now)
+  // Simple activation (v3 site key)
+  firebase.appCheck().activate(
+    "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI",
+    true
+  );
+
   const functions = firebase.app().functions("europe-west2");
-
-  function startAppCheck() {
-    try {
-      const appCheck = firebase.appCheck();
-      appCheck.activate(
-        new firebase.appCheck.ReCaptchaV3Provider("6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI"),
-        true
-      );
-    } catch (e) {
-      console.error("App Check init failed:", e);
-    }
-  }
-
-  // ✅ Ensure <body> exists before reCAPTCHA injects anything
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", startAppCheck, { once: true });
-  } else {
-    startAppCheck();
-  }
 </script>
 
   <!-- =========================
