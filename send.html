@@ -33,10 +33,22 @@
   };
     firebase.initializeApp(firebaseConfig);
 
-    firebase.appCheck().activate(
-      "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI",
-      true
-    );
+    function startAppCheck(){
+  try{
+    firebase.appCheck().activate("6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI", true);
+  }catch(e){
+    // Keep calm + explicit: App Check init failure should be visible in console.
+    console.error("App Check init failed:", e);
+  }
+}
+
+// Ensure body exists before reCAPTCHA injects anything invisible.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startAppCheck);
+} else {
+  startAppCheck();
+}
+
 
     // Functions region
     const functions = firebase.app().functions("europe-west2");
