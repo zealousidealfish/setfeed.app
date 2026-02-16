@@ -5,15 +5,48 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Send — Setfeed</title>
   <meta name="description" content="Send an end-to-end encrypted message to Setfeed." />
-  <meta name="theme-color" content="#FFFBFE" />
 
-  <!-- Favicons -->
+  <meta name="theme-color" content="#FFFBFE" data-theme-color="light" />
+  <meta name="theme-color" content="#1C1B1F" data-theme-color="dark" />
+
   <link rel="icon" href="./favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
   <link rel="icon" type="image/png" href="./favicon-16.png" sizes="16x16">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180">
 
   <link rel="stylesheet" href="./styles.css" />
+
+  <script>
+    (function(){
+      const key = "sf_theme_override"; // "system" | "light" | "dark"
+      const override = localStorage.getItem(key) || "system";
+      const root = document.documentElement;
+
+      if (override === "light" || override === "dark") root.setAttribute("data-theme", override);
+      else root.removeAttribute("data-theme");
+
+      function effectiveTheme(){
+        const forced = root.getAttribute("data-theme");
+        if (forced === "light" || forced === "dark") return forced;
+        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+
+      const t = effectiveTheme();
+      const m = document.querySelector('meta[name="theme-color"][data-theme-color="'+t+'"]');
+      if (m) m.content = t === "dark" ? "#1C1B1F" : "#FFFBFE";
+
+      if (window.matchMedia) {
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        mq.addEventListener?.("change", () => {
+          if (!root.getAttribute("data-theme")) {
+            const nt = effectiveTheme();
+            const mm = document.querySelector('meta[name="theme-color"][data-theme-color="'+nt+'"]');
+            if (mm) mm.content = nt === "dark" ? "#1C1B1F" : "#FFFBFE";
+          }
+        });
+      }
+    })();
+  </script>
 </head>
 
 <body class="page-bg">
@@ -47,6 +80,28 @@
         <div class="pill"><span class="dot good"></span> End-to-end encrypted</div>
         <div class="pill"><span class="dot good"></span> Ciphertext-only storage</div>
         <div class="pill"><span class="dot warn"></span> Rolling is constrained</div>
+      </div>
+
+      <!-- Signed-only controls (hidden until signed in) -->
+      <div id="signed-controls" class="panel hidden" style="margin-top: var(--s-5);">
+        <p class="panel-title" style="margin-bottom: 6px;">Signed session controls</p>
+        <p class="panel-sub" style="margin-bottom: var(--s-3);">
+          Advanced options are available only when you are signed in.
+        </p>
+
+        <div class="inline-row">
+          <div class="field" style="min-width: 220px; margin-top: 0;">
+            <label for="theme-select">Theme</label>
+            <select id="theme-select">
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+          <small class="help" style="margin-top: 0;">
+            Default is system mode. Overrides persist on this device.
+          </small>
+        </div>
       </div>
 
       <h2>Choose a send type</h2>
@@ -91,6 +146,33 @@
               <textarea id="signed-body" maxlength="1200" placeholder="Write your message…"></textarea>
             </div>
 
+            <!-- Scheduling -->
+            <div class="panel" style="margin-top: var(--s-4);">
+              <p class="panel-title" style="margin-bottom: 6px;">Scheduling</p>
+
+              <!-- Unsigned default (always shown, but updated based on signed state) -->
+              <p class="panel-sub" id="schedule-summary" style="margin-bottom: var(--s-3);">
+                Not signed in: messages schedule for <strong>1 day from now</strong>.
+              </p>
+
+              <!-- Signed-only advanced scheduling -->
+              <div id="advanced-scheduling" class="hidden">
+                <div class="field" style="margin-top: 0;">
+                  <label for="scheduled-at">Send at</label>
+                  <input id="scheduled-at" type="datetime-local" />
+                </div>
+
+                <div class="field">
+                  <label for="schedule-window">Optional delivery window (minutes)</label>
+                  <input id="schedule-window" type="number" min="0" max="1440" placeholder="e.g. 30" />
+                </div>
+
+                <small class="help">
+                  Advanced scheduling is available only when signed in. If unset, defaults to 1 day from now.
+                </small>
+              </div>
+            </div>
+
             <div class="actions">
               <button class="btn btn-lg btn-primary" id="btn-signed-send" type="button" disabled>Encrypt &amp; send</button>
               <button class="btn btn-lg btn-quiet" id="btn-signed-clear" type="button">Clear</button>
@@ -115,6 +197,14 @@
             <div class="field">
               <label for="rolling-body">Message</label>
               <textarea id="rolling-body" maxlength="1200" placeholder="Write your message…"></textarea>
+            </div>
+
+            <!-- Rolling scheduling (unsigned rule applies) -->
+            <div class="panel" style="margin-top: var(--s-4);">
+              <p class="panel-title" style="margin-bottom: 6px;">Scheduling</p>
+              <p class="panel-sub" id="rolling-schedule-summary" style="margin-bottom: 0;">
+                Rolling (not signed): messages schedule for <strong>1 day from now</strong>.
+              </p>
             </div>
 
             <div class="actions">
@@ -187,8 +277,10 @@
   </div>
 
   <script>
+    // Year
     document.getElementById("y").textContent = new Date().getFullYear();
 
+    // Tabs (deterministic: visibility + aria only)
     const tabSigned = document.getElementById("tab-signed");
     const tabRolling = document.getElementById("tab-rolling");
     const panelSigned = document.getElementById("panel-signed");
@@ -200,14 +292,13 @@
       tabRolling.setAttribute("aria-selected", signed ? "false" : "true");
       panelSigned.classList.toggle("hidden", !signed);
       panelRolling.classList.toggle("hidden", signed);
-
-      // gentle nudge for embedded video initialization on some browsers
       nudgeVideoLoad();
     }
 
     tabSigned.addEventListener("click", () => setTab("signed"));
     tabRolling.addEventListener("click", () => setTab("rolling"));
 
+    // Status helper
     const statusDot = document.getElementById("status-dot");
     const statusTitle = document.getElementById("status-title");
     const statusLine = document.getElementById("status-line");
@@ -220,6 +311,7 @@
       statusLine.textContent = line;
     }
 
+    // Inputs
     const signedEmail = document.getElementById("signed-email");
     const signedCode = document.getElementById("signed-code");
     const signedBody = document.getElementById("signed-body");
@@ -233,7 +325,56 @@
     const btnRollingSend = document.getElementById("btn-rolling-send");
     const btnRollingClear = document.getElementById("btn-rolling-clear");
 
+    // Scheduling UI
+    const scheduleSummary = document.getElementById("schedule-summary");
+    const rollingScheduleSummary = document.getElementById("rolling-schedule-summary");
+    const advancedScheduling = document.getElementById("advanced-scheduling");
+    const scheduledAt = document.getElementById("scheduled-at");
+    const scheduleWindow = document.getElementById("schedule-window");
+
+    // Signed-only UI
+    const signedControls = document.getElementById("signed-controls");
+    const themeSelect = document.getElementById("theme-select");
+
+    // Local-only state (stub until Firebase auth is wired)
     let signedAuthed = false;
+
+    function tomorrowISO() {
+      const d = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      // datetime-local expects "YYYY-MM-DDTHH:MM"
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function computeScheduledAt() {
+      // Not signed: hard rule
+      if (!signedAuthed) return new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      // Signed: allow advanced if set
+      const val = (scheduledAt && scheduledAt.value) ? scheduledAt.value.trim() : "";
+      if (!val) return new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      const dt = new Date(val);
+      if (Number.isNaN(dt.getTime())) return new Date(Date.now() + 24 * 60 * 60 * 1000);
+      return dt;
+    }
+
+    function refreshSignedOnlyUI() {
+      // Signed-only blocks
+      signedControls.classList.toggle("hidden", !signedAuthed);
+      advancedScheduling.classList.toggle("hidden", !signedAuthed);
+
+      // Summary copy
+      if (!signedAuthed) {
+        scheduleSummary.innerHTML = 'Not signed in: messages schedule for <strong>1 day from now</strong>.';
+        rollingScheduleSummary.innerHTML = 'Rolling (not signed): messages schedule for <strong>1 day from now</strong>.';
+      } else {
+        scheduleSummary.innerHTML = 'Signed in: you can use <strong>advanced scheduling</strong> (or keep the 1-day default).';
+        rollingScheduleSummary.innerHTML = 'Rolling still uses the <strong>1-day default</strong> (no sign-in).';
+        // Set a helpful default for the picker
+        if (scheduledAt && !scheduledAt.value) scheduledAt.value = tomorrowISO();
+      }
+    }
 
     function refreshSignedSendEnabled() {
       const canSend = signedAuthed
@@ -245,28 +386,76 @@
     signedCode.addEventListener("input", refreshSignedSendEnabled);
     signedBody.addEventListener("input", refreshSignedSendEnabled);
 
+    // Theme override (signed-only access)
+    function applyThemeOverride(mode) {
+      const key = "sf_theme_override"; // "system" | "light" | "dark"
+      const root = document.documentElement;
+
+      if (mode === "light" || mode === "dark") {
+        root.setAttribute("data-theme", mode);
+        localStorage.setItem(key, mode);
+      } else {
+        root.removeAttribute("data-theme");
+        localStorage.setItem(key, "system");
+      }
+
+      // Update theme-color meta deterministically
+      const effective = root.getAttribute("data-theme")
+        || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+
+      const m = document.querySelector('meta[name="theme-color"][data-theme-color="'+effective+'"]');
+      if (m) m.content = effective === "dark" ? "#1C1B1F" : "#FFFBFE";
+    }
+
+    function hydrateThemeSelect() {
+      const key = "sf_theme_override";
+      const stored = localStorage.getItem(key) || "system";
+      if (themeSelect) themeSelect.value = stored;
+    }
+
+    if (themeSelect) {
+      themeSelect.addEventListener("change", () => {
+        // Only allow changes if signed in
+        if (!signedAuthed) {
+          hydrateThemeSelect();
+          setStatus("warn", "Sign-in required", "Theme override is available only after sign-in.");
+          return;
+        }
+        applyThemeOverride(themeSelect.value);
+        setStatus("good", "Theme updated", "Theme preference saved on this device.");
+      });
+    }
+
+    // Auth stubs
     btnSendLink.addEventListener("click", () => {
       const email = signedEmail.value.trim();
       if (!email) {
         setStatus("warn", "Email needed", "Enter your email to request a sign-in link.");
         return;
       }
+      // Stub: treat as signed-in once "requested"
       setStatus("good", "Sign-in link requested", "When Firebase is wired, a sign-in link will be sent to your email.");
       signedAuthed = true;
       btnSignOut.disabled = false;
       refreshSignedSendEnabled();
+      refreshSignedOnlyUI();
+      hydrateThemeSelect();
     });
 
     btnSignOut.addEventListener("click", () => {
       signedAuthed = false;
       btnSignOut.disabled = true;
       refreshSignedSendEnabled();
+      refreshSignedOnlyUI();
       setStatus("warn", "Signed out", "Signed sending is unavailable until you sign in again.");
+      // Theme toggle remains stored, but UI access is removed until next sign-in.
     });
 
+    // Send stubs (now with scheduling rules)
     btnSignedSend.addEventListener("click", () => {
       const code = signedCode.value.trim();
       const body = signedBody.value.trim();
+
       if (!signedAuthed) {
         setStatus("warn", "Sign-in required", "Secure and Personal sending require email-link sign-in.");
         return;
@@ -275,12 +464,21 @@
         setStatus("warn", "Missing details", "Add a code and a message, then try again.");
         return;
       }
+
+      const when = computeScheduledAt();
+      const windowMin = signedAuthed ? Number((scheduleWindow && scheduleWindow.value) ? scheduleWindow.value : "0") : 0;
+      const safeWindow = Number.isFinite(windowMin) && windowMin >= 0 ? windowMin : 0;
+
       setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the signed send function.");
+      // Debug line (explicit and calm)
+      statusLine.textContent = `Planned schedule: ${when.toISOString()}${safeWindow ? ` (window: ${safeWindow}m)` : ""}.`;
     });
 
     btnSignedClear.addEventListener("click", () => {
       signedCode.value = "";
       signedBody.value = "";
+      if (scheduledAt) scheduledAt.value = "";
+      if (scheduleWindow) scheduleWindow.value = "";
       refreshSignedSendEnabled();
       setStatus("warn", "Cleared", "Signed send fields cleared.");
     });
@@ -288,11 +486,17 @@
     btnRollingSend.addEventListener("click", () => {
       const code = rollingCode.value.trim();
       const body = rollingBody.value.trim();
+
       if (!code || !body) {
         setStatus("warn", "Missing details", "Add a rolling code and a message, then try again.");
         return;
       }
+
+      // Rolling: enforce 1-day schedule
+      const when = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
       setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the rolling send function.");
+      statusLine.textContent = `Rolling schedule (fixed): ${when.toISOString()}.`;
     });
 
     btnRollingClear.addEventListener("click", () => {
@@ -301,14 +505,11 @@
       setStatus("warn", "Cleared", "Rolling send fields cleared.");
     });
 
-    // Video init helper (keeps behavior explicit; no autoplay)
+    // Video reliability helper
     const video = document.getElementById("walkthroughVideo");
     const videoHelp = document.getElementById("video-help");
 
-    function setVideoHelp(text) {
-      if (videoHelp) videoHelp.textContent = text;
-    }
-
+    function setVideoHelp(text) { if (videoHelp) videoHelp.textContent = text; }
     function nudgeVideoLoad() {
       if (!video) return;
       if (video.readyState >= 1) return;
@@ -322,6 +523,10 @@
         setStatus("warn", "Video unavailable", "The walkthrough video failed to initialize on this page. The direct link may still work.");
       });
     }
+
+    // Initial UI state
+    refreshSignedOnlyUI();
+    hydrateThemeSelect();
   </script>
 </body>
 </html>
