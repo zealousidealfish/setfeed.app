@@ -5,171 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Setfeed</title>
   <meta name="description" content="Setfeed is a calm, local-first scheduled messaging app." />
-  <meta name="theme-color" content="#0B0B0C" />
-  <style>
-    :root{
-      --bg:#0B0B0C;
-      --card:#121214;
-      --text:#F2F2F3;
-      --muted:#A7A7AD;
-      --line:#232326;
-      --hover: rgba(255,255,255,0.06);
-      --link: #B7C5FF;
-      --pill: rgba(255,255,255,0.05);
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background: radial-gradient(1200px 700px at 20% 0%, #141418 0%, var(--bg) 55%);
-      color:var(--text);
-    }
-    a{ color: var(--link); }
-    a:hover{ text-decoration: underline; }
-
-    .wrap{ max-width: 860px; margin:0 auto; padding: 26px 20px 72px; }
-
-    /* Header / footer (shared pattern) */
-    .site-header{
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      backdrop-filter: blur(10px);
-      background: color-mix(in srgb, var(--bg) 88%, transparent);
-      border-bottom: 1px solid var(--line);
-    }
-    .header-inner{
-      max-width: 860px;
-      margin: 0 auto;
-      padding: 12px 20px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:16px;
-    }
-
-    /* Brand (logo + word) */
-    .brand a{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      color: var(--text);
-      text-decoration:none;
-      font-weight:600;
-      letter-spacing:-0.1px;
-      line-height: 1;
-    }
-    .brand-mark{
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      display:block;
-      object-fit: contain;
-    }
-
-    .nav{
-      display:flex;
-      gap:10px;
-      color:var(--muted);
-      font-size:14px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-    .nav a{
-      color:var(--muted);
-      text-decoration:none;
-      padding:8px 10px;
-      border-radius:12px;
-    }
-    .nav a:hover{
-      background: var(--hover);
-      color: var(--text);
-      text-decoration:none;
-    }
-
-    .card{
-      margin-top: 18px;
-      background: rgba(18,18,20,0.78);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 22px;
-      backdrop-filter: blur(10px);
-    }
-
-    h1{ margin:0 0 8px 0; font-size: 30px; letter-spacing:-0.25px; }
-    .lead{ margin:0 0 14px 0; color:var(--muted); font-size: 14.8px; line-height:1.7; }
-    h2{ margin: 22px 0 10px 0; font-size: 16px; color: var(--text); }
-    p, li{ color: var(--muted); line-height: 1.7; font-size: 14.5px; }
-    ul{ margin: 0 0 0 18px; padding:0; }
-
-    .pills{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      margin-top: 14px;
-    }
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding: 7px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: var(--pill);
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .dot{
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: var(--muted);
-    }
-    .dot.ok{ background: #86efac; }   /* green */
-
-    .actions{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      margin-top: 16px;
-    }
-    .btn{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:8px;
-      padding:10px 12px;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.04);
-      color: var(--text);
-      text-decoration:none;
-      font-size: 14px;
-    }
-    .btn:hover{
-      background: var(--hover);
-      text-decoration:none;
-    }
-
-    footer{
-      margin-top: 18px;
-      color: var(--muted);
-      font-size: 13px;
-      display:flex;
-      gap:12px;
-      justify-content:space-between;
-      align-items:center;
-      border-top: 1px solid var(--line);
-      padding-top: 14px;
-      flex-wrap: wrap;
-    }
-    footer a{ color: var(--muted); text-decoration:none; }
-    footer a:hover{ color: var(--text); text-decoration:none; }
-    .sep{ color: var(--muted); }
-  </style>
+  <meta name="theme-color" content="#0F1114" />
+  <link rel="stylesheet" href="./style.css" />
 </head>
 
-<body>
+<body class="page-bg">
   <header class="site-header">
     <div class="header-inner">
       <div class="brand">
@@ -178,8 +18,9 @@
           <span>Setfeed</span>
         </a>
       </div>
+
       <nav class="nav" aria-label="Primary">
-        <a href="./" style="color: var(--text);">Home</a>
+        <a href="./" aria-current="page">Home</a>
         <a href="./send.html">Send</a>
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
@@ -189,28 +30,49 @@
   </header>
 
   <div class="wrap">
-    <div class="card">
-      <h1>Scheduled messages. Kept simple.</h1>
-      <p class="lead">
-        A calm, local-first scheduled messaging app — predictable behavior, explicit actions, and no surprise state changes.
-      </p>
+    <main class="card">
+      <section class="hero">
+        <div>
+          <h1>Scheduled messages. Kept simple.</h1>
+          <p class="lead">
+            A calm, local-first scheduled messaging app — predictable behavior, explicit actions, and no surprise state changes.
+          </p>
 
-      <div class="pills" aria-label="Product principles">
-        <div class="pill"><span class="dot ok"></span> Local-first</div>
-        <div class="pill"><span class="dot ok"></span> Deterministic</div>
-        <div class="pill"><span class="dot ok"></span> End-to-end encrypted web send</div>
-      </div>
+          <div class="pills" aria-label="Product principles">
+            <div class="pill"><span class="dot ok"></span> Local-first</div>
+            <div class="pill"><span class="dot ok"></span> Deterministic</div>
+            <div class="pill"><span class="dot ok"></span> End-to-end encrypted web send</div>
+          </div>
 
-      <div class="actions">
-        <a class="btn" href="./send.html">Send</a>
-        <a class="btn" href="./security.html">Read security</a>
-        <a class="btn" href="./privacy.html">Read privacy</a>
-      </div>
+          <div class="actions" style="margin-top: var(--s-5);">
+            <a class="btn btn-primary" href="./send.html">Send a message</a>
+            <a class="btn btn-quiet" href="./security.html">Security</a>
+            <a class="btn btn-quiet" href="./privacy.html">Privacy</a>
+          </div>
+
+          <small class="help">
+            “Send a message” opens the web sender. For support, use Contact.
+          </small>
+        </div>
+
+        <aside class="panel" aria-label="Quick guidance">
+          <div class="panel-title">Quick start</div>
+          <p class="panel-sub">
+            Paste a receive code, write a message, then encrypt &amp; send.
+            The server stores ciphertext only.
+          </p>
+          <div class="actions">
+            <a class="btn" href="./send.html">Open sender</a>
+            <a class="btn btn-quiet" href="./security.html">How encryption works</a>
+          </div>
+        </aside>
+      </section>
 
       <h2>Web send</h2>
       <p>
-        setfeed.app supports sending messages to the app through an encrypted bridge.
-        Messages are encrypted before they reach our servers. The server stores ciphertext only.
+        setfeed.app provides a web sender that delivers encrypted messages to the app.
+        Messages are encrypted in your browser before they reach our servers.
+        The server stores ciphertext only.
       </p>
 
       <h2>Contact</h2>
@@ -230,7 +92,7 @@
           <a href="mailto:security@setfeed.app">security@setfeed.app</a>
         </div>
       </footer>
-    </div>
+    </main>
   </div>
 
   <script>
