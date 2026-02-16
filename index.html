@@ -18,38 +18,18 @@
 
   <script>
     (function(){
-      const key = "sf_theme_override"; // "system" | "light" | "dark"
+      const key = "sf_theme_override";
       const override = localStorage.getItem(key) || "system";
       const root = document.documentElement;
 
-      if (override === "light" || override === "dark") {
-        root.setAttribute("data-theme", override);
-      } else {
-        root.removeAttribute("data-theme");
-      }
+      if (override === "light" || override === "dark") root.setAttribute("data-theme", override);
+      else root.removeAttribute("data-theme");
 
-      function effectiveTheme(){
-        const forced = root.getAttribute("data-theme");
-        if (forced === "light" || forced === "dark") return forced;
-        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      }
+      const effective = root.getAttribute("data-theme")
+        || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 
-      const t = effectiveTheme();
-      const metas = document.querySelectorAll('meta[name="theme-color"][data-theme-color]');
-      metas.forEach(m => m.content = (m.getAttribute("data-theme-color") === t)
-        ? (t === "dark" ? "#1C1B1F" : "#FFFBFE")
-        : m.content);
-
-      if (window.matchMedia) {
-        const mq = window.matchMedia("(prefers-color-scheme: dark)");
-        mq.addEventListener?.("change", () => {
-          if (!root.getAttribute("data-theme")) {
-            const nt = effectiveTheme();
-            const mm = document.querySelector('meta[name="theme-color"][data-theme-color="'+nt+'"]');
-            if (mm) mm.content = nt === "dark" ? "#1C1B1F" : "#FFFBFE";
-          }
-        });
-      }
+      const m = document.querySelector('meta[name="theme-color"][data-theme-color="'+effective+'"]');
+      if (m) m.content = effective === "dark" ? "#1C1B1F" : "#FFFBFE";
     })();
   </script>
 </head>
