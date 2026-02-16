@@ -55,71 +55,30 @@
 
   <div class="wrap">
     <div class="card">
-      <div class="hero">
-        <div>
-          <h1>Privacy Policy</h1>
-          <p class="lead">Effective date: <strong>2026-02-15</strong></p>
+      <h1>Privacy Policy</h1>
+      <p class="lead">Effective date: <strong>2026-02-15</strong></p>
 
-          <p>
-            This policy explains what is stored and processed when you use the Setfeed app and the Setfeed web bridge (setfeed.app).
-            The goal is minimal data, explicit boundaries, and ciphertext-only transport.
-          </p>
-
-          <h2>Message content</h2>
-          <p>
-            Messages sent through setfeed.app are encrypted in your browser before they reach our servers.
-            We store encrypted ciphertext only and cannot read message contents.
-          </p>
-
-          <div class="note">
-            <p style="margin:0;">
-              Private encryption keys are stored only on recipient devices and are never uploaded to our servers.
-            </p>
-          </div>
-        </div>
-
-        <aside class="panel">
-          <p class="panel-title">Practical summary</p>
-          <p class="panel-sub">
-            We don’t store message plaintext. We store what’s needed to deliver ciphertext reliably and prevent abuse.
-          </p>
-          <div class="actions">
-            <a class="btn btn-lg btn-quiet" href="./security.html">Security model</a>
-            <a class="btn btn-lg btn-quiet" href="mailto:privacy@setfeed.app">Email privacy</a>
-          </div>
-        </aside>
-      </div>
-
-      <h2>Information we store</h2>
-      <p>To operate Setfeed, we store the minimum needed for scheduling, delivery, and abuse prevention:</p>
-      <ul>
-        <li><strong>Encrypted message ciphertext</strong> and encryption metadata (for example, key version).</li>
-        <li><strong>Delivery metadata</strong> (timestamps, message identifiers, and routing to the recipient).</li>
-        <li><strong>Authentication state</strong> for signed sends (Secure and Personal), such as a Firebase user ID.</li>
-        <li><strong>Abuse-prevention signals</strong> like rate-limit counters and hashed operational identifiers.</li>
-        <li><strong>Device delivery tokens</strong> (for example, an FCM token) needed to notify a recipient device.</li>
-      </ul>
-
-      <h2>Information we do not store</h2>
-      <ul>
-        <li>Message plaintext.</li>
-        <li>Recipient private keys.</li>
-        <li>Content-based advertising profiles.</li>
-      </ul>
-
-      <h2>Contact</h2>
       <p>
-        Privacy: <a href="mailto:privacy@setfeed.app">privacy@setfeed.app</a><br />
-        Security: <a href="mailto:security@setfeed.app">security@setfeed.app</a><br />
-        Support: <a href="mailto:support@setfeed.app">support@setfeed.app</a>
+        This policy explains what is stored and processed when you use the Setfeed app and the Setfeed web bridge (setfeed.app).
+        The goal is minimal data, explicit boundaries, and ciphertext-only transport.
       </p>
+
+      <h2>Message content</h2>
+      <p>
+        Messages sent through setfeed.app are encrypted in your browser before they reach our servers.
+        We store encrypted ciphertext only and cannot read message contents.
+      </p>
+
+      <div class="note">
+        <p style="margin:0;">
+          Private encryption keys are stored only on recipient devices and are never uploaded to our servers.
+        </p>
+      </div>
 
       <footer>
         <div>© <span id="y"></span> Setfeed</div>
         <div>
           <a href="./security.html">Security</a>
-          <span class="sep">·</span>
-          <a href="./receive.html">Receive</a>
           <span class="sep">·</span>
           <a href="mailto:privacy@setfeed.app">privacy@setfeed.app</a>
         </div>
