@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Get a receive code — Setfeed</title>
+  <meta name="description" content="How to find your Setfeed receive codes in the app and choose the right type." />
+  <meta name="theme-color" content="#0F1114" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <div class="page-bg">
+    <header class="site-header">
+      <div class="header-inner">
+        <div class="brand"><a href="./">Setfeed</a></div>
+        <nav class="nav" aria-label="Primary">
+          <a href="./">Home</a>
+          <a href="./send.html">Send</a>
+          <a href="./receive.html" aria-current="page">Get a code</a>
+          <a href="./security.html">Security</a>
+          <a href="./privacy.html">Privacy</a>
+          <a href="mailto:support@setfeed.app">Contact</a>
+        </nav>
+      </div>
+    </header>
+
+    <div class="wrap">
+      <div class="card">
+        <div class="hero">
+          <div>
+            <h1>Get a receive code.</h1>
+            <p class="lead">
+              A receive code is the address. If someone has your code, they can send you an encrypted message
+              through setfeed.app.
+            </p>
+
+            <h2>Where to find codes</h2>
+            <p>
+              In the Setfeed app: <strong>Settings → Receive codes</strong>.
+              You’ll see three types. Each has a different safety model.
+            </p>
+
+            <h2>Choose the right type</h2>
+            <ul>
+              <li><strong>Secure</strong>: signed send. Best for yourself or trusted sharing.</li>
+              <li><strong>Personal</strong>: signed send. Friendly format, still requires sign-in.</li>
+              <li><strong>Rolling</strong>: temporary. No sign-in, but constrained (expiry / limits).</li>
+            </ul>
+
+            <div class="note">
+              <p style="margin:0;">
+                If you’re unsure, use <strong>Secure</strong>. It’s designed for stable use with explicit controls.
+              </p>
+            </div>
+          </div>
+
+          <aside class="panel">
+            <p class="panel-title">Next step</p>
+            <p class="panel-sub">
+              Once you have a code, open the send form and paste it in.
+            </p>
+
+            <div class="actions">
+              <a class="btn btn-primary" href="./send.html">Send to a code</a>
+              <a class="btn btn-quiet" href="./security.html">Read security</a>
+            </div>
+
+            <small class="help">
+              Tip: codes start with prefixes like <strong>SF-</strong>, <strong>SFS-</strong>, or <strong>SFR-</strong>.
+            </small>
+          </aside>
+        </div>
+
+        <footer>
+          <div>© <span id="y"></span> Setfeed</div>
+          <div>
+            <a href="./send.html">Send</a>
+            <span class="sep">·</span>
+            <a href="./security.html">Security</a>
+            <span class="sep">·</span>
+            <a href="./privacy.html">Privacy</a>
+          </div>
+        </footer>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById("y").textContent = new Date().getFullYear();
+    </script>
+  </div>
+</body>
+</html>
