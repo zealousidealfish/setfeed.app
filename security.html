@@ -74,12 +74,6 @@
           <p>
             Messages sent through setfeed.app are encrypted in the browser. The server never receives plaintext.
           </p>
-
-          <div class="note">
-            <p style="margin:0;">
-              If a design change requires server-side plaintext, we treat it as a bug.
-            </p>
-          </div>
         </div>
 
         <aside class="panel">
@@ -97,25 +91,9 @@
         </aside>
       </div>
 
-      <h2>What we store</h2>
-      <ul>
-        <li>Encrypted message ciphertext</li>
-        <li>Key version and delivery metadata (timestamps, routing)</li>
-        <li>Abuse-prevention counters and hashed operational identifiers</li>
-      </ul>
-
-      <h2>What we do not store</h2>
-      <ul>
-        <li>Message plaintext</li>
-        <li>Recipient private keys</li>
-        <li>Content-derived analytics</li>
-      </ul>
-
       <footer>
         <div>© <span id="y"></span> Setfeed</div>
         <div>
-          <a href="./receive.html">Receive</a>
-          <span class="sep">·</span>
           <a href="./privacy.html">Privacy</a>
           <span class="sep">·</span>
           <a href="mailto:security@setfeed.app">security@setfeed.app</a>
