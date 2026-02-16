@@ -16,25 +16,69 @@
 
   <script>
     (function(){
-      const key = "sf_theme_mode"; // "system" | "light" | "dark"
-      const stored = localStorage.getItem(key) || "system";
+      const THEME_KEY = "sf_theme_mode"; // "system" | "light" | "dark"
+      const AUTH_KEY = "sf_signed_authed"; // "true" | "false"
       const root = document.documentElement;
 
-      if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
-      else root.removeAttribute("data-theme");
+      function readThemeMode(){
+        try { return localStorage.getItem(THEME_KEY) || "system"; }
+        catch(e){ return "system"; }
+      }
+
+      function applyThemeAttr(){
+        const stored = readThemeMode();
+        if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
+        else root.removeAttribute("data-theme");
+      }
+
+      // Keep early theme application to avoid flash
+      applyThemeAttr();
+
+      function isSystemDark(){
+        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      }
+
+      function setThemeColor(){
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (!meta) return;
+
+        const mode = readThemeMode();
+        const effectiveDark = (mode === "dark") ? true : (mode === "light") ? false : isSystemDark();
+        meta.setAttribute("content", effectiveDark ? "#0F1114" : "#FFFBFE");
+      }
+
+      // Update theme-color on load + when system theme changes
+      setThemeColor();
+      try{
+        if (window.matchMedia){
+          const mq = window.matchMedia("(prefers-color-scheme: dark)");
+          if (mq && mq.addEventListener){
+            mq.addEventListener("change", () => { applyThemeAttr(); setThemeColor(); });
+          } else if (mq && mq.addListener){
+            mq.addListener(() => { applyThemeAttr(); setThemeColor(); });
+          }
+        }
+      }catch(e){}
 
       function applyAuthVisibility(){
-        const authed = localStorage.getItem("sf_signed_authed") === "true";
+        const authed = (localStorage.getItem(AUTH_KEY) === "true");
         document.querySelectorAll(".auth-only").forEach(el => {
           el.classList.toggle("hidden", !authed);
         });
       }
 
+      // Apply immediately (reduces any auth-only flash), then again when DOM is ready.
+      applyAuthVisibility();
       document.addEventListener("DOMContentLoaded", applyAuthVisibility);
 
       // Cross-tab updates
       window.addEventListener("storage", (e) => {
-        if (e && e.key === "sf_signed_authed") applyAuthVisibility();
+        if (!e) return;
+        if (e.key === AUTH_KEY) applyAuthVisibility();
+        if (e.key === THEME_KEY){
+          applyThemeAttr();
+          setThemeColor();
+        }
       });
     })();
   </script>
@@ -146,15 +190,15 @@
 
             <h2>Delivery</h2>
             <div class="panel">
-              <p class="panel-sub" style="margin-bottom: var(--s-3);">
-                If you are not signed in, sends schedule for tomorrow. Choose a time.
+              <p class="panel-sub" id="signed-delivery-sub" style="margin-bottom: var(--s-3);">
+                Sign in to unlock advanced scheduling. Otherwise, signed sends are constrained to tomorrow with preset times.
               </p>
               <div class="chips" aria-label="Default times">
                 <button class="chip" type="button" aria-pressed="true">8am</button>
                 <button class="chip" type="button" aria-pressed="false">1pm</button>
                 <button class="chip" type="button" aria-pressed="false">6pm</button>
               </div>
-              <small class="help" style="margin-top: 10px;">
+              <small class="help" id="signed-delivery-help" style="margin-top: 10px;">
                 Advanced scheduling becomes available after sign-in.
               </small>
             </div>
@@ -287,11 +331,14 @@
     const btnSignedSend = document.getElementById("btn-signed-send");
     const btnSignedClear = document.getElementById("btn-signed-clear");
     const videoSigned = document.getElementById("video-signed");
+    const signedDeliverySub = document.getElementById("signed-delivery-sub");
+    const signedDeliveryHelp = document.getElementById("signed-delivery-help");
 
     const rollingCode = document.getElementById("rolling-code");
     const rollingBody = document.getElementById("rolling-body");
     const btnRollingSend = document.getElementById("btn-rolling-send");
     const btnRollingClear = document.getElementById("btn-rolling-clear");
+    const videoRolling = document.getElementById("video-rolling");
 
     let signedAuthed = (localStorage.getItem("sf_signed_authed") === "true");
 
@@ -317,8 +364,20 @@
     function applySignedAuthUI() {
       btnSignOut.disabled = !signedAuthed;
 
-      // Hide walkthrough after sign-in (SIGNED only)
+      // Requirement: when signed in, do NOT show walkthrough video in either tab.
       if (videoSigned) videoSigned.classList.toggle("hidden", signedAuthed);
+      if (videoRolling) videoRolling.classList.toggle("hidden", signedAuthed);
+
+      // Signed delivery copy becomes signed-aware (no ambiguity)
+      if (signedDeliverySub && signedDeliveryHelp) {
+        if (signedAuthed) {
+          signedDeliverySub.textContent = "Signed in: advanced scheduling becomes available in the next step (Phase 1 stub).";
+          signedDeliveryHelp.textContent = "For now, default is still tomorrow with preset times until scheduling UI is expanded.";
+        } else {
+          signedDeliverySub.textContent = "Not signed in: signed sends are constrained to tomorrow with preset times. Sign in to unlock advanced scheduling.";
+          signedDeliveryHelp.textContent = "Advanced scheduling becomes available after sign-in.";
+        }
+      }
 
       refreshNavAuthOnly();
       refreshSignedSendEnabled();
