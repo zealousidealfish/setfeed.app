@@ -19,12 +19,11 @@
 
   <script>
     (function(){
-      // Keep consistent with send.html/styles.css
-      const key = "sf_theme_mode"; // "system" | "light" | "dark"
-      const stored = localStorage.getItem(key) || "system";
+      // Theme mode
+      const themeKey = "sf_theme_mode"; // "system" | "light" | "dark"
+      const stored = localStorage.getItem(themeKey) || "system";
       const root = document.documentElement;
 
-      // Apply explicit override only if set; otherwise respect system via CSS prefers-color-scheme
       if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
       else root.removeAttribute("data-theme");
 
@@ -34,6 +33,14 @@
 
       const meta = document.getElementById("meta-theme-color");
       if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
+
+      // Auth-only nav
+      const authed = localStorage.getItem("sf_signed_authed") === "true";
+      document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll(".auth-only").forEach(el => {
+          el.classList.toggle("hidden", !authed);
+        });
+      });
     })();
   </script>
 </head>
@@ -51,6 +58,7 @@
         <a href="./" aria-current="page">Home</a>
         <a href="./send.html">Send</a>
         <a href="./receive.html">Receive</a>
+        <a class="auth-only hidden" href="./inbox.html">Inbox</a>
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
         <a class="nav-cta" href="#" aria-label="Download Setfeed app">Download app</a>
@@ -78,7 +86,6 @@
         <a class="btn btn-lg btn-quiet" href="./security.html">Security</a>
       </div>
 
-      <!-- Sign-in links (placeholder routes for later auth wiring) -->
       <div class="panel" style="margin-top: var(--s-6);">
         <p class="panel-title">Sign in</p>
         <p class="panel-sub">
