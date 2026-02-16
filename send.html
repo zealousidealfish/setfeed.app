@@ -42,6 +42,7 @@
         <a href="./receive.html">Receive</a>
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
+        <a class="nav-cta" href="#" aria-label="Download Setfeed app">Download app</a>
       </nav>
     </div>
   </header>
@@ -73,7 +74,7 @@
       <!-- Signed panel -->
       <div id="panel-signed" role="tabpanel" aria-labelledby="tab-signed">
         <div class="row">
-          <div class="col">
+          <div class="col" id="signin">
             <div class="field">
               <label for="signed-email">Email</label>
               <input id="signed-email" type="email" autocomplete="email" placeholder="you@example.com" />
@@ -105,7 +106,7 @@
               </div>
 
               <small class="help">
-                Demonstration supports clarity. UI stays explicit.
+                Demonstration supports clarity. UI stays calm and predictable.
               </small>
             </div>
           </div>
@@ -132,7 +133,7 @@
 
             <h2>Delivery</h2>
             <div class="panel">
-              <p class="panel-title" style="margin-bottom: 6px;">Tomorrow</p>
+              <!-- Removed "Tomorrow" header per request -->
               <p class="panel-sub" style="margin-bottom: var(--s-3);">
                 If you are not signed in, sends schedule for tomorrow. Choose a time.
               </p>
@@ -158,7 +159,7 @@
               <input id="rolling-code" type="text" inputmode="text" placeholder="Paste a Rolling code (SFR-…)" />
             </div>
 
-            <!-- Walkthrough video (ROLLING): always shown (no sign-in here) -->
+            <!-- Walkthrough video (ROLLING): always shown -->
             <div class="video-card" id="video-rolling" aria-label="Walkthrough">
               <h2 style="margin-top:0;">Walkthrough</h2>
               <p class="lead" style="margin-bottom: 0;">
@@ -321,7 +322,7 @@
         return;
       }
       setStatus("good", "Sign-in link requested", "When Firebase is wired, a sign-in link will be sent to your email.");
-      signedAuthed = true;        // stub sign-in
+      signedAuthed = true; // stub sign-in
       applySignedAuthUI();
     });
 
