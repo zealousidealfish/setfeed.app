@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Data Deletion — Setfeed</title>
+  <meta name="description" content="Request deletion of your Setfeed data" />
+
+  <meta name="theme-color" content="#FFFBFE" id="meta-theme-color" />
+
+  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="./favicon-16.png" sizes="16x16">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180">
+
+  <link rel="stylesheet" href="./styles.css" />
+
+  <script>
+    (function(){
+      const themeKey = "sf_theme_mode";
+      const stored = localStorage.getItem(themeKey) || "system";
+      const root = document.documentElement;
+
+      if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
+      else root.removeAttribute("data-theme");
+
+      const effective =
+        root.getAttribute("data-theme") ||
+        (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+
+      const meta = document.getElementById("meta-theme-color");
+      if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
+    })();
+  </script>
+</head>
+
+<body class="page-bg">
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand-mark" href="./" aria-label="Setfeed home">
+        <img class="logo" src="./logo.png" alt="" aria-hidden="true" />
+      </a>
+
+      <a class="brand-title" href="./">Setfeed</a>
+
+      <nav class="nav" aria-label="Primary">
+        <a href="./">Home</a>
+        <a href="./security.html">Security</a>
+        <a href="./privacy.html">Privacy</a>
+        <a href="./delete.html" aria-current="page">Delete data</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="card">
+      <h1>Request Data Deletion</h1>
+
+      <p class="lead">
+        This page explains how you can request deletion of data associated with your use of Setfeed.
+      </p>
+
+      <h2>How to request deletion</h2>
+      <p>
+        To request deletion of backend data associated with your use of Setfeed, please email:
+      </p>
+
+      <p>
+        <strong><a href="mailto:privacy@setfeed.app">privacy@setfeed.app</a></strong>
+      </p>
+
+      <p>
+        Please include:
+      </p>
+
+      <ul>
+        <li>Your receive code (if applicable)</li>
+        <li>Approximate dates of usage</li>
+        <li>Any relevant context that helps identify the data</li>
+      </ul>
+
+      <h2>What data may be deleted</h2>
+      <ul>
+        <li>Encrypted message envelopes associated with your receive code (where identifiable)</li>
+        <li>Related backend metadata (e.g., delivery state)</li>
+      </ul>
+
+      <h2>What is not stored</h2>
+      <p>
+        Setfeed does not store plaintext message content when end-to-end encryption is used.
+        Private encryption keys remain on user devices and are not uploaded to our servers.
+      </p>
+
+      <h2>Local device data</h2>
+      <p>
+        Data stored locally on your device (such as scheduled messages and app state)
+        can be removed by:
+      </p>
+      <ul>
+        <li>Clearing app storage</li>
+        <li>Uninstalling the app</li>
+      </ul>
+
+      <h2>Response time</h2>
+      <p>
+        We respond to deletion requests within 30 days.
+      </p>
+
+      <footer>
+        <div>© <span id="y"></span> Setfeed</div>
+        <div>
+          <a href="./privacy.html">Privacy Policy</a>
+          <span class="sep">·</span>
+          <a href="mailto:privacy@setfeed.app">privacy@setfeed.app</a>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("y").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
