@@ -143,7 +143,7 @@
         </div>
       </div>
 
-      <!-- Video (placed after CTA + explanation, no autoplay) -->
+      <!-- Video (after CTA + explanation, no autoplay) -->
       <div class="video-card" aria-label="Walkthrough">
         <h2 style="margin-top:0;">Walkthrough</h2>
         <p class="lead" style="margin-bottom: 0;">
@@ -151,13 +151,25 @@
         </p>
 
         <div class="video-frame">
-          <video controls preload="metadata" poster="./poster.png">
+          <!-- Key attributes:
+               - playsinline: iOS/Safari reliability
+               - preload metadata: calm + light
+               - controls only: explicit user action
+               - crossorigin not needed for same-origin
+          -->
+          <video
+            id="walkthroughVideo"
+            controls
+            playsinline
+            preload="metadata"
+            poster="./poster.png"
+          >
             <source src="./walkthough.mp4" type="video/mp4" />
             Sorry — your browser can’t play this video.
           </video>
         </div>
 
-        <small class="help">
+        <small class="help" id="video-help">
           Principle: CTA first, explanation second, demonstration third.
         </small>
       </div>
@@ -200,6 +212,9 @@
       tabRolling.setAttribute("aria-selected", signed ? "false" : "true");
       panelSigned.classList.toggle("hidden", !signed);
       panelRolling.classList.toggle("hidden", signed);
+
+      // If the browser didn’t initialize video earlier, nudge it now.
+      nudgeVideoLoad();
     }
 
     tabSigned.addEventListener("click", () => setTab("signed"));
@@ -297,6 +312,47 @@
       rollingBody.value = "";
       setStatus("warn", "Cleared", "Rolling send fields cleared.");
     });
+
+    // --- Video reliability helpers ---
+    const video = document.getElementById("walkthroughVideo");
+    const videoHelp = document.getElementById("video-help");
+
+    function setVideoHelp(text) {
+      if (videoHelp) videoHelp.textContent = text;
+    }
+
+    function nudgeVideoLoad() {
+      // Avoid doing anything if video element doesn’t exist.
+      if (!video) return;
+
+      // If metadata already available, don’t touch it.
+      if (video.readyState >= 1) return;
+
+      try {
+        video.load();
+      } catch (e) {
+        // Some browsers may throw; we’ll handle via events below.
+      }
+    }
+
+    if (video) {
+      // Nudge once after layout stabilizes
+      window.addEventListener("load", () => {
+        // small delay helps on Safari / iOS
+        setTimeout(nudgeVideoLoad, 50);
+      });
+
+      video.addEventListener("loadedmetadata", () => {
+        // quiet confirmation (no UI change needed)
+      });
+
+      video.addEventListener("error", () => {
+        // Provide explicit, calm debugging guidance to yourself/user
+        // (still doesn’t leak technical noise unless it fails)
+        setVideoHelp("Video failed to load. Try a hard refresh. If it persists, the host may not support byte-range streaming for embedded video.");
+        setStatus("warn", "Video unavailable", "The walkthrough video failed to initialize on this page. The direct link may still work.");
+      });
+    }
   </script>
 </body>
 </html>
