@@ -6,19 +6,28 @@
   <title>Setfeed</title>
   <meta name="description" content="Setfeed is a calm, local-first scheduled messaging app." />
   <meta name="theme-color" content="#0F1114" />
+
+  <!-- Favicons -->
+  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="./favicon-16.png" sizes="16x16">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180">
+
   <link rel="stylesheet" href="./styles.css" />
 </head>
 
 <body class="page-bg">
   <header class="site-header">
     <div class="header-inner">
-      <div class="brand">
-        <a href="./" aria-label="Setfeed home">
-          <img class="logo" src="./logo.png" alt="" aria-hidden="true" />
-          <span>Setfeed</span>
-        </a>
-      </div>
+      <!-- Left: logo -->
+      <a class="brand-mark" href="./" aria-label="Setfeed home">
+        <img class="logo" src="./logo.png" alt="" aria-hidden="true" />
+      </a>
 
+      <!-- Center: wordmark (between logo and nav) -->
+      <a class="brand-title" href="./">Setfeed</a>
+
+      <!-- Right: nav -->
       <nav class="nav" aria-label="Primary">
         <a href="./" aria-current="page">Home</a>
         <a href="./send.html">Send</a>
