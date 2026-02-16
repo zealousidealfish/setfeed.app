@@ -16,20 +16,25 @@
 
   <script>
     (function(){
-      // Theme mode
-      const themeKey = "sf_theme_mode"; // "system" | "light" | "dark"
-      const stored = localStorage.getItem(themeKey) || "system";
+      const key = "sf_theme_mode"; // "system" | "light" | "dark"
+      const stored = localStorage.getItem(key) || "system";
       const root = document.documentElement;
 
       if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
       else root.removeAttribute("data-theme");
 
-      // Auth-only nav (also used by page sections later)
-      const authed = localStorage.getItem("sf_signed_authed") === "true";
-      document.addEventListener("DOMContentLoaded", () => {
+      function applyAuthVisibility(){
+        const authed = localStorage.getItem("sf_signed_authed") === "true";
         document.querySelectorAll(".auth-only").forEach(el => {
           el.classList.toggle("hidden", !authed);
         });
+      }
+
+      document.addEventListener("DOMContentLoaded", applyAuthVisibility);
+
+      // Cross-tab updates
+      window.addEventListener("storage", (e) => {
+        if (e && e.key === "sf_signed_authed") applyAuthVisibility();
       });
     })();
   </script>
@@ -100,7 +105,6 @@
               </p>
             </div>
 
-            <!-- Walkthrough video (SIGNED): shown when NOT signed in, hidden after sign-in -->
             <div class="video-card" id="video-signed" aria-label="Walkthrough">
               <h2 style="margin-top:0;">Walkthrough</h2>
               <p class="lead" style="margin-bottom: 0;">
@@ -167,7 +171,6 @@
               <input id="rolling-code" type="text" inputmode="text" placeholder="Paste a Rolling code (SFR-…)" />
             </div>
 
-            <!-- Walkthrough video (ROLLING): always shown -->
             <div class="video-card" id="video-rolling" aria-label="Walkthrough">
               <h2 style="margin-top:0;">Walkthrough</h2>
               <p class="lead" style="margin-bottom: 0;">
@@ -290,7 +293,6 @@
     const btnRollingSend = document.getElementById("btn-rolling-send");
     const btnRollingClear = document.getElementById("btn-rolling-clear");
 
-    // Persisted auth state
     let signedAuthed = (localStorage.getItem("sf_signed_authed") === "true");
 
     function refreshNavAuthOnly() {
@@ -322,14 +324,19 @@
       refreshSignedSendEnabled();
     }
 
-    // Inputs
+    // Keep this page in sync if another tab signs out
+    window.addEventListener("storage", (e) => {
+      if (!e || e.key !== "sf_signed_authed") return;
+      signedAuthed = (localStorage.getItem("sf_signed_authed") === "true");
+      applySignedAuthUI();
+    });
+
     signedCode.addEventListener("input", refreshSignedSendEnabled);
     signedBody.addEventListener("input", refreshSignedSendEnabled);
 
     rollingCode.addEventListener("input", refreshRollingSendEnabled);
     rollingBody.addEventListener("input", refreshRollingSendEnabled);
 
-    // Sign in (stub)
     btnSendLink.addEventListener("click", () => {
       const email = signedEmail.value.trim();
       if (!email) {
@@ -342,7 +349,6 @@
       applySignedAuthUI();
     });
 
-    // Sign out
     btnSignOut.addEventListener("click", () => {
       signedAuthed = false;
       localStorage.setItem("sf_signed_authed", "false");
@@ -350,7 +356,6 @@
       setStatus("warn", "Signed out", "Signed sending is unavailable until you sign in again.");
     });
 
-    // Send stubs
     btnSignedSend.addEventListener("click", () => {
       const code = signedCode.value.trim();
       const body = signedBody.value.trim();
@@ -389,7 +394,6 @@
       setStatus("warn", "Cleared", "Rolling send fields cleared.");
     });
 
-    // Initial state
     applySignedAuthUI();
     refreshRollingSendEnabled();
   </script>
