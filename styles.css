@@ -1,13 +1,18 @@
 /* Setfeed Web — Scheduling-aligned theme
    Goals:
    - Calm, deterministic
-   - Blue action buttons similar to scheduling UX
+   - Blue action buttons similar to scheduling UX (but not glaring)
    - Respect system dark mode
    - Reduce typographic “shout” (lighter bolds)
+   - Disabled states are unambiguous
 */
 
+/* =========================
+   Tokens
+   ========================= */
+
 :root{
-  /* Light */
+  /* Light surfaces */
   --bg: #FFFBFE;
   --surface: #FFFBFE;
   --surface-1: #FFFFFF;
@@ -19,15 +24,19 @@
   --muted: rgba(73,69,79,0.86);
   --soft: rgba(73,69,79,0.70);
 
-  /* Setfeed scheduling blue */
+  /* Setfeed scheduling blue (light) */
   --primary: #4C8DFF;
   --on-primary: #FFFFFF;
+
+  /* Soft blue wash (selection, tabs, chips) */
   --primary-soft: rgba(76,141,255,0.14);
 
+  /* Secondary neutrals */
   --secondary: #5F5A6A;
   --on-secondary: #FFFFFF;
   --secondary-soft: rgba(95,90,106,0.14);
 
+  /* Status */
   --danger: #B3261E;
   --good: #0F7B3D;
 
@@ -41,15 +50,18 @@
   --s-7: 44px;
   --s-8: 58px;
 
+  /* Radii */
   --radius-1: 12px;
   --radius-2: 16px;
   --radius-3: 20px;
 
+  /* Layout */
   --max: 980px;
 
+  /* Typeface */
   --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 
-  /* ↓ Reduced global bold intensity */
+  /* Reduced global bold intensity */
   --fw-regular: 420;
   --fw-medium: 480;
   --fw-bold: 520;
@@ -69,12 +81,14 @@
     --muted: rgba(203,208,216,0.86);
     --soft: rgba(203,208,216,0.68);
 
-    /* IMPORTANT: keep primary as a real blue in dark mode
-       (pale periwinkle reads grey against dark surfaces) */
-    --primary: #2F6BFF;
+    /* Dark-mode primary tuned:
+       - stays clearly blue
+       - slightly less “light source” than a fully saturated electric blue */
+    --primary: #3F7BFF;
     --on-primary: #FFFFFF;
-    --primary-soft: rgba(47,107,255,0.18);
+    --primary-soft: rgba(63,123,255,0.20);
 
+    /* Secondary in dark should read as a surface button, not purple */
     --secondary: #2B2F36;
     --on-secondary: rgba(255,255,255,0.92);
     --secondary-soft: rgba(180,190,210,0.12);
@@ -121,10 +135,9 @@
   --muted: rgba(203,208,216,0.86);
   --soft: rgba(203,208,216,0.68);
 
-  /* Match system-dark token above */
-  --primary: #2F6BFF;
+  --primary: #3F7BFF;
   --on-primary: #FFFFFF;
-  --primary-soft: rgba(47,107,255,0.18);
+  --primary-soft: rgba(63,123,255,0.20);
 
   --secondary: #2B2F36;
   --on-secondary: rgba(255,255,255,0.92);
@@ -161,27 +174,28 @@ a:hover{ text-decoration: underline; }
   min-height: 100vh;
   background:
     radial-gradient(900px 520px at 18% -10%,
-      color-mix(in srgb, var(--primary) 6%, transparent) 0%,
-      transparent 52%),
+      color-mix(in srgb, var(--primary) 5%, transparent) 0%,
+      transparent 54%),
     radial-gradient(700px 460px at 85% 0%,
       rgba(0,0,0,0.05) 0%,
       transparent 62%),
     linear-gradient(180deg,
-      rgba(255,255,255,0.03) 0%,
+      rgba(255,255,255,0.025) 0%,
       rgba(255,255,255,0.00) 28%);
 }
+
 :root[data-theme="dark"] .page-bg,
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]) .page-bg{
     background:
       radial-gradient(900px 520px at 18% -10%,
-        color-mix(in srgb, var(--primary) 7%, transparent) 0%,
-        transparent 54%),
+        color-mix(in srgb, var(--primary) 6%, transparent) 0%,
+        transparent 56%),
       radial-gradient(700px 460px at 85% 0%,
-        rgba(255,255,255,0.05) 0%,
+        rgba(255,255,255,0.045) 0%,
         transparent 62%),
       linear-gradient(180deg,
-        rgba(255,255,255,0.025) 0%,
+        rgba(255,255,255,0.022) 0%,
         rgba(255,255,255,0.00) 28%);
   }
 }
@@ -228,24 +242,23 @@ a:hover{ text-decoration: underline; }
   text-decoration: none;
 }
 
+/* Subtle logo elevation only (avoid strong glow wash) */
 .logo{
   width: 36px;
   height: 36px;
   display: block;
   object-fit: contain;
-
-  /* Subtle: reduce “glow wash” */
-  filter: drop-shadow(0 1px 0 rgba(255,255,255,0.04))
-          drop-shadow(0 8px 14px rgba(0,0,0,0.18));
+  filter: drop-shadow(0 1px 0 rgba(255,255,255,0.035))
+          drop-shadow(0 7px 12px rgba(0,0,0,0.16));
 }
 
 .brand-title{
   justify-self: center;
   color: var(--text);
   text-decoration: none;
-  letter-spacing: -0.12px;
+  letter-spacing: -0.10px;
   font-weight: var(--fw-medium);
-  font-size: 15px;
+  font-size: 14.6px;
   line-height: 1;
   padding: 8px 10px;
   border-radius: 999px;
@@ -283,14 +296,14 @@ a:hover{ text-decoration: underline; }
   border-color: var(--line);
 }
 
-/* Download app nav button */
+/* Download app nav button (calm, not too bright) */
 .nav a.nav-cta{
-  background: color-mix(in srgb, var(--primary) 16%, var(--surface-variant));
-  border: 1px solid color-mix(in srgb, var(--primary) 26%, var(--line));
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface-variant));
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--line));
   color: var(--text);
 }
 .nav a.nav-cta:hover{
-  background: color-mix(in srgb, var(--primary) 22%, var(--surface-variant));
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface-variant));
 }
 
 @media (max-width: 720px){
@@ -320,25 +333,29 @@ a:hover{ text-decoration: underline; }
   border: 1px solid var(--line);
   border-radius: var(--radius-3);
   padding: var(--s-6);
+
+  /* Softer shadows overall */
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.30) inset,
-    0 14px 36px rgba(0,0,0,0.10);
+    0 1px 0 rgba(255,255,255,0.26) inset,
+    0 12px 32px rgba(0,0,0,0.09);
 }
+
 :root[data-theme="dark"] .card,
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]) .card{
     background: color-mix(in srgb, var(--surface-2) 86%, transparent);
     box-shadow:
-      0 1px 0 rgba(255,255,255,0.05) inset,
-      0 18px 40px rgba(0,0,0,0.30);
+      0 1px 0 rgba(255,255,255,0.045) inset,
+      0 16px 36px rgba(0,0,0,0.28);
   }
 }
 
+/* Headings slightly softened */
 h1{
   margin: 0 0 var(--s-2) 0;
-  font-size: 30px;
-  letter-spacing: -0.4px;
-  line-height: 1.16;
+  font-size: 28.5px;
+  letter-spacing: -0.34px;
+  line-height: 1.18;
   font-weight: var(--fw-medium);
 }
 
@@ -352,15 +369,15 @@ h1{
 
 h2{
   margin: var(--s-6) 0 var(--s-2) 0;
-  font-size: 15px;
-  letter-spacing: -0.08px;
+  font-size: 14.9px;
+  letter-spacing: -0.06px;
   font-weight: var(--fw-medium);
 }
 
 h3{
   margin: var(--s-4) 0 var(--s-2) 0;
-  font-size: 13.8px;
-  letter-spacing: -0.04px;
+  font-size: 13.6px;
+  letter-spacing: -0.03px;
   font-weight: var(--fw-medium);
   color: var(--text);
 }
@@ -415,20 +432,25 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   padding: 7px 10px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 20%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 18%, transparent);
   color: var(--soft);
   font-size: 13px;
 }
 
+/* Status dots */
 .dot{
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: var(--soft);
+
+  /* Neutral should be visible but not loud */
+  background: color-mix(in srgb, var(--soft) 72%, transparent);
 }
 .dot.good{ background: var(--good); }
 .dot.ok{ background: var(--good); }
-.dot.warn{ background: var(--danger); }
+
+/* Warning should be clear but calmer than pure red */
+.dot.warn{ background: color-mix(in srgb, var(--danger) 78%, #D67A7A); }
 
 /* =========================
    Rows / columns
@@ -475,7 +497,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 }
 
 .tab:hover{
-  background: color-mix(in srgb, var(--surface-variant) 22%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 20%, transparent);
   color: var(--text);
 }
 
@@ -515,11 +537,16 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   cursor: pointer;
   user-select: none;
 
-  transition: background 120ms ease, opacity 120ms ease, transform 80ms ease, box-shadow 120ms ease, border-color 120ms ease;
+  transition:
+    background 120ms ease,
+    opacity 120ms ease,
+    transform 80ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease;
 }
 
 .btn:hover{
-  background: color-mix(in srgb, var(--surface-variant) 18%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 16%, transparent);
   text-decoration: none;
 }
 
@@ -529,19 +556,13 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 
 /* Deterministic disabled: looks disabled, never “maybe active” */
 .btn:disabled{
-  opacity: 0.55;
   cursor: not-allowed;
   transform: none;
-}
-
-/* Ensure primary disabled is still clearly a disabled primary (not grey) */
-.btn-primary:disabled{
-  background: color-mix(in srgb, var(--primary) 40%, var(--surface-variant));
-  border-color: color-mix(in srgb, var(--primary) 28%, var(--line));
-  color: color-mix(in srgb, var(--on-primary) 78%, transparent);
+  opacity: 1; /* we control appearance via background/text */
   box-shadow: none;
 }
 
+/* Large buttons */
 .btn-lg{
   padding: 12px 18px;
   font-size: 14.4px;
@@ -549,52 +570,67 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   line-height: 1.2;
 }
 
-/* Primary (Setfeed scheduling blue) */
+/* Primary (blue scheduling feel) — tuned to be calm in dark mode */
 .btn-primary{
   background: var(--primary);
   color: var(--on-primary);
-  border-color: color-mix(in srgb, var(--primary) 62%, var(--line));
-  box-shadow: 0 10px 22px rgba(0,0,0,0.12);
+  border-color: color-mix(in srgb, var(--primary) 58%, var(--line));
+  box-shadow: 0 10px 22px rgba(0,0,0,0.10);
 }
 
 .btn-primary:hover{
+  /* Slight lift, not a glow */
   background: color-mix(in srgb, var(--primary) 92%, white);
 }
 :root[data-theme="dark"] .btn-primary:hover{
-  background: color-mix(in srgb, var(--primary) 92%, black);
+  background: color-mix(in srgb, var(--primary) 90%, black);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]) .btn-primary:hover{
-    background: color-mix(in srgb, var(--primary) 92%, black);
+    background: color-mix(in srgb, var(--primary) 90%, black);
   }
 }
 
 .btn-primary:active{
-  box-shadow: 0 6px 14px rgba(0,0,0,0.16);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.14);
+}
+
+/* Primary disabled (calm, clearly disabled, still brand-aligned) */
+.btn-primary:disabled{
+  background: color-mix(in srgb, var(--primary) 24%, var(--surface-variant));
+  border-color: color-mix(in srgb, var(--primary) 22%, var(--line));
+  color: color-mix(in srgb, var(--on-primary) 72%, transparent);
 }
 
 /* Secondary */
 .btn-secondary{
-  background: color-mix(in srgb, var(--primary) 18%, var(--surface-variant));
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface-variant));
   color: var(--text);
-  border-color: color-mix(in srgb, var(--primary) 26%, var(--line));
+  border-color: color-mix(in srgb, var(--primary) 22%, var(--line));
 }
 .btn-secondary:hover{
-  background: color-mix(in srgb, var(--primary) 24%, var(--surface-variant));
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface-variant));
 }
 
 /* Quiet */
 .btn-quiet{
   background: color-mix(in srgb, var(--surface-variant) 8%, transparent);
 }
+.btn-quiet:hover{
+  background: color-mix(in srgb, var(--surface-variant) 14%, transparent);
+}
 
-/* Chip buttons (time presets) */
+/* =========================
+   Chips (time presets)
+   ========================= */
+
 .chips{
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   margin-top: var(--s-3);
 }
+
 .chip{
   appearance: none;
   border: 1px solid var(--line);
@@ -606,14 +642,16 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   user-select: none;
   font-size: 13.5px;
 }
+
 .chip:hover{
-  background: color-mix(in srgb, var(--surface-variant) 22%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 20%, transparent);
   color: var(--text);
 }
+
 .chip[aria-pressed="true"]{
-  background: var(--primary-soft);
+  background: color-mix(in srgb, var(--primary) 22%, var(--surface-variant));
   color: var(--text);
-  border-color: color-mix(in srgb, var(--primary) 34%, var(--line));
+  border-color: color-mix(in srgb, var(--primary) 46%, var(--line));
 }
 
 /* =========================
@@ -649,9 +687,10 @@ textarea{
   resize: vertical;
 }
 
+/* Focus: clear but no bright halo */
 input:focus, textarea:focus, select:focus{
-  border-color: color-mix(in srgb, var(--primary) 44%, var(--line));
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 14%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 56%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 small.help{
@@ -675,7 +714,7 @@ small.help{
 .panel{
   border-radius: var(--radius-2);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 14%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 13%, transparent);
   padding: var(--s-5);
 }
 
@@ -696,7 +735,7 @@ small.help{
   margin-top: var(--s-4);
   border-radius: var(--radius-2);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 9%, transparent);
   padding: 12px;
 }
 
@@ -726,8 +765,18 @@ small.help{
   margin-top: var(--s-6);
   border-radius: var(--radius-3);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
+
+  /* Slightly calmer than before (especially in dark) */
+  background: color-mix(in srgb, var(--surface-variant) 9%, transparent);
+
   padding: var(--s-5);
+}
+
+:root[data-theme="dark"] .video-card,
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .video-card{
+    background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+  }
 }
 
 .video-frame{
@@ -735,7 +784,7 @@ small.help{
   border-radius: var(--radius-2);
   overflow: hidden;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 14%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 12%, transparent);
 }
 
 .video-frame video{
