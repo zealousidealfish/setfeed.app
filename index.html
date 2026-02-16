@@ -93,12 +93,25 @@
       </div>
 
       <div class="panel" style="margin-top: var(--s-6);">
-        <p class="panel-title">Sign in</p>
-        <p class="panel-sub">
+        <p class="panel-sub" style="margin-top: 0;">
           Optional. Sign in to access signed sending and advanced options when they’re enabled on the web bridge.
         </p>
         <div class="actions">
-          <a class="btn btn-lg btn-primary" href="./send.html#signin">Continue with Google</a>
+          <a class="btn btn-lg btn-primary" href="./send.html#signin" aria-label="Continue with Google">
+            <span aria-hidden="true" style="
+              display:inline-flex;
+              align-items:center;
+              justify-content:center;
+              width: 22px;
+              height: 22px;
+              border-radius: 999px;
+              background: rgba(255,255,255,0.18);
+              border: 1px solid rgba(255,255,255,0.16);
+              font-weight: 600;
+              line-height: 1;
+            ">G</span>
+            <span class="sr-only">Continue with Google</span>
+          </a>
           <a class="btn btn-lg btn-secondary" href="./send.html#signin">Continue with email</a>
         </div>
         <small class="help">You can also send using Rolling without signing in.</small>
@@ -126,5 +139,20 @@
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
   </script>
+
+  <!-- Screen-reader-only utility -->
+  <style>
+    .sr-only{
+      position:absolute !important;
+      width:1px !important;
+      height:1px !important;
+      padding:0 !important;
+      margin:-1px !important;
+      overflow:hidden !important;
+      clip:rect(0,0,0,0) !important;
+      white-space:nowrap !important;
+      border:0 !important;
+    }
+  </style>
 </body>
 </html>
