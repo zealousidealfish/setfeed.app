@@ -1,11 +1,10 @@
 /* Setfeed DEFAULT (Material 3 purple)
-   - Light-first, automatic dark via prefers-color-scheme
-   - Primary/Secondary mapped to Purple40/PurpleGrey40 (+ dark equivalents)
-   - Calm hierarchy, explicit actions
+   - Default: system mode (prefers-color-scheme)
+   - Override: set <html data-theme="light|dark"> (only when signed-in toggle used)
 */
 
+/* Light tokens */
 :root{
-  /* Material 3 baseline (approx default purple theme) */
   --primary: #6750A4;          /* Purple40 */
   --on-primary: #FFFFFF;
 
@@ -17,9 +16,10 @@
 
   --bg: #FFFBFE;               /* Material light background */
   --surface: #FFFBFE;
-  --surface-1: #F7F2FA;        /* gentle lift */
-  --surface-2: #F3EDF7;        /* Material-ish */
+  --surface-1: #F7F2FA;
+  --surface-2: #F3EDF7;
   --surface-variant: #E7E0EC;
+
   --on-surface: #1C1B1F;
   --on-surface-variant: #49454F;
 
@@ -28,7 +28,6 @@
 
   --shadow: rgba(28,27,31,0.12);
 
-  /* Spacing */
   --s-1: 8px;
   --s-2: 12px;
   --s-3: 16px;
@@ -45,7 +44,7 @@
   --max: 980px;
 }
 
-/* Dark scheme (Material 3 default-ish) */
+/* System dark mode (default behavior if no manual override) */
 @media (prefers-color-scheme: dark){
   :root{
     --primary: #D0BCFF;        /* Purple80 */
@@ -62,6 +61,7 @@
     --surface-1: #211F26;
     --surface-2: #26222B;
     --surface-variant: #49454F;
+
     --on-surface: #E6E1E5;
     --on-surface-variant: #CAC4D0;
 
@@ -70,6 +70,57 @@
 
     --shadow: rgba(0,0,0,0.35);
   }
+}
+
+/* Manual overrides (take precedence over system) */
+:root[data-theme="light"]{
+  --primary: #6750A4;
+  --on-primary: #FFFFFF;
+
+  --secondary: #625B71;
+  --on-secondary: #FFFFFF;
+
+  --tertiary: #7D5260;
+  --on-tertiary: #FFFFFF;
+
+  --bg: #FFFBFE;
+  --surface: #FFFBFE;
+  --surface-1: #F7F2FA;
+  --surface-2: #F3EDF7;
+  --surface-variant: #E7E0EC;
+
+  --on-surface: #1C1B1F;
+  --on-surface-variant: #49454F;
+
+  --outline: rgba(28,27,31,0.16);
+  --outline-strong: rgba(28,27,31,0.22);
+
+  --shadow: rgba(28,27,31,0.12);
+}
+
+:root[data-theme="dark"]{
+  --primary: #D0BCFF;
+  --on-primary: #381E72;
+
+  --secondary: #CCC2DC;
+  --on-secondary: #332D41;
+
+  --tertiary: #EFB8C8;
+  --on-tertiary: #492532;
+
+  --bg: #1C1B1F;
+  --surface: #1C1B1F;
+  --surface-1: #211F26;
+  --surface-2: #26222B;
+  --surface-variant: #49454F;
+
+  --on-surface: #E6E1E5;
+  --on-surface-variant: #CAC4D0;
+
+  --outline: rgba(230,225,229,0.14);
+  --outline-strong: rgba(230,225,229,0.20);
+
+  --shadow: rgba(0,0,0,0.35);
 }
 
 *{ box-sizing:border-box; }
@@ -82,18 +133,13 @@ html, body{
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 }
 
-/* Links: calm (not neon) */
-a{
-  color: var(--primary);
-  text-decoration: none;
-}
+a{ color: var(--primary); text-decoration: none; }
 a:hover{ text-decoration: underline; }
 
 ::selection{
   background: color-mix(in srgb, var(--primary) 22%, transparent);
 }
 
-/* Background: subtle, non-crypto */
 .page-bg{
   min-height: 100vh;
   background:
@@ -111,13 +157,20 @@ a:hover{ text-decoration: underline; }
   }
 }
 
+/* If manual dark override is active, use dark-ish texture too */
+:root[data-theme="dark"] .page-bg{
+  background:
+    radial-gradient(900px 520px at 18% -5%, color-mix(in srgb, var(--primary) 12%, transparent) 0%, transparent 58%),
+    radial-gradient(700px 460px at 85% 10%, rgba(255,255,255,0.05) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.00) 28%);
+}
+
 .wrap{
   max-width: var(--max);
   margin: 0 auto;
   padding: var(--s-6) var(--s-4) var(--s-8);
 }
 
-/* Header (quiet) */
 .site-header{
   position: sticky;
   top: 0;
@@ -152,17 +205,16 @@ a:hover{ text-decoration: underline; }
   filter: drop-shadow(0 1px 0 rgba(255,255,255,0.12))
           drop-shadow(0 10px 18px rgba(0,0,0,0.18));
 }
-@media (prefers-color-scheme: dark){
-  .logo{
-    filter: drop-shadow(0 1px 0 rgba(255,255,255,0.08))
-            drop-shadow(0 10px 18px rgba(0,0,0,0.35));
-  }
+
+:root[data-theme="dark"] .logo{
+  filter: drop-shadow(0 1px 0 rgba(255,255,255,0.08))
+          drop-shadow(0 10px 18px rgba(0,0,0,0.35));
 }
+
 @media (min-width: 900px){
   .logo{ width: 42px; height: 42px; flex-basis: 42px; }
 }
 
-/* Center title: calm */
 .brand-title{
   justify-self: center;
   color: color-mix(in srgb, var(--on-surface) 82%, transparent);
@@ -177,7 +229,6 @@ a:hover{ text-decoration: underline; }
   .brand-title{ display:none; }
 }
 
-/* Nav */
 .nav{
   display:flex;
   flex-wrap:wrap;
@@ -204,7 +255,6 @@ a:hover{ text-decoration: underline; }
   border-color: var(--outline);
 }
 
-/* Card */
 .card{
   margin-top: var(--s-5);
   background: color-mix(in srgb, var(--surface) 92%, transparent);
@@ -216,15 +266,12 @@ a:hover{ text-decoration: underline; }
     0 1px 0 rgba(255,255,255,0.55) inset,
     0 18px 40px var(--shadow);
 }
-@media (prefers-color-scheme: dark){
-  .card{
-    box-shadow:
-      0 1px 0 rgba(255,255,255,0.04) inset,
-      0 18px 40px var(--shadow);
-  }
+:root[data-theme="dark"] .card{
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.04) inset,
+    0 18px 40px var(--shadow);
 }
 
-/* Typography: default theme calm */
 h1{
   margin:0 0 var(--s-2) 0;
   font-size: clamp(28px, 3.4vw, 34px);
@@ -265,7 +312,6 @@ p, li, label{
 }
 ul{ margin: 0 0 0 18px; padding:0; }
 
-/* Hero layout */
 .hero{
   display:grid;
   grid-template-columns: 1fr;
@@ -279,7 +325,6 @@ ul{ margin: 0 0 0 18px; padding:0; }
   }
 }
 
-/* Pills */
 .pills{
   display:flex;
   flex-wrap:wrap;
@@ -309,7 +354,6 @@ ul{ margin: 0 0 0 18px; padding:0; }
 .dot.ok{ background: #2E7D32; }
 .dot.warn{ background: #B3261E; }
 
-/* Panel */
 .panel{
   border-radius: var(--radius-2);
   border: 1px solid var(--outline);
@@ -336,7 +380,6 @@ ul{ margin: 0 0 0 18px; padding:0; }
   color: color-mix(in srgb, var(--on-surface-variant) 92%, transparent);
 }
 
-/* Buttons: primary + secondary like Material */
 .actions{
   display:flex;
   flex-wrap:wrap;
@@ -378,7 +421,6 @@ ul{ margin: 0 0 0 18px; padding:0; }
   line-height: 1.2;
 }
 
-/* Filled primary */
 .btn-primary{
   background: var(--primary);
   color: var(--on-primary);
@@ -389,7 +431,6 @@ ul{ margin: 0 0 0 18px; padding:0; }
   background: color-mix(in srgb, var(--primary) 92%, white);
 }
 
-/* Filled secondary */
 .btn-secondary{
   background: var(--secondary);
   color: var(--on-secondary);
@@ -400,7 +441,6 @@ ul{ margin: 0 0 0 18px; padding:0; }
   background: color-mix(in srgb, var(--secondary) 92%, white);
 }
 
-/* Tonal / quiet */
 .btn-quiet{
   background: color-mix(in srgb, var(--primary) 8%, var(--surface));
   border-color: var(--outline);
@@ -414,14 +454,12 @@ small.help{
   line-height: 1.55;
 }
 
-/* Notes */
 .note{
   border-left: 3px solid var(--outline-strong);
   padding-left: 12px;
   margin-top: var(--s-4);
 }
 
-/* Forms */
 .field{
   display:flex;
   flex-direction:column;
@@ -429,7 +467,7 @@ small.help{
   margin-top: var(--s-3);
 }
 
-input, textarea{
+input, textarea, select{
   width: 100%;
   border-radius: var(--radius-1);
   border: 1px solid var(--outline);
@@ -442,12 +480,11 @@ input, textarea{
 
 textarea{ min-height: 120px; resize: vertical; }
 
-input:focus, textarea:focus{
+input:focus, textarea:focus, select:focus{
   border-color: color-mix(in srgb, var(--primary) 45%, var(--outline));
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 16%, transparent);
 }
 
-/* Tabs */
 .tabs{
   display:flex;
   gap:10px;
@@ -489,7 +526,6 @@ input:focus, textarea:focus{
 
 .hidden{ display:none !important; }
 
-/* Status */
 .status{
   margin-top: var(--s-4);
   border-radius: var(--radius-2);
@@ -539,7 +575,14 @@ input:focus, textarea:focus{
   height:auto;
 }
 
-/* Footer */
+/* Small utility row for “signed-only controls” */
+.inline-row{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
 footer{
   margin-top: var(--s-6);
   color: color-mix(in srgb, var(--on-surface-variant) 82%, transparent);
