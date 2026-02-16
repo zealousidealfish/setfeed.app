@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Send — Setfeed</title>
-  <meta name="description" content="Send an end-to-end encrypted message to Setfeed." />
+  <meta name="description" content="Send an end-to-end encrypted scheduled message to Setfeed." />
   <meta name="theme-color" content="#0F1114" />
 
   <!-- Favicons -->
@@ -75,8 +75,35 @@
 
             <div class="note">
               <p style="margin:0;">
-                Signed send uses email-link sign-in. It is required for Secure and Personal codes.
+                Signed send requires email-link sign-in. It is required for Secure and Personal codes.
               </p>
+            </div>
+
+            <!-- Signed-only controls (hidden until signed in) -->
+            <div id="signed-controls" class="panel hidden" style="margin-top: var(--s-5);">
+              <p class="panel-title" style="margin-bottom: 6px;">Signed session controls</p>
+              <p class="panel-sub" style="margin-bottom: var(--s-3);">
+                Theme override and advanced defaults are available only when you are signed in.
+              </p>
+
+              <div class="inline-row">
+                <div class="field" style="min-width: 240px; margin-top: 0;">
+                  <label for="theme-mode">Theme</label>
+                  <select id="theme-mode">
+                    <option value="system">System</option>
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                  </select>
+                </div>
+
+                <div class="actions" style="margin-top: 0;">
+                  <button class="btn btn-lg btn-quiet" id="btn-theme-reset" type="button">Reset to system</button>
+                </div>
+              </div>
+
+              <small class="help" style="margin-top: 10px;">
+                System mode follows your device. Theme overrides are stored on this device.
+              </small>
             </div>
           </div>
 
@@ -91,13 +118,107 @@
               <textarea id="signed-body" maxlength="1200" placeholder="Write your message…"></textarea>
             </div>
 
-            <div class="actions">
+            <!-- Scheduling -->
+            <h2>Delivery</h2>
+
+            <!-- Basic (always visible): tomorrow + default times (unsigned users) -->
+            <div id="basic-schedule" class="panel" style="margin-top: 0;">
+              <p class="panel-title" style="margin-bottom: 6px;">Tomorrow</p>
+              <p class="panel-sub" style="margin-bottom: var(--s-3);">
+                If you are not signed in, sends schedule for tomorrow. Choose a time.
+              </p>
+
+              <div class="chips" role="group" aria-label="Tomorrow time">
+                <button class="chip" type="button" data-time="08:00" aria-pressed="true">8am</button>
+                <button class="chip" type="button" data-time="13:00" aria-pressed="false">1pm</button>
+                <button class="chip" type="button" data-time="18:00" aria-pressed="false">6pm</button>
+              </div>
+
+              <small class="help" id="basic-schedule-summary">
+                Scheduled for tomorrow at 8am.
+              </small>
+            </div>
+
+            <!-- Advanced scheduling (signed-in only) -->
+            <div id="advanced-schedule" class="panel hidden" style="margin-top: var(--s-4);">
+              <p class="panel-title" style="margin-bottom: 6px;">Advanced scheduling</p>
+              <p class="panel-sub" style="margin-bottom: var(--s-3);">
+                Available only when signed in. This stays explicit—no background changes.
+              </p>
+
+              <div class="tabs" role="tablist" aria-label="Schedule mode">
+                <button class="tab" id="tab-adv-quick" type="button" aria-selected="true">Quick</button>
+                <button class="tab" id="tab-adv-presets" type="button" aria-selected="false">Presets</button>
+                <button class="tab" id="tab-adv-pick" type="button" aria-selected="false">Pick date</button>
+              </div>
+
+              <!-- QUICK -->
+              <div id="adv-quick">
+                <div class="chips" role="group" aria-label="Quick presets">
+                  <button class="chip" type="button" data-quick="10" aria-pressed="false">Soon</button>
+                  <button class="chip" type="button" data-quick="20" aria-pressed="true">Later</button>
+                  <button class="chip" type="button" data-quick="60" aria-pressed="false">1 hour</button>
+                </div>
+
+                <div class="field" style="margin-top: var(--s-3);">
+                  <label for="quick-minutes">Minutes from now (10–1440)</label>
+                  <input id="quick-minutes" type="range" min="10" max="1440" step="5" value="20" />
+                </div>
+
+                <small class="help" id="quick-summary">
+                  Scheduled for 20 minutes from now.
+                </small>
+              </div>
+
+              <!-- PRESETS -->
+              <div id="adv-presets" class="hidden">
+                <p class="panel-sub" style="margin-top: 0;">
+                  Your default preset times. (Wiring: load from account after Firebase.)
+                </p>
+
+                <div class="field" style="margin-top: 0;">
+                  <label for="preset-times">Preset times (HH:MM, comma-separated)</label>
+                  <input id="preset-times" type="text" placeholder="08:00, 13:00, 18:00" />
+                </div>
+
+                <div class="actions" style="margin-top: var(--s-3);">
+                  <button class="btn btn-lg btn-secondary" id="btn-save-presets" type="button">Save presets</button>
+                  <button class="btn btn-lg btn-quiet" id="btn-reset-presets" type="button">Reset</button>
+                </div>
+
+                <small class="help" id="preset-summary">
+                  Presets are stored on this device until account wiring is added.
+                </small>
+              </div>
+
+              <!-- PICK DATE -->
+              <div id="adv-pick" class="hidden">
+                <div class="inline-row">
+                  <div class="field" style="min-width: 220px; margin-top: 0;">
+                    <label for="pick-date">Date</label>
+                    <input id="pick-date" type="date" />
+                  </div>
+
+                  <div class="field" style="min-width: 220px; margin-top: 0;">
+                    <label for="pick-time">Time</label>
+                    <input id="pick-time" type="time" step="300" />
+                  </div>
+                </div>
+
+                <small class="help" id="pick-summary">
+                  Choose a date and time explicitly.
+                </small>
+              </div>
+            </div>
+
+            <div class="actions" style="margin-top: var(--s-5);">
+              <!-- IMPORTANT: enabled state controlled by JS; shade changes via :disabled opacity -->
               <button class="btn btn-lg btn-primary" id="btn-signed-send" type="button" disabled>Encrypt &amp; send</button>
               <button class="btn btn-lg btn-quiet" id="btn-signed-clear" type="button">Clear</button>
             </div>
 
             <small class="help">
-              Only the recipient device can decrypt. If a code is invalid, you’ll be told explicitly.
+              The button enables when a code and message are present. Sign-in is enforced explicitly on send.
             </small>
           </div>
         </div>
@@ -117,49 +238,62 @@
               <textarea id="rolling-body" maxlength="1200" placeholder="Write your message…"></textarea>
             </div>
 
-            <div class="actions">
+            <h2>Delivery</h2>
+            <div class="panel" style="margin-top: 0;">
+              <p class="panel-title" style="margin-bottom: 6px;">Tomorrow</p>
+              <p class="panel-sub" style="margin-bottom: var(--s-3);">
+                Rolling uses tomorrow-only scheduling with default times.
+              </p>
+
+              <div class="chips" role="group" aria-label="Tomorrow time (rolling)">
+                <button class="chip" type="button" data-time="08:00" aria-pressed="true">8am</button>
+                <button class="chip" type="button" data-time="13:00" aria-pressed="false">1pm</button>
+                <button class="chip" type="button" data-time="18:00" aria-pressed="false">6pm</button>
+              </div>
+
+              <small class="help" id="rolling-schedule-summary">
+                Scheduled for tomorrow at 8am.
+              </small>
+            </div>
+
+            <div class="actions" style="margin-top: var(--s-5);">
               <button class="btn btn-lg btn-primary" id="btn-rolling-send" type="button" disabled>Encrypt &amp; send</button>
               <button class="btn btn-lg btn-quiet" id="btn-rolling-clear" type="button">Clear</button>
             </div>
 
             <small class="help">
-              Rolling is meant for temporary sharing. It may expire or become invalid after use.
+              Rolling is temporary. It may expire or become invalid after use.
             </small>
           </div>
 
           <div class="col">
-            <h2 style="margin-top:0;">What to expect</h2>
-            <ul>
-              <li>No sign-in required.</li>
-              <li>Strict guardrails (validity, usage limits, rate limiting).</li>
-              <li>Clear errors when something can’t be sent.</li>
-            </ul>
+            <!-- Video (calm, no autoplay) -->
+            <div class="video-card" aria-label="Walkthrough">
+              <h2 style="margin-top:0;">Walkthrough</h2>
+              <p class="lead" style="margin-bottom: 0;">
+                A short demonstration of the web send flow. No autoplay. Controls only.
+              </p>
+
+              <div class="video-frame">
+                <video controls preload="metadata" poster="./poster.png">
+                  <!-- NOTE: filename MUST match your actual file. If your file is "walkthrough.mp4" rename it or change this. -->
+                  <source src="./walkthrough.mp4" type="video/mp4" />
+                  Sorry — your browser can’t play this video.
+                </video>
+              </div>
+
+              <small class="help">
+                Principle: action first, explanation second, demonstration third.
+              </small>
+            </div>
+
             <div class="note">
               <p style="margin:0;">
-                If you want a stable link, use Secure (signed) for yourself.
+                Rolling intentionally stays constrained to reduce abuse and surprise state.
               </p>
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Video (CTA first, explanation second, demo third) -->
-      <div class="video-card" aria-label="Walkthrough">
-        <h2 style="margin-top:0;">Walkthrough</h2>
-        <p class="lead" style="margin-bottom: 0;">
-          A short demonstration of the web send flow. No autoplay. Controls only.
-        </p>
-
-        <div class="video-frame">
-          <video controls preload="metadata" poster="./poster.png" playsinline>
-            <source src="./walkthrough.mp4" type="video/mp4" />
-            Sorry — your browser can’t play this video.
-          </video>
-        </div>
-
-        <small class="help">
-          Principle: CTA first, explanation second, demonstration third.
-        </small>
       </div>
 
       <h2>Status</h2>
@@ -187,27 +321,11 @@
   </div>
 
   <script>
-    // Year
+    // -----------------------------
+    // Utilities
+    // -----------------------------
     document.getElementById("y").textContent = new Date().getFullYear();
 
-    // Tabs (deterministic: visibility + aria only)
-    const tabSigned = document.getElementById("tab-signed");
-    const tabRolling = document.getElementById("tab-rolling");
-    const panelSigned = document.getElementById("panel-signed");
-    const panelRolling = document.getElementById("panel-rolling");
-
-    function setTab(which) {
-      const signed = which === "signed";
-      tabSigned.setAttribute("aria-selected", signed ? "true" : "false");
-      tabRolling.setAttribute("aria-selected", signed ? "false" : "true");
-      panelSigned.classList.toggle("hidden", !signed);
-      panelRolling.classList.toggle("hidden", signed);
-    }
-
-    tabSigned.addEventListener("click", () => setTab("signed"));
-    tabRolling.addEventListener("click", () => setTab("rolling"));
-
-    // Status helper (quiet, explicit)
     const statusDot = document.getElementById("status-dot");
     const statusTitle = document.getElementById("status-title");
     const statusLine = document.getElementById("status-line");
@@ -220,12 +338,289 @@
       statusLine.textContent = line;
     }
 
-    // Elements
+    function pad2(n){ return String(n).padStart(2, "0"); }
+    function formatTimeLabel(hhmm){
+      const [h, m] = hhmm.split(":").map(Number);
+      const isAm = h < 12;
+      const ampm = isAm ? "am" : "pm";
+      const h12 = (h % 12) === 0 ? 12 : (h % 12);
+      return m === 0 ? `${h12}${ampm}` : `${h12}:${pad2(m)}${ampm}`;
+    }
+
+    function tomorrowLocalDateString(){
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      const y = d.getFullYear();
+      const m = pad2(d.getMonth() + 1);
+      const day = pad2(d.getDate());
+      return `${y}-${m}-${day}`;
+    }
+
+    // -----------------------------
+    // Tabs: Signed vs Rolling
+    // -----------------------------
+    const tabSigned = document.getElementById("tab-signed");
+    const tabRolling = document.getElementById("tab-rolling");
+    const panelSigned = document.getElementById("panel-signed");
+    const panelRolling = document.getElementById("panel-rolling");
+
+    function setMainTab(which) {
+      const signed = which === "signed";
+      tabSigned.setAttribute("aria-selected", signed ? "true" : "false");
+      tabRolling.setAttribute("aria-selected", signed ? "false" : "true");
+      panelSigned.classList.toggle("hidden", !signed);
+      panelRolling.classList.toggle("hidden", signed);
+    }
+
+    tabSigned.addEventListener("click", () => setMainTab("signed"));
+    tabRolling.addEventListener("click", () => setMainTab("rolling"));
+
+    // -----------------------------
+    // Auth stub (replace with Firebase later)
+    // -----------------------------
     const signedEmail = document.getElementById("signed-email");
-    const signedCode = document.getElementById("signed-code");
-    const signedBody = document.getElementById("signed-body");
     const btnSendLink = document.getElementById("btn-send-link");
     const btnSignOut = document.getElementById("btn-sign-out");
+
+    const signedControls = document.getElementById("signed-controls");
+    const advancedSchedule = document.getElementById("advanced-schedule");
+
+    let signedAuthed = false;
+
+    function setSignedAuthed(next) {
+      signedAuthed = next;
+
+      btnSignOut.disabled = !signedAuthed;
+
+      // Gate: signed-only UI
+      signedControls.classList.toggle("hidden", !signedAuthed);
+      advancedSchedule.classList.toggle("hidden", !signedAuthed);
+
+      // When signed in, basic schedule remains visible (calm + deterministic),
+      // but advanced becomes available.
+      if (signedAuthed) {
+        setStatus("good", "Signed in", "Advanced scheduling and theme override are available.");
+      } else {
+        // Reset theme override visibility to system behavior (do not force a mode)
+        applyThemeFromStorageOrSystem();
+        setStatus("warn", "Signed out", "Signed sending requires sign-in. Advanced scheduling is hidden.");
+      }
+    }
+
+    btnSendLink.addEventListener("click", () => {
+      const email = signedEmail.value.trim();
+      if (!email) {
+        setStatus("warn", "Email needed", "Enter your email to request a sign-in link.");
+        return;
+      }
+      // Stub: mark authed
+      setSignedAuthed(true);
+    });
+
+    btnSignOut.addEventListener("click", () => setSignedAuthed(false));
+
+    // -----------------------------
+    // Theme override (signed-in only UI; system by default)
+    // -----------------------------
+    const themeMode = document.getElementById("theme-mode");
+    const btnThemeReset = document.getElementById("btn-theme-reset");
+
+    function applyTheme(mode) {
+      const root = document.documentElement;
+      if (mode === "light" || mode === "dark") root.setAttribute("data-theme", mode);
+      else root.removeAttribute("data-theme");
+    }
+
+    function applyThemeFromStorageOrSystem() {
+      const stored = localStorage.getItem("sf_theme_mode") || "system";
+      applyTheme(stored);
+      if (themeMode) themeMode.value = stored;
+    }
+
+    applyThemeFromStorageOrSystem();
+
+    themeMode.addEventListener("change", () => {
+      if (!signedAuthed) {
+        // Shouldn’t happen because UI is hidden, but keep deterministic.
+        themeMode.value = "system";
+        applyTheme("system");
+        return;
+      }
+      const mode = themeMode.value;
+      localStorage.setItem("sf_theme_mode", mode);
+      applyTheme(mode);
+      setStatus("good", "Theme updated", `Theme set to ${mode}.`);
+    });
+
+    btnThemeReset.addEventListener("click", () => {
+      localStorage.setItem("sf_theme_mode", "system");
+      applyTheme("system");
+      themeMode.value = "system";
+      setStatus("good", "Theme reset", "Theme now follows system mode.");
+    });
+
+    // -----------------------------
+    // Scheduling state (explicit)
+    // -----------------------------
+    // Basic schedule (tomorrow-only) used by:
+    // - all unsigned sends
+    // - rolling sends
+    // Signed users may use advanced schedule, but basic remains as a stable fallback.
+
+    let basicTime = "08:00";
+    const basicSummary = document.getElementById("basic-schedule-summary");
+    const rollingSummary = document.getElementById("rolling-schedule-summary");
+
+    function setChipGroupPressed(container, matchValue) {
+      const chips = container.querySelectorAll("button.chip[data-time]");
+      chips.forEach(b => b.setAttribute("aria-pressed", b.dataset.time === matchValue ? "true" : "false"));
+    }
+
+    function updateBasicSummary() {
+      const tLabel = formatTimeLabel(basicTime);
+      if (basicSummary) basicSummary.textContent = `Scheduled for tomorrow at ${tLabel}.`;
+      if (rollingSummary) rollingSummary.textContent = `Scheduled for tomorrow at ${tLabel}.`;
+    }
+
+    // Wire chip groups (both signed basic + rolling)
+    const signedBasicPanel = document.getElementById("basic-schedule");
+    const rollingPanel = document.getElementById("panel-rolling");
+
+    // Signed basic chips
+    signedBasicPanel.querySelectorAll("button.chip[data-time]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        basicTime = btn.dataset.time;
+        setChipGroupPressed(signedBasicPanel, basicTime);
+        // also mirror to rolling chips if user swaps tabs
+        const rollingChipsContainer = document.querySelector("#panel-rolling .chips");
+        if (rollingChipsContainer) setChipGroupPressed(rollingChipsContainer, basicTime);
+        updateBasicSummary();
+      });
+    });
+
+    // Rolling chips
+    rollingPanel.querySelectorAll("button.chip[data-time]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        basicTime = btn.dataset.time;
+        const rollingChipsContainer = document.querySelector("#panel-rolling .chips");
+        if (rollingChipsContainer) setChipGroupPressed(rollingChipsContainer, basicTime);
+        // mirror to signed basic chips
+        setChipGroupPressed(signedBasicPanel, basicTime);
+        updateBasicSummary();
+      });
+    });
+
+    updateBasicSummary();
+
+    // Advanced schedule (signed-only)
+    const advQuickTab = document.getElementById("tab-adv-quick");
+    const advPresetsTab = document.getElementById("tab-adv-presets");
+    const advPickTab = document.getElementById("tab-adv-pick");
+
+    const advQuick = document.getElementById("adv-quick");
+    const advPresets = document.getElementById("adv-presets");
+    const advPick = document.getElementById("adv-pick");
+
+    const quickMinutes = document.getElementById("quick-minutes");
+    const quickSummary = document.getElementById("quick-summary");
+
+    const presetTimes = document.getElementById("preset-times");
+    const presetSummary = document.getElementById("preset-summary");
+    const btnSavePresets = document.getElementById("btn-save-presets");
+    const btnResetPresets = document.getElementById("btn-reset-presets");
+
+    const pickDate = document.getElementById("pick-date");
+    const pickTime = document.getElementById("pick-time");
+    const pickSummary = document.getElementById("pick-summary");
+
+    let advMode = "quick"; // quick | presets | pick
+    let advQuickMin = 20;
+
+    function setAdvMode(mode) {
+      advMode = mode;
+
+      advQuickTab.setAttribute("aria-selected", mode === "quick" ? "true" : "false");
+      advPresetsTab.setAttribute("aria-selected", mode === "presets" ? "true" : "false");
+      advPickTab.setAttribute("aria-selected", mode === "pick" ? "true" : "false");
+
+      advQuick.classList.toggle("hidden", mode !== "quick");
+      advPresets.classList.toggle("hidden", mode !== "presets");
+      advPick.classList.toggle("hidden", mode !== "pick");
+    }
+
+    advQuickTab.addEventListener("click", () => { if (signedAuthed) setAdvMode("quick"); });
+    advPresetsTab.addEventListener("click", () => { if (signedAuthed) setAdvMode("presets"); });
+    advPickTab.addEventListener("click", () => { if (signedAuthed) setAdvMode("pick"); });
+
+    // Quick presets
+    function setQuickPreset(minutes) {
+      advQuickMin = minutes;
+      quickMinutes.value = String(minutes);
+
+      // Update pressed state on quick chips
+      advQuick.querySelectorAll("button.chip[data-quick]").forEach(b => {
+        b.setAttribute("aria-pressed", b.dataset.quick === String(minutes) ? "true" : "false");
+      });
+
+      if (quickSummary) quickSummary.textContent = `Scheduled for ${minutes} minutes from now.`;
+    }
+
+    advQuick.querySelectorAll("button.chip[data-quick]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (!signedAuthed) return;
+        setQuickPreset(Number(btn.dataset.quick));
+      });
+    });
+
+    quickMinutes.addEventListener("input", () => {
+      if (!signedAuthed) return;
+      const v = Number(quickMinutes.value);
+      advQuickMin = v;
+      // Clear chip selection when custom
+      advQuick.querySelectorAll("button.chip[data-quick]").forEach(b => b.setAttribute("aria-pressed", "false"));
+      if (quickSummary) quickSummary.textContent = `Scheduled for ${v} minutes from now.`;
+    });
+
+    // Presets storage (local only for now)
+    function loadPresetTimes() {
+      const stored = localStorage.getItem("sf_preset_times") || "08:00, 13:00, 18:00";
+      presetTimes.value = stored;
+    }
+    function savePresetTimes() {
+      const raw = presetTimes.value.trim();
+      localStorage.setItem("sf_preset_times", raw);
+      if (presetSummary) presetSummary.textContent = "Presets saved on this device.";
+    }
+    function resetPresetTimes() {
+      localStorage.setItem("sf_preset_times", "08:00, 13:00, 18:00");
+      loadPresetTimes();
+      if (presetSummary) presetSummary.textContent = "Presets reset to defaults.";
+    }
+
+    btnSavePresets.addEventListener("click", () => { if (signedAuthed) savePresetTimes(); });
+    btnResetPresets.addEventListener("click", () => { if (signedAuthed) resetPresetTimes(); });
+    loadPresetTimes();
+
+    // Pick date defaults
+    pickDate.value = tomorrowLocalDateString();
+    pickTime.value = "08:00";
+    pickDate.addEventListener("change", () => {
+      if (!signedAuthed) return;
+      if (pickSummary) pickSummary.textContent = `Scheduled for ${pickDate.value} at ${pickTime.value}.`;
+    });
+    pickTime.addEventListener("change", () => {
+      if (!signedAuthed) return;
+      if (pickSummary) pickSummary.textContent = `Scheduled for ${pickDate.value} at ${pickTime.value}.`;
+    });
+
+    setQuickPreset(20);
+    setAdvMode("quick");
+
+    // -----------------------------
+    // Enable/disable logic (fix)
+    // -----------------------------
+    const signedCode = document.getElementById("signed-code");
+    const signedBody = document.getElementById("signed-body");
     const btnSignedSend = document.getElementById("btn-signed-send");
     const btnSignedClear = document.getElementById("btn-signed-clear");
 
@@ -234,63 +629,47 @@
     const btnRollingSend = document.getElementById("btn-rolling-send");
     const btnRollingClear = document.getElementById("btn-rolling-clear");
 
-    // Local-only state (no silent storage)
-    let signedAuthed = false;
-
-    // ✅ App-consistent enabling:
-    // Enable when required fields are present.
-    // Auth is enforced on click (explicit error), not by silently disabling.
     function refreshSignedSendEnabled() {
-      const canAttempt = signedCode.value.trim().length > 0
-        && signedBody.value.trim().length > 0;
+      const canAttempt =
+        signedCode.value.trim().length > 0 &&
+        signedBody.value.trim().length > 0;
+
       btnSignedSend.disabled = !canAttempt;
     }
 
     function refreshRollingSendEnabled() {
-      const canAttempt = rollingCode.value.trim().length > 0
-        && rollingBody.value.trim().length > 0;
+      const canAttempt =
+        rollingCode.value.trim().length > 0 &&
+        rollingBody.value.trim().length > 0;
+
       btnRollingSend.disabled = !canAttempt;
     }
 
     signedCode.addEventListener("input", refreshSignedSendEnabled);
     signedBody.addEventListener("input", refreshSignedSendEnabled);
+
     rollingCode.addEventListener("input", refreshRollingSendEnabled);
     rollingBody.addEventListener("input", refreshRollingSendEnabled);
 
-    // Signed auth stub (no network calls yet)
-    btnSendLink.addEventListener("click", () => {
-      const email = signedEmail.value.trim();
-      if (!email) {
-        setStatus("warn", "Email needed", "Enter your email to request a sign-in link.");
-        return;
-      }
-      signedAuthed = true;
-      btnSignOut.disabled = false;
-      setStatus("good", "Signed in", "Signed sending is available. (Firebase wiring pending.)");
-      refreshSignedSendEnabled();
-    });
+    refreshSignedSendEnabled();
+    refreshRollingSendEnabled();
 
-    btnSignOut.addEventListener("click", () => {
-      signedAuthed = false;
-      btnSignOut.disabled = true;
-      setStatus("warn", "Signed out", "Signed sending requires sign-in.");
-      refreshSignedSendEnabled();
-    });
-
-    // Send stubs (still deterministic, explicit)
+    // -----------------------------
+    // Send actions (explicit checks)
+    // -----------------------------
     btnSignedSend.addEventListener("click", () => {
-      const code = signedCode.value.trim();
-      const body = signedBody.value.trim();
-
-      if (!code || !body) {
-        setStatus("warn", "Missing details", "Add a code and a message, then try again.");
-        return;
-      }
       if (!signedAuthed) {
         setStatus("warn", "Sign-in required", "Secure and Personal sending require email-link sign-in.");
         return;
       }
-      setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the signed send function.");
+
+      // Compute schedule (explicit)
+      let scheduleDesc = `tomorrow at ${formatTimeLabel(basicTime)}`;
+      if (advMode === "quick") scheduleDesc = `${advQuickMin} minutes from now`;
+      if (advMode === "presets") scheduleDesc = `next preset time (from your list)`;
+      if (advMode === "pick") scheduleDesc = `${pickDate.value} at ${pickTime.value}`;
+
+      setStatus("good", "Ready to send", `Next step: encrypt in browser, then call signed send function (deliver: ${scheduleDesc}).`);
     });
 
     btnSignedClear.addEventListener("click", () => {
@@ -301,14 +680,9 @@
     });
 
     btnRollingSend.addEventListener("click", () => {
-      const code = rollingCode.value.trim();
-      const body = rollingBody.value.trim();
-
-      if (!code || !body) {
-        setStatus("warn", "Missing details", "Add a rolling code and a message, then try again.");
-        return;
-      }
-      setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the rolling send function.");
+      // Rolling allowed without sign-in
+      const scheduleDesc = `tomorrow at ${formatTimeLabel(basicTime)}`;
+      setStatus("good", "Ready to send", `Next step: encrypt in browser, then call rolling send function (deliver: ${scheduleDesc}).`);
     });
 
     btnRollingClear.addEventListener("click", () => {
@@ -318,9 +692,8 @@
       setStatus("warn", "Cleared", "Rolling send fields cleared.");
     });
 
-    // Init
-    refreshSignedSendEnabled();
-    refreshRollingSendEnabled();
+    // Start signed-out deterministically
+    setSignedAuthed(false);
   </script>
 </body>
 </html>
