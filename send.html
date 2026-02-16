@@ -6,18 +6,24 @@
   <title>Send — Setfeed</title>
   <meta name="description" content="Send an end-to-end encrypted message to Setfeed." />
   <meta name="theme-color" content="#0F1114" />
+
+  <!-- Favicons -->
+  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="./favicon-16.png" sizes="16x16">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180">
+
   <link rel="stylesheet" href="./styles.css" />
 </head>
 
 <body class="page-bg">
   <header class="site-header">
     <div class="header-inner">
-      <div class="brand">
-        <a href="./">
-          <img class="logo" src="./logo.png" alt="" aria-hidden="true" />
-          <span>Setfeed</span>
-        </a>
-      </div>
+      <a class="brand-mark" href="./" aria-label="Setfeed home">
+        <img class="logo" src="./logo.png" alt="" aria-hidden="true" />
+      </a>
+
+      <a class="brand-title" href="./">Setfeed</a>
 
       <nav class="nav" aria-label="Primary">
         <a href="./">Home</a>
@@ -86,7 +92,6 @@
             </div>
 
             <div class="actions">
-              <!-- FIX: larger buttons + primary styling -->
               <button class="btn btn-lg btn-primary" id="btn-signed-send" type="button" disabled>Encrypt &amp; send</button>
               <button class="btn btn-lg btn-quiet" id="btn-signed-clear" type="button">Clear</button>
             </div>
@@ -138,6 +143,25 @@
         </div>
       </div>
 
+      <!-- Video (placed after CTA + explanation, no autoplay) -->
+      <div class="video-card" aria-label="Walkthrough">
+        <h2 style="margin-top:0;">Walkthrough</h2>
+        <p class="lead" style="margin-bottom: 0;">
+          A short demonstration of the web send flow. No autoplay. Controls only.
+        </p>
+
+        <div class="video-frame">
+          <video controls preload="metadata" poster="./poster.png">
+            <source src="./walkthrough.mp4" type="video/mp4" />
+            Sorry — your browser can’t play this video.
+          </video>
+        </div>
+
+        <small class="help">
+          Principle: CTA first, explanation second, demonstration third.
+        </small>
+      </div>
+
       <h2>Status</h2>
       <div class="status" role="status" aria-live="polite">
         <div class="status-title">
@@ -163,10 +187,8 @@
   </div>
 
   <script>
-    // Year
     document.getElementById("y").textContent = new Date().getFullYear();
 
-    // Tabs (deterministic: no side effects besides visibility + aria)
     const tabSigned = document.getElementById("tab-signed");
     const tabRolling = document.getElementById("tab-rolling");
     const panelSigned = document.getElementById("panel-signed");
@@ -183,7 +205,6 @@
     tabSigned.addEventListener("click", () => setTab("signed"));
     tabRolling.addEventListener("click", () => setTab("rolling"));
 
-    // Status helper (quiet, explicit)
     const statusDot = document.getElementById("status-dot");
     const statusTitle = document.getElementById("status-title");
     const statusLine = document.getElementById("status-line");
@@ -196,7 +217,6 @@
       statusLine.textContent = line;
     }
 
-    // Buttons (stubs for now; no network calls)
     const signedEmail = document.getElementById("signed-email");
     const signedCode = document.getElementById("signed-code");
     const signedBody = document.getElementById("signed-body");
@@ -210,7 +230,6 @@
     const btnRollingSend = document.getElementById("btn-rolling-send");
     const btnRollingClear = document.getElementById("btn-rolling-clear");
 
-    // Local-only state (no silent mutation across refresh; no storage)
     let signedAuthed = false;
 
     function refreshSignedSendEnabled() {
