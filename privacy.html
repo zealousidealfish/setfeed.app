@@ -5,223 +5,138 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Privacy Policy — Setfeed</title>
   <meta name="description" content="Privacy Policy for Setfeed" />
-  <meta name="theme-color" content="#0B0B0C" />
-  <style>
-    :root{
-      --bg:#0B0B0C;
-      --card:#121214;
-      --text:#F2F2F3;
-      --muted:#A7A7AD;
-      --line:#232326;
-      --hover: rgba(255,255,255,0.06);
-      --link: #B7C5FF;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background: radial-gradient(1200px 700px at 20% 0%, #141418 0%, var(--bg) 55%);
-      color:var(--text);
-    }
-    a{ color: var(--link); }
-    a:hover{ text-decoration: underline; }
-
-    .wrap{ max-width: 860px; margin:0 auto; padding: 26px 20px 72px; }
-
-    /* Header / footer (shared pattern) */
-    .site-header{
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      backdrop-filter: blur(10px);
-      background: color-mix(in srgb, var(--bg) 88%, transparent);
-      border-bottom: 1px solid var(--line);
-    }
-    .header-inner{
-      max-width: 860px;
-      margin: 0 auto;
-      padding: 14px 20px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:16px;
-    }
-    .brand{
-      font-weight:600;
-      letter-spacing:-0.1px;
-    }
-    .brand a{
-      color: var(--text);
-      text-decoration:none;
-    }
-    .nav{
-      display:flex;
-      gap:10px;
-      color:var(--muted);
-      font-size:14px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-    .nav a{
-      color:var(--muted);
-      text-decoration:none;
-      padding:8px 10px;
-      border-radius:12px;
-    }
-    .nav a:hover{
-      background: var(--hover);
-      color: var(--text);
-      text-decoration:none;
-    }
-
-    .card{
-      margin-top: 18px;
-      background: rgba(18,18,20,0.78);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 22px;
-      backdrop-filter: blur(10px);
-    }
-    h1{ margin:0 0 6px 0; font-size: 28px; letter-spacing:-0.2px; }
-    .meta{ margin:0 0 18px 0; color:var(--muted); font-size: 14px; }
-    h2{ margin: 22px 0 10px 0; font-size: 16px; color: var(--text); }
-    p, li{ color: var(--muted); line-height: 1.7; font-size: 14.5px; }
-    ul{ margin: 0 0 0 18px; padding:0; }
-
-    .note{
-      border-left: 3px solid var(--line);
-      padding-left: 12px;
-      margin-top: 14px;
-    }
-
-    footer{
-      margin-top: 18px;
-      color: var(--muted);
-      font-size: 13px;
-      display:flex;
-      gap:12px;
-      justify-content:space-between;
-      align-items:center;
-      border-top: 1px solid var(--line);
-      padding-top: 14px;
-      flex-wrap: wrap;
-    }
-    footer a{ color: var(--muted); text-decoration:none; }
-    footer a:hover{ color: var(--text); text-decoration:none; }
-
-    .dot{ color: var(--muted); }
-  </style>
+  <meta name="theme-color" content="#0F1114" />
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 
 <body>
-  <header class="site-header">
-    <div class="header-inner">
-      <div class="brand"><a href="/">Setfeed</a></div>
-      <nav class="nav" aria-label="Primary">
-        <a href="/">Home</a>
-        <a href="/security.html">Security</a>
-        <a href="/privacy.html" style="color: var(--text);">Privacy</a>
-        <a href="mailto:support@setfeed.app">Contact</a>
-      </nav>
-    </div>
-  </header>
+  <div class="page-bg">
+    <header class="site-header">
+      <div class="header-inner">
+        <div class="brand"><a href="./">Setfeed</a></div>
+        <nav class="nav" aria-label="Primary">
+          <a href="./">Home</a>
+          <a href="./send.html">Send</a>
+          <a href="./receive.html">Get a code</a>
+          <a href="./security.html">Security</a>
+          <a href="./privacy.html" aria-current="page">Privacy</a>
+          <a href="mailto:support@setfeed.app">Contact</a>
+        </nav>
+      </div>
+    </header>
 
-  <div class="wrap">
-    <div class="card">
-      <h1>Privacy Policy</h1>
-      <p class="meta">Effective date: <strong>2026-02-15</strong></p>
+    <div class="wrap">
+      <div class="card">
+        <div class="hero">
+          <div>
+            <h1>Privacy Policy</h1>
+            <p class="lead">Effective date: <strong>2026-02-15</strong></p>
 
-      <p>
-        Setfeed (“we”, “us”, “our”) respects your privacy. This policy explains what Setfeed stores
-        and processes when you use the Setfeed app and the Setfeed web bridge (setfeed.app).
-      </p>
+            <p>
+              This policy explains what is stored and processed when you use the Setfeed app and the Setfeed web bridge (setfeed.app).
+              The goal is minimal data, explicit boundaries, and ciphertext-only transport.
+            </p>
 
-      <h2>Message content</h2>
-      <p>
-        Setfeed is designed to be local-first and end-to-end encrypted.
-        When you send a message through setfeed.app, the message is encrypted in your browser before it reaches our servers.
-        We store encrypted ciphertext only and cannot read message contents.
-      </p>
-      <p class="note">
-        Private encryption keys are stored only on recipient devices and are never uploaded to our servers.
-      </p>
+            <h2>Message content</h2>
+            <p>
+              Messages sent through setfeed.app are encrypted in your browser before they reach our servers.
+              We store encrypted ciphertext only and cannot read message contents.
+            </p>
 
-      <h2>Information we store</h2>
-      <p>
-        To operate Setfeed, we store the minimum needed for scheduling, delivery, and abuse prevention:
-      </p>
-      <ul>
-        <li><strong>Encrypted message ciphertext</strong> and encryption metadata (for example, key version).</li>
-        <li><strong>Delivery metadata</strong> (timestamps, message identifiers, and routing to the recipient).</li>
-        <li><strong>Authentication state</strong> for signed sends (Secure and Personal), such as a Firebase user ID.</li>
-        <li><strong>Abuse-prevention signals</strong> like rate-limit counters and hashed operational identifiers.</li>
-        <li><strong>Device delivery tokens</strong> (for example, an FCM token) needed to notify a recipient device.</li>
-      </ul>
+            <div class="note">
+              <p style="margin:0;">
+                Private encryption keys are stored only on recipient devices and are never uploaded to our servers.
+              </p>
+            </div>
+          </div>
 
-      <h2>Information we do not store</h2>
-      <ul>
-        <li>Message plaintext.</li>
-        <li>Recipient private keys.</li>
-        <li>Content-based advertising profiles.</li>
-      </ul>
-
-      <h2>How we use information</h2>
-      <ul>
-        <li>To deliver messages at the time you chose (or at the recipient’s preferred time window for inbound).</li>
-        <li>To validate receive codes and enforce usage limits (for example, Rolling single-use).</li>
-        <li>To provide notifications you have enabled.</li>
-        <li>To maintain reliability, performance, and safety (including abuse prevention).</li>
-      </ul>
-
-      <h2>Rolling codes</h2>
-      <p>
-        Rolling codes are designed for temporary sharing. They may allow sending without sign-in.
-        To prevent abuse, we apply strict constraints such as short validity windows, single-use limits, App Check validation,
-        and rate limiting.
-      </p>
-
-      <h2>Third-party services</h2>
-      <p>
-        Setfeed uses Firebase services to operate the web bridge and delivery pipeline, including:
-        Authentication, Cloud Functions, Firestore, Cloud Messaging, and App Check.
-        These services process limited technical data required to provide their functionality.
-      </p>
-
-      <h2>Retention</h2>
-      <p>
-        The web bridge is a transport layer. Encrypted ciphertext may be retained for a limited period to support delivery and retries.
-        The Setfeed app is the primary long-term store for messages on your device.
-      </p>
-
-      <h2>Your choices</h2>
-      <ul>
-        <li>You control notifications through app settings and system settings.</li>
-        <li>You can cancel scheduled items and remove items from your feed within the app.</li>
-        <li>You can avoid using setfeed.app and send only through in-app flows if preferred.</li>
-      </ul>
-
-      <h2>Contact</h2>
-      <p>
-        Privacy questions: <a href="mailto:privacy@setfeed.app">privacy@setfeed.app</a><br />
-        Security reports: <a href="mailto:security@setfeed.app">security@setfeed.app</a><br />
-        General support: <a href="mailto:support@setfeed.app">support@setfeed.app</a>
-      </p>
-
-      <footer>
-        <div>© <span id="y"></span> Setfeed</div>
-        <div>
-          <a href="/security.html">Security</a>
-          <span class="dot">·</span>
-          <a href="/privacy.html">Privacy</a>
-          <span class="dot">·</span>
-          <a href="mailto:security@setfeed.app">security@setfeed.app</a>
+          <aside class="panel">
+            <p class="panel-title">Practical summary</p>
+            <p class="panel-sub">
+              We don’t store message plaintext. We store what’s needed to deliver ciphertext reliably and prevent abuse.
+            </p>
+            <div class="actions">
+              <a class="btn btn-quiet" href="./security.html">Security model</a>
+              <a class="btn btn-quiet" href="mailto:privacy@setfeed.app">Email privacy</a>
+            </div>
+          </aside>
         </div>
-      </footer>
-    </div>
-  </div>
 
-  <script>
-    document.getElementById("y").textContent = new Date().getFullYear();
-  </script>
+        <h2>Information we store</h2>
+        <p>To operate Setfeed, we store the minimum needed for scheduling, delivery, and abuse prevention:</p>
+        <ul>
+          <li><strong>Encrypted message ciphertext</strong> and encryption metadata (for example, key version).</li>
+          <li><strong>Delivery metadata</strong> (timestamps, message identifiers, and routing to the recipient).</li>
+          <li><strong>Authentication state</strong> for signed sends (Secure and Personal), such as a Firebase user ID.</li>
+          <li><strong>Abuse-prevention signals</strong> like rate-limit counters and hashed operational identifiers.</li>
+          <li><strong>Device delivery tokens</strong> (for example, an FCM token) needed to notify a recipient device.</li>
+        </ul>
+
+        <h2>Information we do not store</h2>
+        <ul>
+          <li>Message plaintext.</li>
+          <li>Recipient private keys.</li>
+          <li>Content-based advertising profiles.</li>
+        </ul>
+
+        <h2>How we use information</h2>
+        <ul>
+          <li>To deliver messages at the time you chose (or at the recipient’s preferred time window for inbound).</li>
+          <li>To validate receive codes and enforce usage limits (for example, Rolling single-use).</li>
+          <li>To provide notifications you have enabled.</li>
+          <li>To maintain reliability, performance, and safety (including abuse prevention).</li>
+        </ul>
+
+        <h2>Rolling codes</h2>
+        <p>
+          Rolling codes are designed for temporary sharing and may allow sending without sign-in.
+          To prevent abuse, we apply constraints such as short validity windows, single-use limits, App Check validation,
+          and rate limiting.
+        </p>
+
+        <h2>Third-party services</h2>
+        <p>
+          Setfeed uses Firebase services to operate the web bridge and delivery pipeline, including:
+          Authentication, Cloud Functions, Firestore, Cloud Messaging, and App Check.
+          These services process limited technical data required to provide their functionality.
+        </p>
+
+        <h2>Retention</h2>
+        <p>
+          The web bridge is a transport layer. Encrypted ciphertext may be retained for a limited period to support delivery and retries.
+          The Setfeed app is the primary long-term store for messages on your device.
+        </p>
+
+        <h2>Your choices</h2>
+        <ul>
+          <li>You control notifications through app settings and system settings.</li>
+          <li>You can cancel scheduled items and remove items from your feed within the app.</li>
+          <li>You can avoid using setfeed.app and send only through in-app flows if preferred.</li>
+        </ul>
+
+        <h2>Contact</h2>
+        <p>
+          Privacy: <a href="mailto:privacy@setfeed.app">privacy@setfeed.app</a><br />
+          Security: <a href="mailto:security@setfeed.app">security@setfeed.app</a><br />
+          Support: <a href="mailto:support@setfeed.app">support@setfeed.app</a>
+        </p>
+
+        <footer>
+          <div>© <span id="y"></span> Setfeed</div>
+          <div>
+            <a href="./receive.html">Get a code</a>
+            <span class="sep">·</span>
+            <a href="./security.html">Security</a>
+            <span class="sep">·</span>
+            <a href="mailto:privacy@setfeed.app">privacy@setfeed.app</a>
+          </div>
+        </footer>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById("y").textContent = new Date().getFullYear();
+    </script>
+  </div>
 </body>
 </html>
