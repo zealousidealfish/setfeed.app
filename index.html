@@ -34,12 +34,18 @@
       const meta = document.getElementById("meta-theme-color");
       if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
 
-      // Auth-only nav
-      const authed = localStorage.getItem("sf_signed_authed") === "true";
-      document.addEventListener("DOMContentLoaded", () => {
+      function applyAuthVisibility(){
+        const authed = localStorage.getItem("sf_signed_authed") === "true";
         document.querySelectorAll(".auth-only").forEach(el => {
           el.classList.toggle("hidden", !authed);
         });
+      }
+
+      document.addEventListener("DOMContentLoaded", applyAuthVisibility);
+
+      // Cross-tab / other-page live update
+      window.addEventListener("storage", (e) => {
+        if (e && e.key === "sf_signed_authed") applyAuthVisibility();
       });
     })();
   </script>
