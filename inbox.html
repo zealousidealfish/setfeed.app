@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Inbox — Setfeed</title>
+  <meta name="description" content="Your Setfeed inbox feed (signed-in view)." />
+
+  <meta name="theme-color" content="#FFFBFE" id="meta-theme-color" />
+
+  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="./favicon-16.png" sizes="16x16">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180">
+
+  <link rel="stylesheet" href="./styles.css" />
+
+  <script>
+    (function(){
+      const themeKey = "sf_theme_mode"; // "system" | "light" | "dark"
+      const stored = localStorage.getItem(themeKey) || "system";
+      const root = document.documentElement;
+
+      if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
+      else root.removeAttribute("data-theme");
+
+      const effective =
+        root.getAttribute("data-theme") ||
+        (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+
+      const meta = document.getElementById("meta-theme-color");
+      if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
+
+      function applyAuthVisibility(){
+        const authed = localStorage.getItem("sf_signed_authed") === "true";
+        document.querySelectorAll(".auth-only").forEach(el => {
+          el.classList.toggle("hidden", !authed);
+        });
+
+        // Gate: if not authed, keep the page calm and redirect to Send
+        const gate = document.getElementById("inbox-gate");
+        const content = document.getElementById("inbox-content");
+        if (gate) gate.classList.toggle("hidden", authed);
+        if (content) content.classList.toggle("hidden", !authed);
+      }
+
+      document.addEventListener("DOMContentLoaded", applyAuthVisibility);
+
+      window.addEventListener("storage", (e) => {
+        if (e && e.key === "sf_signed_authed") applyAuthVisibility();
+      });
+    })();
+  </script>
+</head>
+
+<body class="page-bg">
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand-mark" href="./" aria-label="Setfeed home">
+        <img class="logo" src="./logo.png" alt="" aria-hidden="true" />
+      </a>
+
+      <a class="brand-title" href="./">Setfeed</a>
+
+      <nav class="nav" aria-label="Primary">
+        <a href="./">Home</a>
+        <a href="./send.html">Send</a>
+        <a href="./receive.html">Receive</a>
+        <a class="auth-only hidden" href="./inbox.html" aria-current="page">Inbox</a>
+        <a href="./security.html">Security</a>
+        <a href="./privacy.html">Privacy</a>
+        <a class="nav-cta" href="#" aria-label="Download Setfeed app">Download app</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="card">
+      <h1>Inbox</h1>
+      <p class="lead">
+        Your inbox feed will appear here after sign-in. This page stays calm: no auto-fetch until wired.
+      </p>
+
+      <div class="panel" id="inbox-gate">
+        <p class="panel-title">Sign in required</p>
+        <p class="panel-sub">
+          Inbox is available only after you sign in.
+        </p>
+        <div class="actions">
+          <a class="btn btn-lg btn-primary" href="./send.html#signin">Go to sign in</a>
+          <a class="btn btn-lg btn-quiet" href="./">Back to home</a>
+        </div>
+        <small class="help">
+          This is a UI stub. Once auth + inbox wiring is added, this page will show your feed deterministically.
+        </small>
+      </div>
+
+      <div id="inbox-content" class="hidden">
+        <h2>Your feed</h2>
+        <div class="status" role="status" aria-live="polite">
+          <div class="status-title">
+            <span class="dot good"></span>
+            <span>Signed in</span>
+          </div>
+          <p class="status-line">
+            Inbox wiring isn’t enabled yet. When it is, messages will appear here in a stable chronological list.
+          </p>
+        </div>
+
+        <div class="panel" style="margin-top: var(--s-5);">
+          <p class="panel-title">Expected behavior</p>
+          <ul>
+            <li>Explicit refresh / fetch actions (no surprise network).</li>
+            <li>Clear empty states and errors.</li>
+            <li>Deterministic ordering.</li>
+          </ul>
+          <small class="help">This is intentionally minimal until the backend is wired.</small>
+        </div>
+      </div>
+
+      <footer>
+        <div>© <span id="y"></span> Setfeed</div>
+        <div>
+          <a href="./security.html">Security</a>
+          <span class="sep">·</span>
+          <a href="./privacy.html">Privacy</a>
+          <span class="sep">·</span>
+          <a href="mailto:security@setfeed.app">security@setfeed.app</a>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("y").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
