@@ -5,33 +5,66 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Send — Setfeed</title>
   <meta name="description" content="Send an end-to-end encrypted message to Setfeed." />
-  <meta name="theme-color" content="#0B0B0C" />
+  <meta name="theme-color" content="#0F1114" />
   <style>
     :root{
-      --bg:#0B0B0C;
-      --card:#121214;
-      --text:#F2F2F3;
-      --muted:#A7A7AD;
-      --line:#232326;
+      /* Modern Dark (app-aligned) */
+      --bg:#0F1114;
+      --surface:#0F1114;
+      --card:#12151A;          /* slightly lifted */
+      --surface-2:#1A1D22;     /* surfaceVariant */
+      --line: rgba(255,255,255,0.09);
       --hover: rgba(255,255,255,0.06);
-      --link: #B7C5FF;
-      --pill: rgba(255,255,255,0.05);
+
+      --text:#F2F4F7;
+      --muted:#C2C7D0;
+      --muted-2:#9AA3AF;
+
+      /* Calm light-blue accent (secondary vibe) */
+      --accent:#B7C5FF;
+      --accent-2: rgba(183,197,255,0.16);
+      --focus: rgba(183,197,255,0.45);
+
       --good: #86efac;
       --warn: #fecaca;
+
+      /* “Golden-ish” proportions */
+      --wrap: 860px;
+      --radius: 22px;
+      --radius-sm: 14px;
+
+      /* Spacing scale (calm, consistent) */
+      --s1: 8px;
+      --s2: 12px;
+      --s3: 16px;
+      --s4: 20px;
+      --s5: 26px;
+      --s6: 34px;
     }
-    *{box-sizing:border-box}
+
+    *{ box-sizing:border-box; }
+    html, body{ height:100%; }
+
     body{
       margin:0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background: radial-gradient(1200px 700px at 20% 0%, #141418 0%, var(--bg) 55%);
-      color:var(--text);
+      background:
+        radial-gradient(1100px 680px at 18% 0%, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0) 55%),
+        var(--bg);
+      color: var(--text);
+      text-rendering: geometricPrecision;
     }
-    a{ color: var(--link); }
+
+    a{ color: var(--accent); }
     a:hover{ text-decoration: underline; }
 
-    .wrap{ max-width: 860px; margin:0 auto; padding: 26px 20px 72px; }
+    .wrap{
+      max-width: var(--wrap);
+      margin:0 auto;
+      padding: var(--s5) 20px 72px;
+    }
 
-    /* Header / footer (shared pattern) */
+    /* Header */
     .site-header{
       position: sticky;
       top: 0;
@@ -41,7 +74,7 @@
       border-bottom: 1px solid var(--line);
     }
     .header-inner{
-      max-width: 860px;
+      max-width: var(--wrap);
       margin: 0 auto;
       padding: 14px 20px;
       display:flex;
@@ -50,13 +83,26 @@
       gap:16px;
     }
     .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
       font-weight:600;
       letter-spacing:-0.1px;
     }
     .brand a{
       color: var(--text);
       text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
     }
+    .brand img{
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      display:block;
+    }
+
     .nav{
       display:flex;
       gap:10px;
@@ -77,45 +123,58 @@
       text-decoration:none;
     }
 
+    /* Card */
     .card{
       margin-top: 18px;
-      background: rgba(18,18,20,0.78);
+      background: color-mix(in srgb, var(--card) 86%, transparent);
       border: 1px solid var(--line);
-      border-radius: 22px;
+      border-radius: var(--radius);
       padding: 22px;
       backdrop-filter: blur(10px);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25);
     }
 
-    h1{ margin:0 0 8px 0; font-size: 28px; letter-spacing:-0.2px; }
-    .lead{ margin:0 0 12px 0; color:var(--muted); font-size: 14.8px; line-height:1.7; }
+    h1{
+      margin:0 0 8px 0;
+      font-size: 28px;
+      letter-spacing:-0.2px;
+      line-height: 1.15;
+    }
+    .lead{
+      margin:0 0 var(--s3) 0;
+      color:var(--muted);
+      font-size: 14.8px;
+      line-height:1.7;
+      max-width: 68ch;
+    }
 
-    h2{ margin: 18px 0 10px 0; font-size: 16px; color: var(--text); }
-    p, li, label{ color: var(--muted); line-height: 1.7; font-size: 14.5px; }
+    h2{
+      margin: 18px 0 10px 0;
+      font-size: 16px;
+      color: var(--text);
+      letter-spacing:-0.1px;
+    }
+    p, li, label{
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 14.5px;
+    }
     ul{ margin: 0 0 0 18px; padding:0; }
 
     .note{
       border-left: 3px solid var(--line);
       padding-left: 12px;
       margin-top: 12px;
+      color: var(--muted);
     }
 
-    .row{
-      display:flex;
-      gap:14px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-
-    .col{
-      flex: 1 1 280px;
-      min-width: 280px;
-    }
-
+    /* Pills */
     .pills{
       display:flex;
       flex-wrap: wrap;
       gap: 10px;
       margin-top: 10px;
+      margin-bottom: var(--s3);
     }
     .pill{
       display:inline-flex;
@@ -124,7 +183,7 @@
       padding: 7px 10px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: var(--pill);
+      background: rgba(255,255,255,0.03);
       color: var(--muted);
       font-size: 13px;
     }
@@ -132,11 +191,51 @@
       width: 8px;
       height: 8px;
       border-radius: 999px;
-      background: var(--muted);
+      background: var(--muted-2);
     }
     .dot.good{ background: var(--good); }
     .dot.warn{ background: var(--warn); }
 
+    /* Video (optional guidance, placed after trust + before form) */
+    .video-block{
+      margin-top: var(--s3);
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+      border-radius: 18px;
+      padding: var(--s3);
+    }
+    .video-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap: var(--s3);
+      flex-wrap: wrap;
+      margin-bottom: var(--s2);
+    }
+    .video-title{
+      margin:0;
+      font-size: 14px;
+      color: var(--text);
+      letter-spacing:-0.1px;
+    }
+    .video-sub{
+      margin:4px 0 0 0;
+      color: var(--muted);
+      font-size: 13.5px;
+      line-height: 1.6;
+      max-width: 72ch;
+    }
+    .video{
+      width:100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #000;
+      display:block;
+      overflow:hidden;
+    }
+
+    /* Tabs */
     .tabs{
       display:flex;
       gap:10px;
@@ -147,21 +246,43 @@
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      padding: 9px 12px;
+      padding: 10px 14px; /* slightly larger */
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.03);
       color: var(--muted);
-      text-decoration:none;
       cursor:pointer;
       user-select:none;
-      font-size: 13.5px;
+      font-size: 13.75px;
+      line-height: 1;
+      min-height: 40px;
     }
     .tab[aria-selected="true"]{
-      background: rgba(255,255,255,0.08);
+      background: rgba(183,197,255,0.10);
+      border-color: rgba(183,197,255,0.28);
       color: var(--text);
     }
+    .tab:focus-visible{
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
 
+    /* Layout */
+    .row{
+      display:flex;
+      gap:14px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .col{
+      flex: 1 1 320px;
+      min-width: 320px;
+    }
+    @media (max-width: 740px){
+      .col{ min-width: 100%; }
+    }
+
+    /* Fields */
     .field{
       display:flex;
       flex-direction: column;
@@ -170,20 +291,22 @@
     }
     input, textarea{
       width: 100%;
-      border-radius: 14px;
+      border-radius: var(--radius-sm);
       border: 1px solid var(--line);
-      background: rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.03);
       color: var(--text);
-      padding: 10px 12px;
+      padding: 12px 12px;
       font-size: 14.5px;
       outline: none;
     }
-    textarea{ min-height: 120px; resize: vertical; }
+    textarea{ min-height: 128px; resize: vertical; }
 
     input:focus, textarea:focus{
-      border-color: rgba(183,197,255,0.45);
+      border-color: var(--focus);
+      box-shadow: 0 0 0 3px rgba(183,197,255,0.12);
     }
 
+    /* Buttons (FIX: larger + better text fit) */
     .actions{
       display:flex;
       flex-wrap: wrap;
@@ -196,30 +319,59 @@
       align-items:center;
       justify-content:center;
       gap:8px;
-      padding:10px 12px;
+
+      /* Bigger tap target + better typography */
+      min-height: 44px;
+      padding: 12px 16px;
       border-radius: 14px;
+
       border: 1px solid var(--line);
-      background: rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.03);
       color: var(--text);
-      text-decoration:none;
-      font-size: 14px;
+      font-size: 15px;
+      line-height: 1;
+
       cursor:pointer;
       user-select:none;
+      white-space: nowrap; /* prevents ugly wrapping inside the button */
     }
     .btn:hover{
       background: var(--hover);
-      text-decoration:none;
     }
     .btn:disabled{
       opacity: 0.55;
       cursor: not-allowed;
     }
+    .btn:focus-visible{
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
 
+    /* Primary CTA button (calm blue, not “crypto neon”) */
+    .btn-primary{
+      border-color: rgba(183,197,255,0.28);
+      background: rgba(183,197,255,0.12);
+    }
+    .btn-primary:hover{
+      background: rgba(183,197,255,0.18);
+    }
+
+    /* Quiet / secondary action */
+    .btn-quiet{
+      color: var(--muted);
+      background: rgba(255,255,255,0.02);
+    }
+    .btn-quiet:hover{
+      color: var(--text);
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* Status */
     .status{
       margin-top: 14px;
       border-radius: 16px;
       border: 1px solid var(--line);
-      background: rgba(255,255,255,0.03);
+      background: rgba(255,255,255,0.02);
       padding: 12px;
     }
     .status-title{
@@ -238,6 +390,7 @@
       margin: 0;
     }
 
+    /* Footer */
     footer{
       margin-top: 18px;
       color: var(--muted);
@@ -261,7 +414,12 @@
 <body>
   <header class="site-header">
     <div class="header-inner">
-      <div class="brand"><a href="./">Setfeed</a></div>
+      <div class="brand">
+        <a href="./" aria-label="Setfeed home">
+          <img src="./poster.png" alt="" aria-hidden="true" />
+          <span>Setfeed</span>
+        </a>
+      </div>
       <nav class="nav" aria-label="Primary">
         <a href="./">Home</a>
         <a href="./send.html" style="color: var(--text);">Send</a>
@@ -274,15 +432,30 @@
 
   <div class="wrap">
     <div class="card">
-      <h1>Send</h1>
+      <h1>Send an encrypted message</h1>
       <p class="lead">
-        Messages are encrypted before they reach Setfeed servers. The server stores ciphertext only.
+        This page sends to a Setfeed receive code. Your message is encrypted in the browser.
+        The server stores ciphertext only.
       </p>
 
       <div class="pills" aria-label="Send highlights">
         <div class="pill"><span class="dot good"></span> End-to-end encrypted</div>
         <div class="pill"><span class="dot good"></span> Ciphertext-only storage</div>
         <div class="pill"><span class="dot warn"></span> Rolling is constrained</div>
+      </div>
+
+      <div class="video-block" aria-label="Optional walkthrough">
+        <div class="video-top">
+          <div>
+            <p class="video-title">Optional walkthrough</p>
+            <p class="video-sub">A short, calm guide to sending to a receive code. No autoplay.</p>
+          </div>
+        </div>
+
+        <video class="video" controls preload="metadata" poster="./poster.png">
+          <source src="./walkthough.mp4" type="video/mp4" />
+          Sorry — your browser can’t play this video.
+        </video>
       </div>
 
       <h2>Choose a send type</h2>
@@ -306,12 +479,12 @@
 
             <div class="actions">
               <button class="btn" id="btn-send-link" type="button">Send sign-in link</button>
-              <button class="btn" id="btn-sign-out" type="button" disabled>Sign out</button>
+              <button class="btn btn-quiet" id="btn-sign-out" type="button" disabled>Sign out</button>
             </div>
 
             <div class="note">
               <p style="margin:0;">
-                Signed send uses email-link sign-in. It is required for Secure and Personal codes.
+                Signed send requires email-link sign-in. It’s used for Secure and Personal codes.
               </p>
             </div>
           </div>
@@ -328,13 +501,13 @@
             </div>
 
             <div class="actions">
-              <button class="btn" id="btn-signed-send" type="button" disabled>Encrypt & send</button>
-              <button class="btn" id="btn-signed-clear" type="button">Clear</button>
+              <button class="btn btn-primary" id="btn-signed-send" type="button" disabled>Encrypt &amp; send</button>
+              <button class="btn btn-quiet" id="btn-signed-clear" type="button">Clear</button>
             </div>
 
             <div class="note">
               <p style="margin:0;">
-                Your message will be encrypted in the browser. Only the recipient device can decrypt.
+                Only the recipient device can decrypt.
               </p>
             </div>
           </div>
@@ -356,8 +529,8 @@
             </div>
 
             <div class="actions">
-              <button class="btn" id="btn-rolling-send" type="button">Encrypt & send</button>
-              <button class="btn" id="btn-rolling-clear" type="button">Clear</button>
+              <button class="btn btn-primary" id="btn-rolling-send" type="button">Encrypt &amp; send</button>
+              <button class="btn btn-quiet" id="btn-rolling-clear" type="button">Clear</button>
             </div>
 
             <div class="note">
@@ -371,8 +544,8 @@
             <h2 style="margin-top:0;">What to expect</h2>
             <ul>
               <li>Rolling does not require sign-in.</li>
-              <li>We apply strict guardrails (validity, usage limits, rate limiting).</li>
-              <li>If a code is invalid, you will be told explicitly.</li>
+              <li>Guardrails apply: validity, usage limits, rate limiting.</li>
+              <li>If a code is invalid, you’ll be told explicitly.</li>
             </ul>
             <div class="note">
               <p style="margin:0;">
@@ -476,7 +649,6 @@
       }
       // Stub: later this triggers Firebase email-link auth.
       setStatus("good", "Sign-in link requested", "When Firebase is wired, a sign-in link will be sent to your email.");
-      // Simulate "signed in" for UI wiring preview:
       signedAuthed = true;
       btnSignOut.disabled = false;
       refreshSignedSendEnabled();
