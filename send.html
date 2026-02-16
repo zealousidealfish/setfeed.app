@@ -18,11 +18,11 @@
        FIREBASE + APP CHECK
        ========================= -->
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 
-  <script>
+<script>
   const firebaseConfig = {
     apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",
     authDomain: "setfeed-fcd7a.firebaseapp.com",
@@ -31,28 +31,20 @@
     messagingSenderId: "553573263069",
     appId: "1:553573263069:web:e5c9884101ca38eaee1d34"
   };
-    firebase.initializeApp(firebaseConfig);
 
-    function startAppCheck(){
-  try{
-    firebase.appCheck().activate("6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI", true);
-  }catch(e){
-    // Keep calm + explicit: App Check init failure should be visible in console.
-    console.error("App Check init failed:", e);
-  }
-}
+  firebase.initializeApp(firebaseConfig);
 
-// Ensure body exists before reCAPTCHA injects anything invisible.
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", startAppCheck);
-} else {
-  startAppCheck();
-}
+  const appCheck = firebase.appCheck();
 
+  appCheck.activate(
+    new firebase.appCheck.ReCaptchaV3Provider(
+      "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI"
+    ),
+    true
+  );
 
-    // Functions region
-    const functions = firebase.app().functions("europe-west2");
-  </script>
+  const functions = firebase.app().functions("europe-west2");
+</script>
 
   <!-- =========================
        THEME + AUTH EARLY LOGIC
