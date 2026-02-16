@@ -6,435 +6,34 @@
   <title>Send — Setfeed</title>
   <meta name="description" content="Send an end-to-end encrypted message to Setfeed." />
   <meta name="theme-color" content="#0F1114" />
-  <style>
-    :root{
-      /* Modern Dark (app-aligned) */
-      --bg:#0F1114;
-      --surface:#0F1114;
-      --card:#12151A;          /* slightly lifted */
-      --surface-2:#1A1D22;     /* surfaceVariant */
-      --line: rgba(255,255,255,0.09);
-      --hover: rgba(255,255,255,0.06);
-
-      --text:#F2F4F7;
-      --muted:#C2C7D0;
-      --muted-2:#9AA3AF;
-
-      /* Calm light-blue accent (secondary vibe) */
-      --accent:#B7C5FF;
-      --accent-2: rgba(183,197,255,0.16);
-      --focus: rgba(183,197,255,0.45);
-
-      --good: #86efac;
-      --warn: #fecaca;
-
-      /* “Golden-ish” proportions */
-      --wrap: 860px;
-      --radius: 22px;
-      --radius-sm: 14px;
-
-      /* Spacing scale (calm, consistent) */
-      --s1: 8px;
-      --s2: 12px;
-      --s3: 16px;
-      --s4: 20px;
-      --s5: 26px;
-      --s6: 34px;
-    }
-
-    *{ box-sizing:border-box; }
-    html, body{ height:100%; }
-
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background:
-        radial-gradient(1100px 680px at 18% 0%, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0) 55%),
-        var(--bg);
-      color: var(--text);
-      text-rendering: geometricPrecision;
-    }
-
-    a{ color: var(--accent); }
-    a:hover{ text-decoration: underline; }
-
-    .wrap{
-      max-width: var(--wrap);
-      margin:0 auto;
-      padding: var(--s5) 20px 72px;
-    }
-
-    /* Header */
-    .site-header{
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      backdrop-filter: blur(10px);
-      background: color-mix(in srgb, var(--bg) 88%, transparent);
-      border-bottom: 1px solid var(--line);
-    }
-    .header-inner{
-      max-width: var(--wrap);
-      margin: 0 auto;
-      padding: 14px 20px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:16px;
-    }
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      font-weight:600;
-      letter-spacing:-0.1px;
-    }
-    .brand a{
-      color: var(--text);
-      text-decoration:none;
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-    }
-    .brand img{
-      width: 22px;
-      height: 22px;
-      border-radius: 6px;
-      display:block;
-    }
-
-    .nav{
-      display:flex;
-      gap:10px;
-      color:var(--muted);
-      font-size:14px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-    .nav a{
-      color:var(--muted);
-      text-decoration:none;
-      padding:8px 10px;
-      border-radius:12px;
-    }
-    .nav a:hover{
-      background: var(--hover);
-      color: var(--text);
-      text-decoration:none;
-    }
-
-    /* Card */
-    .card{
-      margin-top: 18px;
-      background: color-mix(in srgb, var(--card) 86%, transparent);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 22px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 10px 40px rgba(0,0,0,0.25);
-    }
-
-    h1{
-      margin:0 0 8px 0;
-      font-size: 28px;
-      letter-spacing:-0.2px;
-      line-height: 1.15;
-    }
-    .lead{
-      margin:0 0 var(--s3) 0;
-      color:var(--muted);
-      font-size: 14.8px;
-      line-height:1.7;
-      max-width: 68ch;
-    }
-
-    h2{
-      margin: 18px 0 10px 0;
-      font-size: 16px;
-      color: var(--text);
-      letter-spacing:-0.1px;
-    }
-    p, li, label{
-      color: var(--muted);
-      line-height: 1.7;
-      font-size: 14.5px;
-    }
-    ul{ margin: 0 0 0 18px; padding:0; }
-
-    .note{
-      border-left: 3px solid var(--line);
-      padding-left: 12px;
-      margin-top: 12px;
-      color: var(--muted);
-    }
-
-    /* Pills */
-    .pills{
-      display:flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 10px;
-      margin-bottom: var(--s3);
-    }
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding: 7px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.03);
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .dot{
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: var(--muted-2);
-    }
-    .dot.good{ background: var(--good); }
-    .dot.warn{ background: var(--warn); }
-
-    /* Video (optional guidance, placed after trust + before form) */
-    .video-block{
-      margin-top: var(--s3);
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.02);
-      border-radius: 18px;
-      padding: var(--s3);
-    }
-    .video-top{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap: var(--s3);
-      flex-wrap: wrap;
-      margin-bottom: var(--s2);
-    }
-    .video-title{
-      margin:0;
-      font-size: 14px;
-      color: var(--text);
-      letter-spacing:-0.1px;
-    }
-    .video-sub{
-      margin:4px 0 0 0;
-      color: var(--muted);
-      font-size: 13.5px;
-      line-height: 1.6;
-      max-width: 72ch;
-    }
-    .video{
-      width:100%;
-      aspect-ratio: 16 / 9;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      background: #000;
-      display:block;
-      overflow:hidden;
-    }
-
-    /* Tabs */
-    .tabs{
-      display:flex;
-      gap:10px;
-      flex-wrap: wrap;
-      margin-top: 14px;
-    }
-    .tab{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      padding: 10px 14px; /* slightly larger */
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.03);
-      color: var(--muted);
-      cursor:pointer;
-      user-select:none;
-      font-size: 13.75px;
-      line-height: 1;
-      min-height: 40px;
-    }
-    .tab[aria-selected="true"]{
-      background: rgba(183,197,255,0.10);
-      border-color: rgba(183,197,255,0.28);
-      color: var(--text);
-    }
-    .tab:focus-visible{
-      outline: 2px solid var(--focus);
-      outline-offset: 2px;
-    }
-
-    /* Layout */
-    .row{
-      display:flex;
-      gap:14px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-    .col{
-      flex: 1 1 320px;
-      min-width: 320px;
-    }
-    @media (max-width: 740px){
-      .col{ min-width: 100%; }
-    }
-
-    /* Fields */
-    .field{
-      display:flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 12px;
-    }
-    input, textarea{
-      width: 100%;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.03);
-      color: var(--text);
-      padding: 12px 12px;
-      font-size: 14.5px;
-      outline: none;
-    }
-    textarea{ min-height: 128px; resize: vertical; }
-
-    input:focus, textarea:focus{
-      border-color: var(--focus);
-      box-shadow: 0 0 0 3px rgba(183,197,255,0.12);
-    }
-
-    /* Buttons (FIX: larger + better text fit) */
-    .actions{
-      display:flex;
-      flex-wrap: wrap;
-      gap:10px;
-      margin-top: 14px;
-      align-items:center;
-    }
-    .btn{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:8px;
-
-      /* Bigger tap target + better typography */
-      min-height: 44px;
-      padding: 12px 16px;
-      border-radius: 14px;
-
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.03);
-      color: var(--text);
-      font-size: 15px;
-      line-height: 1;
-
-      cursor:pointer;
-      user-select:none;
-      white-space: nowrap; /* prevents ugly wrapping inside the button */
-    }
-    .btn:hover{
-      background: var(--hover);
-    }
-    .btn:disabled{
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
-    .btn:focus-visible{
-      outline: 2px solid var(--focus);
-      outline-offset: 2px;
-    }
-
-    /* Primary CTA button (calm blue, not “crypto neon”) */
-    .btn-primary{
-      border-color: rgba(183,197,255,0.28);
-      background: rgba(183,197,255,0.12);
-    }
-    .btn-primary:hover{
-      background: rgba(183,197,255,0.18);
-    }
-
-    /* Quiet / secondary action */
-    .btn-quiet{
-      color: var(--muted);
-      background: rgba(255,255,255,0.02);
-    }
-    .btn-quiet:hover{
-      color: var(--text);
-      background: rgba(255,255,255,0.04);
-    }
-
-    /* Status */
-    .status{
-      margin-top: 14px;
-      border-radius: 16px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.02);
-      padding: 12px;
-    }
-    .status-title{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      margin-bottom: 6px;
-      color: var(--text);
-      font-size: 14px;
-      letter-spacing: -0.1px;
-    }
-    .status-line{
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.6;
-      margin: 0;
-    }
-
-    /* Footer */
-    footer{
-      margin-top: 18px;
-      color: var(--muted);
-      font-size: 13px;
-      display:flex;
-      gap:12px;
-      justify-content:space-between;
-      align-items:center;
-      border-top: 1px solid var(--line);
-      padding-top: 14px;
-      flex-wrap: wrap;
-    }
-    footer a{ color: var(--muted); text-decoration:none; }
-    footer a:hover{ color: var(--text); text-decoration:none; }
-    .sep{ color: var(--muted); }
-
-    .hidden{ display:none !important; }
-  </style>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 
-<body>
+<body class="page-bg">
   <header class="site-header">
     <div class="header-inner">
       <div class="brand">
-        <a href="./" aria-label="Setfeed home">
-          <img src="./poster.png" alt="" aria-hidden="true" />
+        <a href="./">
+          <img class="logo" src="./logo.png" alt="" aria-hidden="true" />
           <span>Setfeed</span>
         </a>
       </div>
+
       <nav class="nav" aria-label="Primary">
         <a href="./">Home</a>
-        <a href="./send.html" style="color: var(--text);">Send</a>
+        <a href="./send.html" aria-current="page">Send</a>
+        <a href="./receive.html">Receive</a>
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
-        <a href="mailto:support@setfeed.app">Contact</a>
       </nav>
     </div>
   </header>
 
   <div class="wrap">
     <div class="card">
-      <h1>Send an encrypted message</h1>
+      <h1>Send a scheduled message</h1>
       <p class="lead">
-        This page sends to a Setfeed receive code. Your message is encrypted in the browser.
+        Your message is encrypted in the browser before it reaches Setfeed servers.
         The server stores ciphertext only.
       </p>
 
@@ -442,20 +41,6 @@
         <div class="pill"><span class="dot good"></span> End-to-end encrypted</div>
         <div class="pill"><span class="dot good"></span> Ciphertext-only storage</div>
         <div class="pill"><span class="dot warn"></span> Rolling is constrained</div>
-      </div>
-
-      <div class="video-block" aria-label="Optional walkthrough">
-        <div class="video-top">
-          <div>
-            <p class="video-title">Optional walkthrough</p>
-            <p class="video-sub">A short, calm guide to sending to a receive code. No autoplay.</p>
-          </div>
-        </div>
-
-        <video class="video" controls preload="metadata" poster="./poster.png">
-          <source src="./walkthough.mp4" type="video/mp4" />
-          Sorry — your browser can’t play this video.
-        </video>
       </div>
 
       <h2>Choose a send type</h2>
@@ -478,13 +63,13 @@
             </div>
 
             <div class="actions">
-              <button class="btn" id="btn-send-link" type="button">Send sign-in link</button>
-              <button class="btn btn-quiet" id="btn-sign-out" type="button" disabled>Sign out</button>
+              <button class="btn btn-lg" id="btn-send-link" type="button">Send sign-in link</button>
+              <button class="btn btn-lg btn-quiet" id="btn-sign-out" type="button" disabled>Sign out</button>
             </div>
 
             <div class="note">
               <p style="margin:0;">
-                Signed send requires email-link sign-in. It’s used for Secure and Personal codes.
+                Signed send uses email-link sign-in. It is required for Secure and Personal codes.
               </p>
             </div>
           </div>
@@ -501,15 +86,14 @@
             </div>
 
             <div class="actions">
-              <button class="btn btn-primary" id="btn-signed-send" type="button" disabled>Encrypt &amp; send</button>
-              <button class="btn btn-quiet" id="btn-signed-clear" type="button">Clear</button>
+              <!-- FIX: larger buttons + primary styling -->
+              <button class="btn btn-lg btn-primary" id="btn-signed-send" type="button" disabled>Encrypt &amp; send</button>
+              <button class="btn btn-lg btn-quiet" id="btn-signed-clear" type="button">Clear</button>
             </div>
 
-            <div class="note">
-              <p style="margin:0;">
-                Only the recipient device can decrypt.
-              </p>
-            </div>
+            <small class="help">
+              Only the recipient device can decrypt. If a code is invalid, you’ll be told explicitly.
+            </small>
           </div>
         </div>
       </div>
@@ -529,23 +113,21 @@
             </div>
 
             <div class="actions">
-              <button class="btn btn-primary" id="btn-rolling-send" type="button">Encrypt &amp; send</button>
-              <button class="btn btn-quiet" id="btn-rolling-clear" type="button">Clear</button>
+              <button class="btn btn-lg btn-primary" id="btn-rolling-send" type="button">Encrypt &amp; send</button>
+              <button class="btn btn-lg btn-quiet" id="btn-rolling-clear" type="button">Clear</button>
             </div>
 
-            <div class="note">
-              <p style="margin:0;">
-                Rolling is meant for temporary sharing. It may expire or become invalid after use.
-              </p>
-            </div>
+            <small class="help">
+              Rolling is meant for temporary sharing. It may expire or become invalid after use.
+            </small>
           </div>
 
           <div class="col">
             <h2 style="margin-top:0;">What to expect</h2>
             <ul>
-              <li>Rolling does not require sign-in.</li>
-              <li>Guardrails apply: validity, usage limits, rate limiting.</li>
-              <li>If a code is invalid, you’ll be told explicitly.</li>
+              <li>No sign-in required.</li>
+              <li>Strict guardrails (validity, usage limits, rate limiting).</li>
+              <li>Clear errors when something can’t be sent.</li>
             </ul>
             <div class="note">
               <p style="margin:0;">
@@ -647,7 +229,6 @@
         setStatus("warn", "Email needed", "Enter your email to request a sign-in link.");
         return;
       }
-      // Stub: later this triggers Firebase email-link auth.
       setStatus("good", "Sign-in link requested", "When Firebase is wired, a sign-in link will be sent to your email.");
       signedAuthed = true;
       btnSignOut.disabled = false;
@@ -672,7 +253,6 @@
         setStatus("warn", "Missing details", "Add a code and a message, then try again.");
         return;
       }
-      // Stub: later this will encrypt + call Cloud Function.
       setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the signed send function.");
     });
 
@@ -690,7 +270,6 @@
         setStatus("warn", "Missing details", "Add a rolling code and a message, then try again.");
         return;
       }
-      // Stub: later this will encrypt + call Cloud Function (App Check required).
       setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the rolling send function.");
     });
 
