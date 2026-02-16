@@ -7,7 +7,6 @@
   <meta name="description" content="Send an end-to-end encrypted message to Setfeed." />
   <meta name="theme-color" content="#0F1114" />
 
-  <!-- Favicons -->
   <link rel="icon" href="./favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
   <link rel="icon" type="image/png" href="./favicon-16.png" sizes="16x16">
@@ -17,12 +16,21 @@
 
   <script>
     (function(){
-      const key = "sf_theme_mode"; // "system" | "light" | "dark"
-      const stored = localStorage.getItem(key) || "system";
+      // Theme mode
+      const themeKey = "sf_theme_mode"; // "system" | "light" | "dark"
+      const stored = localStorage.getItem(themeKey) || "system";
       const root = document.documentElement;
 
       if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
       else root.removeAttribute("data-theme");
+
+      // Auth-only nav (also used by page sections later)
+      const authed = localStorage.getItem("sf_signed_authed") === "true";
+      document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll(".auth-only").forEach(el => {
+          el.classList.toggle("hidden", !authed);
+        });
+      });
     })();
   </script>
 </head>
@@ -40,6 +48,7 @@
         <a href="./">Home</a>
         <a href="./send.html" aria-current="page">Send</a>
         <a href="./receive.html">Receive</a>
+        <a class="auth-only hidden" href="./inbox.html">Inbox</a>
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
         <a class="nav-cta" href="#" aria-label="Download Setfeed app">Download app</a>
@@ -133,7 +142,6 @@
 
             <h2>Delivery</h2>
             <div class="panel">
-              <!-- Removed "Tomorrow" header per request -->
               <p class="panel-sub" style="margin-bottom: var(--s-3);">
                 If you are not signed in, sends schedule for tomorrow. Choose a time.
               </p>
@@ -235,7 +243,6 @@
   </div>
 
   <script>
-    // Year
     document.getElementById("y").textContent = new Date().getFullYear();
 
     // Tabs
@@ -283,8 +290,14 @@
     const btnRollingSend = document.getElementById("btn-rolling-send");
     const btnRollingClear = document.getElementById("btn-rolling-clear");
 
-    // Local-only auth stub
-    let signedAuthed = false;
+    // Persisted auth state
+    let signedAuthed = (localStorage.getItem("sf_signed_authed") === "true");
+
+    function refreshNavAuthOnly() {
+      document.querySelectorAll(".auth-only").forEach(el => {
+        el.classList.toggle("hidden", !signedAuthed);
+      });
+    }
 
     function refreshSignedSendEnabled() {
       const canSend = signedAuthed
@@ -302,19 +315,21 @@
     function applySignedAuthUI() {
       btnSignOut.disabled = !signedAuthed;
 
-      // Requirement: hide walkthrough after sign-in (SIGNED only)
+      // Hide walkthrough after sign-in (SIGNED only)
       if (videoSigned) videoSigned.classList.toggle("hidden", signedAuthed);
 
+      refreshNavAuthOnly();
       refreshSignedSendEnabled();
     }
 
-    // Enable/disable buttons deterministically
+    // Inputs
     signedCode.addEventListener("input", refreshSignedSendEnabled);
     signedBody.addEventListener("input", refreshSignedSendEnabled);
 
     rollingCode.addEventListener("input", refreshRollingSendEnabled);
     rollingBody.addEventListener("input", refreshRollingSendEnabled);
 
+    // Sign in (stub)
     btnSendLink.addEventListener("click", () => {
       const email = signedEmail.value.trim();
       if (!email) {
@@ -322,16 +337,20 @@
         return;
       }
       setStatus("good", "Sign-in link requested", "When Firebase is wired, a sign-in link will be sent to your email.");
-      signedAuthed = true; // stub sign-in
+      signedAuthed = true;
+      localStorage.setItem("sf_signed_authed", "true");
       applySignedAuthUI();
     });
 
+    // Sign out
     btnSignOut.addEventListener("click", () => {
       signedAuthed = false;
+      localStorage.setItem("sf_signed_authed", "false");
       applySignedAuthUI();
       setStatus("warn", "Signed out", "Signed sending is unavailable until you sign in again.");
     });
 
+    // Send stubs
     btnSignedSend.addEventListener("click", () => {
       const code = signedCode.value.trim();
       const body = signedBody.value.trim();
