@@ -6,8 +6,7 @@
   <title>Privacy Policy — Setfeed</title>
   <meta name="description" content="Privacy Policy for Setfeed" />
 
-  <meta name="theme-color" content="#FFFBFE" data-theme-color="light" />
-  <meta name="theme-color" content="#1C1B1F" data-theme-color="dark" />
+  <meta name="theme-color" content="#FFFBFE" id="meta-theme-color" />
 
   <link rel="icon" href="./favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
@@ -18,24 +17,31 @@
 
   <script>
     (function(){
-      const key = "sf_theme_override";
-      const override = localStorage.getItem(key) || "system";
+      const themeKey = "sf_theme_mode"; // "system" | "light" | "dark"
+      const stored = localStorage.getItem(themeKey) || "system";
       const root = document.documentElement;
 
-      if (override === "light" || override === "dark") root.setAttribute("data-theme", override);
+      if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
       else root.removeAttribute("data-theme");
 
-      const effective = root.getAttribute("data-theme")
-        || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      const effective =
+        root.getAttribute("data-theme") ||
+        (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 
-      const m = document.querySelector('meta[name="theme-color"][data-theme-color="'+effective+'"]');
-      if (m) m.content = effective === "dark" ? "#1C1B1F" : "#FFFBFE";
+      const meta = document.getElementById("meta-theme-color");
+      if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
 
-      const authed = localStorage.getItem("sf_signed_authed") === "true";
-      document.addEventListener("DOMContentLoaded", () => {
+      function applyAuthVisibility(){
+        const authed = localStorage.getItem("sf_signed_authed") === "true";
         document.querySelectorAll(".auth-only").forEach(el => {
           el.classList.toggle("hidden", !authed);
         });
+      }
+
+      document.addEventListener("DOMContentLoaded", applyAuthVisibility);
+
+      window.addEventListener("storage", (e) => {
+        if (e && e.key === "sf_signed_authed") applyAuthVisibility();
       });
     })();
   </script>
