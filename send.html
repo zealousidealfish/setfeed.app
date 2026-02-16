@@ -90,11 +90,8 @@
               </p>
             </div>
 
-            <!-- ✅ Walkthrough video: in the left column (where your arrow points)
-                 - Visible only when NOT signed in
-                 - Hidden immediately after sign-in
-            -->
-            <div class="video-card" id="guest-video" aria-label="Walkthrough">
+            <!-- Walkthrough video (SIGNED): shown when NOT signed in, hidden after sign-in -->
+            <div class="video-card" id="video-signed" aria-label="Walkthrough">
               <h2 style="margin-top:0;">Walkthrough</h2>
               <p class="lead" style="margin-bottom: 0;">
                 A short demonstration of the web send flow. No autoplay. Controls only.
@@ -108,7 +105,7 @@
               </div>
 
               <small class="help">
-                Principle: demonstration supports clarity — it does not replace explicit UI.
+                Demonstration supports clarity. UI stays explicit.
               </small>
             </div>
           </div>
@@ -161,6 +158,27 @@
               <input id="rolling-code" type="text" inputmode="text" placeholder="Paste a Rolling code (SFR-…)" />
             </div>
 
+            <!-- Walkthrough video (ROLLING): always shown (no sign-in here) -->
+            <div class="video-card" id="video-rolling" aria-label="Walkthrough">
+              <h2 style="margin-top:0;">Walkthrough</h2>
+              <p class="lead" style="margin-bottom: 0;">
+                A short demonstration of the rolling send flow. No autoplay. Controls only.
+              </p>
+
+              <div class="video-frame">
+                <video controls preload="metadata" playsinline poster="./poster.png">
+                  <source src="./walkthrough.mp4" type="video/mp4" />
+                  Sorry — your browser can’t play this video.
+                </video>
+              </div>
+
+              <small class="help">
+                Rolling is constrained. Expect explicit errors if expired or over limits.
+              </small>
+            </div>
+          </div>
+
+          <div class="col">
             <div class="field">
               <label for="rolling-body">Message</label>
               <textarea id="rolling-body" maxlength="1200" placeholder="Write your message…"></textarea>
@@ -174,15 +192,14 @@
             <small class="help">
               Rolling is meant for temporary sharing. It may expire or become invalid after use.
             </small>
-          </div>
 
-          <div class="col">
-            <h2 style="margin-top:0;">What to expect</h2>
+            <h2 style="margin-top: var(--s-6);">What to expect</h2>
             <ul>
               <li>No sign-in required.</li>
               <li>Strict guardrails (validity, usage limits, rate limiting).</li>
               <li>Clear errors when something can’t be sent.</li>
             </ul>
+
             <div class="note">
               <p style="margin:0;">
                 If you want a stable link, use Secure (signed) for yourself.
@@ -220,7 +237,7 @@
     // Year
     document.getElementById("y").textContent = new Date().getFullYear();
 
-    // Tabs (deterministic: no side effects besides visibility + aria)
+    // Tabs
     const tabSigned = document.getElementById("tab-signed");
     const tabRolling = document.getElementById("tab-rolling");
     const panelSigned = document.getElementById("panel-signed");
@@ -237,7 +254,7 @@
     tabSigned.addEventListener("click", () => setTab("signed"));
     tabRolling.addEventListener("click", () => setTab("rolling"));
 
-    // Status helper (quiet, explicit)
+    // Status helper
     const statusDot = document.getElementById("status-dot");
     const statusTitle = document.getElementById("status-title");
     const statusLine = document.getElementById("status-line");
@@ -251,8 +268,6 @@
     }
 
     // Elements
-    const guestVideo = document.getElementById("guest-video");
-
     const signedEmail = document.getElementById("signed-email");
     const signedCode = document.getElementById("signed-code");
     const signedBody = document.getElementById("signed-body");
@@ -260,13 +275,14 @@
     const btnSignOut = document.getElementById("btn-sign-out");
     const btnSignedSend = document.getElementById("btn-signed-send");
     const btnSignedClear = document.getElementById("btn-signed-clear");
+    const videoSigned = document.getElementById("video-signed");
 
     const rollingCode = document.getElementById("rolling-code");
     const rollingBody = document.getElementById("rolling-body");
     const btnRollingSend = document.getElementById("btn-rolling-send");
     const btnRollingClear = document.getElementById("btn-rolling-clear");
 
-    // Local-only state (no silent mutation across refresh; no storage)
+    // Local-only auth stub
     let signedAuthed = false;
 
     function refreshSignedSendEnabled() {
@@ -283,13 +299,15 @@
     }
 
     function applySignedAuthUI() {
-      // Hide walkthrough once signed in (per your requirement)
-      if (guestVideo) guestVideo.classList.toggle("hidden", signedAuthed);
-
       btnSignOut.disabled = !signedAuthed;
+
+      // Requirement: hide walkthrough after sign-in (SIGNED only)
+      if (videoSigned) videoSigned.classList.toggle("hidden", signedAuthed);
+
       refreshSignedSendEnabled();
     }
 
+    // Enable/disable buttons deterministically
     signedCode.addEventListener("input", refreshSignedSendEnabled);
     signedBody.addEventListener("input", refreshSignedSendEnabled);
 
@@ -303,7 +321,7 @@
         return;
       }
       setStatus("good", "Sign-in link requested", "When Firebase is wired, a sign-in link will be sent to your email.");
-      signedAuthed = true;
+      signedAuthed = true;        // stub sign-in
       applySignedAuthUI();
     });
 
@@ -351,7 +369,7 @@
       setStatus("warn", "Cleared", "Rolling send fields cleared.");
     });
 
-    // Initial UI state
+    // Initial state
     applySignedAuthUI();
     refreshRollingSendEnabled();
   </script>
