@@ -30,6 +30,13 @@
 
       const m = document.querySelector('meta[name="theme-color"][data-theme-color="'+effective+'"]');
       if (m) m.content = effective === "dark" ? "#1C1B1F" : "#FFFBFE";
+
+      const authed = localStorage.getItem("sf_signed_authed") === "true";
+      document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll(".auth-only").forEach(el => {
+          el.classList.toggle("hidden", !authed);
+        });
+      });
     })();
   </script>
 </head>
@@ -47,6 +54,7 @@
         <a href="./">Home</a>
         <a href="./send.html">Send</a>
         <a href="./receive.html">Receive</a>
+        <a class="auth-only hidden" href="./inbox.html">Inbox</a>
         <a href="./security.html">Security</a>
         <a href="./privacy.html" aria-current="page">Privacy</a>
         <a class="nav-cta" href="#" aria-label="Download Setfeed app">Download app</a>
