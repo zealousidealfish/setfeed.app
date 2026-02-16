@@ -35,13 +35,23 @@
 
   firebase.initializeApp(firebaseConfig);
 
-  // Simple activation (v3 site key)
-  firebase.appCheck().activate(
-    "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI",
-    true
-  );
-
+  // Functions can be created immediately
   const functions = firebase.app().functions("europe-west2");
+
+  // ✅ Delay App Check until <body> exists (fixes recaptcha appendChild crash)
+  function startAppCheck() {
+    try {
+      firebase.appCheck().activate("6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI", true);
+    } catch (e) {
+      console.error("App Check init failed:", e);
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startAppCheck, { once: true });
+  } else {
+    startAppCheck();
+  }
 </script>
 
   <!-- =========================
