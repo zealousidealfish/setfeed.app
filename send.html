@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Send — Setfeed</title>
   <meta name="description" content="Send an end-to-end encrypted message to Setfeed." />
-  <meta name="theme-color" content="#0F1114" />
+  <meta name="theme-color" content="#FFFBFE" />
 
   <!-- Favicons -->
   <link rel="icon" href="./favicon.ico" sizes="any">
@@ -69,7 +69,7 @@
             </div>
 
             <div class="actions">
-              <button class="btn btn-lg" id="btn-send-link" type="button">Send sign-in link</button>
+              <button class="btn btn-lg btn-secondary" id="btn-send-link" type="button">Send sign-in link</button>
               <button class="btn btn-lg btn-quiet" id="btn-sign-out" type="button" disabled>Sign out</button>
             </div>
 
@@ -143,7 +143,7 @@
         </div>
       </div>
 
-      <!-- Video (after CTA + explanation, no autoplay) -->
+      <!-- Video -->
       <div class="video-card" aria-label="Walkthrough">
         <h2 style="margin-top:0;">Walkthrough</h2>
         <p class="lead" style="margin-bottom: 0;">
@@ -151,19 +151,7 @@
         </p>
 
         <div class="video-frame">
-          <!-- Key attributes:
-               - playsinline: iOS/Safari reliability
-               - preload metadata: calm + light
-               - controls only: explicit user action
-               - crossorigin not needed for same-origin
-          -->
-          <video
-            id="walkthroughVideo"
-            controls
-            playsinline
-            preload="metadata"
-            poster="./poster.png"
-          >
+          <video id="walkthroughVideo" controls playsinline preload="metadata" poster="./poster.png">
             <source src="./walkthough.mp4" type="video/mp4" />
             Sorry — your browser can’t play this video.
           </video>
@@ -213,7 +201,7 @@
       panelSigned.classList.toggle("hidden", !signed);
       panelRolling.classList.toggle("hidden", signed);
 
-      // If the browser didn’t initialize video earlier, nudge it now.
+      // gentle nudge for embedded video initialization on some browsers
       nudgeVideoLoad();
     }
 
@@ -313,7 +301,7 @@
       setStatus("warn", "Cleared", "Rolling send fields cleared.");
     });
 
-    // --- Video reliability helpers ---
+    // Video init helper (keeps behavior explicit; no autoplay)
     const video = document.getElementById("walkthroughVideo");
     const videoHelp = document.getElementById("video-help");
 
@@ -322,34 +310,15 @@
     }
 
     function nudgeVideoLoad() {
-      // Avoid doing anything if video element doesn’t exist.
       if (!video) return;
-
-      // If metadata already available, don’t touch it.
       if (video.readyState >= 1) return;
-
-      try {
-        video.load();
-      } catch (e) {
-        // Some browsers may throw; we’ll handle via events below.
-      }
+      try { video.load(); } catch (e) {}
     }
 
     if (video) {
-      // Nudge once after layout stabilizes
-      window.addEventListener("load", () => {
-        // small delay helps on Safari / iOS
-        setTimeout(nudgeVideoLoad, 50);
-      });
-
-      video.addEventListener("loadedmetadata", () => {
-        // quiet confirmation (no UI change needed)
-      });
-
+      window.addEventListener("load", () => setTimeout(nudgeVideoLoad, 50));
       video.addEventListener("error", () => {
-        // Provide explicit, calm debugging guidance to yourself/user
-        // (still doesn’t leak technical noise unless it fails)
-        setVideoHelp("Video failed to load. Try a hard refresh. If it persists, the host may not support byte-range streaming for embedded video.");
+        setVideoHelp("Video failed to initialize on this page. Try a hard refresh. If it persists, serve the MP4 from Firebase Hosting/Storage for reliable streaming.");
         setStatus("warn", "Video unavailable", "The walkthrough video failed to initialize on this page. The direct link may still work.");
       });
     }
