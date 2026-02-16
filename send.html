@@ -34,16 +34,27 @@
 
   firebase.initializeApp(firebaseConfig);
 
-  const appCheck = firebase.appCheck();
-
-  appCheck.activate(
-    new firebase.appCheck.ReCaptchaV3Provider(
-      "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI"
-    ),
-    true
-  );
-
+  // Functions region (safe to set now)
   const functions = firebase.app().functions("europe-west2");
+
+  function startAppCheck() {
+    try {
+      const appCheck = firebase.appCheck();
+      appCheck.activate(
+        new firebase.appCheck.ReCaptchaV3Provider("6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI"),
+        true
+      );
+    } catch (e) {
+      console.error("App Check init failed:", e);
+    }
+  }
+
+  // ✅ Ensure <body> exists before reCAPTCHA injects anything
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startAppCheck, { once: true });
+  } else {
+    startAppCheck();
+  }
 </script>
 
   <!-- =========================
