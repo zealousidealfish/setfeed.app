@@ -53,6 +53,7 @@
         <a href="./receive.html">Receive</a>
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
+        <a class="nav-cta" href="#" aria-label="Download Setfeed app">Download app</a>
       </nav>
     </div>
   </header>
@@ -61,7 +62,7 @@
     <div class="card">
       <h1>Scheduled messages. Kept simple.</h1>
       <p class="lead">
-        A calm, local-first scheduled messaging app — predictable behavior, explicit actions,
+        A calm, local-first scheduled messaging app — predictable behavior, gentle defaults,
         and no surprise state changes.
       </p>
 
@@ -77,7 +78,20 @@
         <a class="btn btn-lg btn-quiet" href="./security.html">Security</a>
       </div>
 
-      <h2>What this site is</h2>
+      <!-- Sign-in links (placeholder routes for later auth wiring) -->
+      <div class="panel" style="margin-top: var(--s-6);">
+        <p class="panel-title">Sign in</p>
+        <p class="panel-sub">
+          Optional. Sign in to access signed sending and advanced options when they’re enabled on the web bridge.
+        </p>
+        <div class="actions">
+          <a class="btn btn-lg btn-primary" href="./send.html#signin">Continue with Google</a>
+          <a class="btn btn-lg btn-secondary" href="./send.html#signin">Continue with email</a>
+        </div>
+        <small class="help">You can also send using Rolling without signing in.</small>
+      </div>
+
+      <h2>About this site</h2>
       <p>
         This website is a simple bridge for sending encrypted messages into Setfeed.
         Messages are encrypted before they reach our servers. The server stores ciphertext only.
