@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Security — Setfeed</title>
   <meta name="description" content="Setfeed security model, encryption boundaries, and responsible disclosure policy." />
-  <meta name="theme-color" content="#0F1114" />
+  <meta name="theme-color" content="#FFFBFE" />
 
   <!-- Favicons -->
   <link rel="icon" href="./favicon.ico" sizes="any">
@@ -41,7 +41,7 @@
         <div>
           <h1>Security</h1>
           <p class="lead">
-            The web bridge is a ciphertext transport layer. Messages are encrypted in the browser to the recipient’s key.
+            The web bridge is a ciphertext transport layer. Messages are encrypted in the browser.
             Only the recipient device can decrypt.
           </p>
 
@@ -70,8 +70,8 @@
             Browser encrypts → policy validated → ciphertext stored → device fetches → decrypts locally
           </p>
           <div class="actions">
-            <a class="btn btn-primary" href="./send.html">Send to a code</a>
-            <a class="btn btn-quiet" href="./receive.html">Get a code</a>
+            <a class="btn btn-lg btn-primary" href="./send.html">Send to a code</a>
+            <a class="btn btn-lg btn-secondary" href="./receive.html">Get a code</a>
           </div>
           <small class="help">
             Responsible disclosure: <a href="mailto:security@setfeed.app">security@setfeed.app</a>
@@ -92,41 +92,6 @@
         <li>Recipient private keys</li>
         <li>Content-derived analytics</li>
       </ul>
-
-      <h2>Receive codes and sending rules</h2>
-      <p>
-        Setfeed supports three receive code types. Two are signed; one is capability-based and strictly limited.
-      </p>
-
-      <h3>Secure and Personal (signed)</h3>
-      <ul>
-        <li><strong>Secure</strong> and <strong>Personal</strong> sends require email-link sign-in.</li>
-        <li>Rate limits apply to reduce abuse and protect recipient devices.</li>
-      </ul>
-
-      <h3>Rolling (capability-based)</h3>
-      <ul>
-        <li>Rolling sends do not require sign-in.</li>
-        <li>They are short-lived, rate-limited, and typically single-use.</li>
-        <li>App Check is required to reduce automated abuse.</li>
-      </ul>
-
-      <h2>Abuse prevention (high level)</h2>
-      <p>
-        We enforce strict controls to keep Setfeed usable without becoming an open inbox:
-        validity windows, usage limits, payload size caps, App Check, and rate limiting.
-      </p>
-      <div class="note">
-        <p style="margin:0;">
-          We intentionally do not publish exact thresholds here. Guardrails may change as we observe real-world abuse.
-        </p>
-      </div>
-
-      <h2>Responsible disclosure</h2>
-      <p>
-        If you believe you’ve found a security vulnerability:
-        email <a href="mailto:security@setfeed.app">security@setfeed.app</a>.
-      </p>
 
       <footer>
         <div>© <span id="y"></span> Setfeed</div>
