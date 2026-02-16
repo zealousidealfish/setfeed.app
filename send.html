@@ -5,48 +5,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Send — Setfeed</title>
   <meta name="description" content="Send an end-to-end encrypted message to Setfeed." />
+  <meta name="theme-color" content="#0F1114" />
 
-  <meta name="theme-color" content="#FFFBFE" data-theme-color="light" />
-  <meta name="theme-color" content="#1C1B1F" data-theme-color="dark" />
-
+  <!-- Favicons -->
   <link rel="icon" href="./favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
   <link rel="icon" type="image/png" href="./favicon-16.png" sizes="16x16">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180">
 
   <link rel="stylesheet" href="./styles.css" />
-
-  <script>
-    (function(){
-      const key = "sf_theme_override"; // "system" | "light" | "dark"
-      const override = localStorage.getItem(key) || "system";
-      const root = document.documentElement;
-
-      if (override === "light" || override === "dark") root.setAttribute("data-theme", override);
-      else root.removeAttribute("data-theme");
-
-      function effectiveTheme(){
-        const forced = root.getAttribute("data-theme");
-        if (forced === "light" || forced === "dark") return forced;
-        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      }
-
-      const t = effectiveTheme();
-      const m = document.querySelector('meta[name="theme-color"][data-theme-color="'+t+'"]');
-      if (m) m.content = t === "dark" ? "#1C1B1F" : "#FFFBFE";
-
-      if (window.matchMedia) {
-        const mq = window.matchMedia("(prefers-color-scheme: dark)");
-        mq.addEventListener?.("change", () => {
-          if (!root.getAttribute("data-theme")) {
-            const nt = effectiveTheme();
-            const mm = document.querySelector('meta[name="theme-color"][data-theme-color="'+nt+'"]');
-            if (mm) mm.content = nt === "dark" ? "#1C1B1F" : "#FFFBFE";
-          }
-        });
-      }
-    })();
-  </script>
 </head>
 
 <body class="page-bg">
@@ -80,39 +47,6 @@
         <div class="pill"><span class="dot good"></span> End-to-end encrypted</div>
         <div class="pill"><span class="dot good"></span> Ciphertext-only storage</div>
         <div class="pill"><span class="dot warn"></span> Rolling is constrained</div>
-      </div>
-
-      <!-- Signed-only controls (hidden until signed in) -->
-      <div id="signed-controls" class="panel hidden" style="margin-top: var(--s-5);">
-        <p class="panel-title" style="margin-bottom: 6px;">Signed session controls</p>
-        <p class="panel-sub" style="margin-bottom: var(--s-3);">
-          Theme and advanced defaults are available only when signed in.
-        </p>
-
-        <div class="inline-row">
-          <div class="field" style="min-width: 220px; margin-top: 0;">
-            <label for="theme-select">Theme</label>
-            <select id="theme-select">
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </div>
-
-          <div class="field" style="min-width: 260px; margin-top: 0;">
-            <label for="preset-times">Preset times (HH:MM, comma-separated)</label>
-            <input id="preset-times" type="text" placeholder="08:00, 13:00, 18:00" />
-          </div>
-
-          <div class="actions" style="margin-top: 0;">
-            <button class="btn btn-lg btn-secondary" id="btn-save-presets" type="button">Save</button>
-            <button class="btn btn-lg btn-quiet" id="btn-reset-presets" type="button">Reset</button>
-          </div>
-
-          <small class="help" style="margin-top: 0;">
-            These are stored locally for now. Later you can sync them to your Firebase profile.
-          </small>
-        </div>
       </div>
 
       <h2>Choose a send type</h2>
@@ -157,109 +91,13 @@
               <textarea id="signed-body" maxlength="1200" placeholder="Write your message…"></textarea>
             </div>
 
-            <!-- Scheduling (Setfeed-like modes) -->
-            <div class="panel" style="margin-top: var(--s-4);">
-              <p class="panel-title" style="margin-bottom: 6px;">Schedule</p>
-              <p class="panel-sub" id="deliver-label" style="margin-bottom: var(--s-3);">
-                Deliver: <strong>Tomorrow · 6pm</strong>
-              </p>
-
-              <div class="tabs" role="tablist" aria-label="Scheduling mode" style="margin-top: 0;">
-                <button class="tab" id="mode-presets" type="button" aria-selected="true">Presets</button>
-                <button class="tab" id="mode-quick" type="button" aria-selected="false">Quick</button>
-                <button class="tab" id="mode-pick" type="button" aria-selected="false">Pick date</button>
-              </div>
-
-              <!-- Presets -->
-              <div id="panel-presets" style="margin-top: var(--s-3);">
-                <p class="panel-sub" style="margin-bottom: var(--s-3);">
-                  Tap a preset time. Signed out defaults are 8am, 1pm, 6pm.
-                </p>
-
-                <div class="actions" id="preset-chips" style="margin-top: 0;"></div>
-
-                <div class="note">
-                  <p style="margin:0;">
-                    Presets choose a time on the currently selected day. If you pick a past time today,
-                    it moves to tomorrow.
-                  </p>
-                </div>
-              </div>
-
-              <!-- Quick -->
-              <div id="panel-quick" class="hidden" style="margin-top: var(--s-3);">
-                <p class="panel-sub" style="margin-bottom: var(--s-3);">
-                  Quick is within the next day. Snaps to calm increments.
-                </p>
-
-                <div class="actions" style="margin-top: 0;">
-                  <button class="btn btn-lg btn-quiet" type="button" data-quick="10">Soon (10m)</button>
-                  <button class="btn btn-lg btn-quiet" type="button" data-quick="20">Later (20m)</button>
-                  <button class="btn btn-lg btn-quiet" type="button" data-quick="60">1 hour</button>
-                  <button class="btn btn-lg btn-quiet" type="button" data-quick="120">2 hours</button>
-                  <button class="btn btn-lg btn-quiet" type="button" data-quick="180">3 hours</button>
-                </div>
-
-                <div class="field">
-                  <label for="quick-slider">Fine adjust (minutes)</label>
-                  <input id="quick-slider" type="range" min="10" max="1440" step="5" value="60" />
-                  <small class="help" id="quick-help">Snaps to 5 minutes.</small>
-                </div>
-              </div>
-
-              <!-- Pick date -->
-              <div id="panel-pick" class="hidden" style="margin-top: var(--s-3);">
-                <div class="row" style="margin-top: 0;">
-                  <div class="col">
-                    <div class="field" style="margin-top: 0;">
-                      <label for="pick-date">Date</label>
-                      <input id="pick-date" type="date" />
-                    </div>
-
-                    <div class="actions" style="margin-top: var(--s-3);">
-                      <button class="btn btn-lg btn-quiet" id="pick-today" type="button">Today</button>
-                      <button class="btn btn-lg btn-quiet" id="pick-tomorrow" type="button">Tomorrow</button>
-                      <button class="btn btn-lg btn-quiet" id="pick-nextweek" type="button">Next week</button>
-                    </div>
-                  </div>
-
-                  <div class="col">
-                    <div class="field" style="margin-top: 0;">
-                      <label for="pick-time">Time</label>
-                      <input id="pick-time" type="time" step="300" />
-                      <small class="help">Snaps to 5 minutes.</small>
-                    </div>
-
-                    <div class="actions" id="pick-time-presets" style="margin-top: var(--s-3);"></div>
-
-                    <div class="field">
-                      <label for="time-snap">Snap to choose time</label>
-                      <input id="time-snap" type="range" min="0" max="1439" step="5" value="1080" />
-                      <small class="help" id="time-snap-label">18:00</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Optional scheduling window (signed-only, like your earlier design) -->
-              <div id="advanced-window" class="hidden" style="margin-top: var(--s-4);">
-                <div class="field" style="margin-top: 0;">
-                  <label for="schedule-window">Optional delivery window (minutes)</label>
-                  <input id="schedule-window" type="number" min="0" max="1440" placeholder="e.g. 30" />
-                </div>
-                <small class="help">
-                  Advanced scheduling options appear when signed in.
-                </small>
-              </div>
-            </div>
-
             <div class="actions">
               <button class="btn btn-lg btn-primary" id="btn-signed-send" type="button" disabled>Encrypt &amp; send</button>
               <button class="btn btn-lg btn-quiet" id="btn-signed-clear" type="button">Clear</button>
             </div>
 
             <small class="help">
-              Send becomes available once your message is non-empty (like Setfeed). No background sending.
+              Only the recipient device can decrypt. If a code is invalid, you’ll be told explicitly.
             </small>
           </div>
         </div>
@@ -279,13 +117,6 @@
               <textarea id="rolling-body" maxlength="1200" placeholder="Write your message…"></textarea>
             </div>
 
-            <div class="panel" style="margin-top: var(--s-4);">
-              <p class="panel-title" style="margin-bottom: 6px;">Scheduling</p>
-              <p class="panel-sub" style="margin-bottom: 0;">
-                Rolling is constrained. Default schedule is <strong>tomorrow</strong> at a calm preset time.
-              </p>
-            </div>
-
             <div class="actions">
               <button class="btn btn-lg btn-primary" id="btn-rolling-send" type="button" disabled>Encrypt &amp; send</button>
               <button class="btn btn-lg btn-quiet" id="btn-rolling-clear" type="button">Clear</button>
@@ -303,11 +134,16 @@
               <li>Strict guardrails (validity, usage limits, rate limiting).</li>
               <li>Clear errors when something can’t be sent.</li>
             </ul>
+            <div class="note">
+              <p style="margin:0;">
+                If you want a stable link, use Secure (signed) for yourself.
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Video -->
+      <!-- Video (CTA first, explanation second, demo third) -->
       <div class="video-card" aria-label="Walkthrough">
         <h2 style="margin-top:0;">Walkthrough</h2>
         <p class="lead" style="margin-bottom: 0;">
@@ -315,14 +151,14 @@
         </p>
 
         <div class="video-frame">
-          <video id="walkthroughVideo" controls playsinline preload="metadata" poster="./poster.png">
-            <source src="./walkthough.mp4" type="video/mp4" />
+          <video controls preload="metadata" poster="./poster.png" playsinline>
+            <source src="./walkthrough.mp4" type="video/mp4" />
             Sorry — your browser can’t play this video.
           </video>
         </div>
 
-        <small class="help" id="video-help">
-          If this fails on-page but works via direct URL, move the MP4 to Firebase Hosting/Storage so it serves a correct video MIME type everywhere.
+        <small class="help">
+          Principle: CTA first, explanation second, demonstration third.
         </small>
       </div>
 
@@ -351,108 +187,31 @@
   </div>
 
   <script>
-    // =========================
-    // Deterministic primitives
-    // =========================
-    const pad2 = (n) => String(n).padStart(2, "0");
-
-    function formatTimeShort(hours, minutes) {
-      const h24 = hours;
-      const m = minutes;
-      const isAm = h24 < 12;
-      const ampm = isAm ? "am" : "pm";
-      const h12 = (h24 % 12) === 0 ? 12 : (h24 % 12);
-      return m === 0 ? `${h12}${ampm}` : `${h12}:${pad2(m)}${ampm}`;
-    }
-
-    function toHHMM(minsOfDay) {
-      const h = Math.floor(minsOfDay / 60);
-      const m = minsOfDay % 60;
-      return `${pad2(h)}:${pad2(m)}`;
-    }
-
-    function fromHHMM(hhmm) {
-      const m = /^(\d{1,2}):(\d{2})$/.exec((hhmm || "").trim());
-      if (!m) return null;
-      const h = Number(m[1]);
-      const min = Number(m[2]);
-      if (!Number.isFinite(h) || !Number.isFinite(min)) return null;
-      if (h < 0 || h > 23 || min < 0 || min > 59) return null;
-      return h * 60 + min;
-    }
-
-    function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-
-    function todayLocal() {
-      const d = new Date();
-      d.setHours(0,0,0,0);
-      return d;
-    }
-
-    function addDays(date, days) {
-      const d = new Date(date.getTime());
-      d.setDate(d.getDate() + days);
-      return d;
-    }
-
-    function dateToInputValue(date) {
-      const y = date.getFullYear();
-      const m = pad2(date.getMonth() + 1);
-      const d = pad2(date.getDate());
-      return `${y}-${m}-${d}`;
-    }
-
-    function inputValueToDate(v) {
-      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((v || "").trim());
-      if (!m) return null;
-      const y = Number(m[1]), mo = Number(m[2]) - 1, da = Number(m[3]);
-      const d = new Date(y, mo, da, 0, 0, 0, 0);
-      if (Number.isNaN(d.getTime())) return null;
-      return d;
-    }
-
-    function buildDeliverLabel(dateObj, minsOfDay) {
-      const now = new Date();
-      const today = todayLocal();
-      const tomorrow = addDays(today, 1);
-      const sameDay = (a, b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
-
-      let dateText = dateObj.toLocaleDateString(undefined, { weekday: "short", day:"numeric", month:"short" });
-      if (sameDay(dateObj, today)) dateText = "Today";
-      if (sameDay(dateObj, tomorrow)) dateText = "Tomorrow";
-
-      const h = Math.floor(minsOfDay / 60);
-      const m = minsOfDay % 60;
-      const t = formatTimeShort(h, m);
-      return `${dateText} · ${t}`;
-    }
-
-    // =========================
-    // Page wiring
-    // =========================
+    // Year
     document.getElementById("y").textContent = new Date().getFullYear();
 
-    // Tabs: Signed/Rolling
+    // Tabs (deterministic: visibility + aria only)
     const tabSigned = document.getElementById("tab-signed");
     const tabRolling = document.getElementById("tab-rolling");
     const panelSigned = document.getElementById("panel-signed");
     const panelRolling = document.getElementById("panel-rolling");
 
-    function setSendTab(which) {
+    function setTab(which) {
       const signed = which === "signed";
       tabSigned.setAttribute("aria-selected", signed ? "true" : "false");
       tabRolling.setAttribute("aria-selected", signed ? "false" : "true");
       panelSigned.classList.toggle("hidden", !signed);
       panelRolling.classList.toggle("hidden", signed);
-      nudgeVideoLoad();
     }
-    tabSigned.addEventListener("click", () => setSendTab("signed"));
-    tabRolling.addEventListener("click", () => setSendTab("rolling"));
 
-    // Status
+    tabSigned.addEventListener("click", () => setTab("signed"));
+    tabRolling.addEventListener("click", () => setTab("rolling"));
+
+    // Status helper (quiet, explicit)
     const statusDot = document.getElementById("status-dot");
     const statusTitle = document.getElementById("status-title");
     const statusLine = document.getElementById("status-line");
+
     function setStatus(kind, title, line) {
       statusDot.className = "dot";
       if (kind === "good") statusDot.classList.add("good");
@@ -461,304 +220,44 @@
       statusLine.textContent = line;
     }
 
-    // Auth stubs
-    const signedControls = document.getElementById("signed-controls");
-    const themeSelect = document.getElementById("theme-select");
-    const presetTimesInput = document.getElementById("preset-times");
-    const btnSavePresets = document.getElementById("btn-save-presets");
-    const btnResetPresets = document.getElementById("btn-reset-presets");
-
+    // Elements
     const signedEmail = document.getElementById("signed-email");
+    const signedCode = document.getElementById("signed-code");
+    const signedBody = document.getElementById("signed-body");
     const btnSendLink = document.getElementById("btn-send-link");
     const btnSignOut = document.getElementById("btn-sign-out");
-
-    let signedAuthed = false;
-
-    // Theme override (signed-only)
-    function applyThemeOverride(mode) {
-      const key = "sf_theme_override";
-      const root = document.documentElement;
-
-      if (mode === "light" || mode === "dark") {
-        root.setAttribute("data-theme", mode);
-        localStorage.setItem(key, mode);
-      } else {
-        root.removeAttribute("data-theme");
-        localStorage.setItem(key, "system");
-      }
-
-      const effective = root.getAttribute("data-theme")
-        || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-      const m = document.querySelector('meta[name="theme-color"][data-theme-color="'+effective+'"]');
-      if (m) m.content = effective === "dark" ? "#1C1B1F" : "#FFFBFE";
-    }
-
-    function hydrateThemeSelect() {
-      const key = "sf_theme_override";
-      const stored = localStorage.getItem(key) || "system";
-      if (themeSelect) themeSelect.value = stored;
-    }
-
-    if (themeSelect) {
-      themeSelect.addEventListener("change", () => {
-        if (!signedAuthed) {
-          hydrateThemeSelect();
-          setStatus("warn", "Sign-in required", "Theme override is available only after sign-in.");
-          return;
-        }
-        applyThemeOverride(themeSelect.value);
-        setStatus("good", "Theme updated", "Theme preference saved on this device.");
-      });
-    }
-
-    // Preset times storage (local-only)
-    const PRESET_KEY_SIGNED = "sf_signed_preset_times"; // "HH:MM,HH:MM,HH:MM"
-    const PRESET_KEY_GUEST = "sf_guest_preset_times";   // keep stable defaults
-
-    function guestPresets() { return ["08:00", "13:00", "18:00"]; }
-
-    function readPresetTimes() {
-      const raw = signedAuthed
-        ? (localStorage.getItem(PRESET_KEY_SIGNED) || "")
-        : (localStorage.getItem(PRESET_KEY_GUEST) || "");
-
-      const fallback = guestPresets();
-      if (!raw) return fallback;
-
-      const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
-      const mins = parts.map(fromHHMM).filter(x => x !== null);
-      if (mins.length < 3) return fallback;
-
-      // return first 3 as HH:MM
-      return mins.slice(0,3).map(toHHMM);
-    }
-
-    function writeSignedPresetTimes(hhmmList3) {
-      localStorage.setItem(PRESET_KEY_SIGNED, hhmmList3.join(","));
-    }
-
-    function resetSignedPresetTimes() {
-      localStorage.removeItem(PRESET_KEY_SIGNED);
-    }
-
-    // Scheduling state (Signed)
-    let schedMode = "presets";      // "presets" | "quick" | "pick"
-    let selectedDate = addDays(todayLocal(), 1); // start as tomorrow (calm default)
-    let selectedMins = 18 * 60;     // 18:00
-
-    function ensureNotPastForToday() {
-      // If selected date is today and time is in the past, move to tomorrow.
-      const now = new Date();
-      const d = new Date(selectedDate.getTime());
-      if (d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate()) {
-        const nowMins = now.getHours()*60 + now.getMinutes();
-        if (selectedMins <= nowMins) {
-          selectedDate = addDays(todayLocal(), 1);
-        }
-      }
-    }
-
-    function updateDeliverUI() {
-      ensureNotPastForToday();
-      document.getElementById("deliver-label").innerHTML =
-        `Deliver: <strong>${buildDeliverLabel(selectedDate, selectedMins)}</strong>`;
-
-      // keep pick inputs in sync
-      const pickDate = document.getElementById("pick-date");
-      const pickTime = document.getElementById("pick-time");
-      const timeSnap = document.getElementById("time-snap");
-      const timeSnapLabel = document.getElementById("time-snap-label");
-
-      if (pickDate) pickDate.value = dateToInputValue(selectedDate);
-      if (pickTime) pickTime.value = toHHMM(selectedMins);
-      if (timeSnap) timeSnap.value = String(selectedMins);
-      if (timeSnapLabel) timeSnapLabel.textContent = toHHMM(selectedMins);
-    }
-
-    // Mode tabs: Presets/Quick/Pick
-    const modePresets = document.getElementById("mode-presets");
-    const modeQuick = document.getElementById("mode-quick");
-    const modePick = document.getElementById("mode-pick");
-
-    const panelPresets = document.getElementById("panel-presets");
-    const panelQuick = document.getElementById("panel-quick");
-    const panelPick = document.getElementById("panel-pick");
-
-    function setScheduleMode(next) {
-      schedMode = next;
-
-      modePresets.setAttribute("aria-selected", next === "presets" ? "true" : "false");
-      modeQuick.setAttribute("aria-selected", next === "quick" ? "true" : "false");
-      modePick.setAttribute("aria-selected", next === "pick" ? "true" : "false");
-
-      panelPresets.classList.toggle("hidden", next !== "presets");
-      panelQuick.classList.toggle("hidden", next !== "quick");
-      panelPick.classList.toggle("hidden", next !== "pick");
-    }
-
-    modePresets.addEventListener("click", () => setScheduleMode("presets"));
-    modeQuick.addEventListener("click", () => setScheduleMode("quick"));
-    modePick.addEventListener("click", () => setScheduleMode("pick"));
-
-    // Build preset chips
-    const presetChips = document.getElementById("preset-chips");
-    const pickTimePresets = document.getElementById("pick-time-presets");
-
-    function renderPresets() {
-      const times = readPresetTimes(); // ["HH:MM",...]
-      const mins = times.map(fromHHMM);
-
-      function makeBtn(label, onClick) {
-        const b = document.createElement("button");
-        b.className = "btn btn-lg btn-quiet";
-        b.type = "button";
-        b.textContent = label;
-        b.addEventListener("click", onClick);
-        return b;
-      }
-
-      // presets main row
-      presetChips.innerHTML = "";
-      mins.forEach((m) => {
-        const h = Math.floor(m/60), mm = m%60;
-        const label = formatTimeShort(h, mm);
-        presetChips.appendChild(makeBtn(label, () => {
-          selectedMins = m;
-          updateDeliverUI();
-        }));
-      });
-
-      // pick-date time presets (same)
-      pickTimePresets.innerHTML = "";
-      mins.forEach((m) => {
-        const h = Math.floor(m/60), mm = m%60;
-        const label = formatTimeShort(h, mm);
-        pickTimePresets.appendChild(makeBtn(label, () => {
-          selectedMins = m;
-          updateDeliverUI();
-        }));
-      });
-
-      // also set default when entering (calm)
-      if (!Number.isFinite(selectedMins)) selectedMins = mins[2] ?? (18*60);
-      updateDeliverUI();
-    }
-
-    // Pick date wiring
-    const pickDate = document.getElementById("pick-date");
-    const pickTime = document.getElementById("pick-time");
-    const timeSnap = document.getElementById("time-snap");
-    const timeSnapLabel = document.getElementById("time-snap-label");
-
-    if (pickDate) {
-      pickDate.addEventListener("change", () => {
-        const d = inputValueToDate(pickDate.value);
-        if (!d) return;
-        selectedDate = d;
-        updateDeliverUI();
-      });
-    }
-
-    if (pickTime) {
-      pickTime.addEventListener("change", () => {
-        const m = fromHHMM(pickTime.value);
-        if (m === null) return;
-        selectedMins = clamp(Math.round(m / 5) * 5, 0, 1439);
-        updateDeliverUI();
-      });
-    }
-
-    if (timeSnap) {
-      timeSnap.addEventListener("input", () => {
-        const v = Number(timeSnap.value);
-        const snapped = clamp(Math.round(v / 5) * 5, 0, 1439);
-        selectedMins = snapped;
-        if (timeSnapLabel) timeSnapLabel.textContent = toHHMM(snapped);
-        if (pickTime) pickTime.value = toHHMM(snapped);
-        updateDeliverUI();
-      });
-    }
-
-    // Date quick buttons
-    document.getElementById("pick-today").addEventListener("click", () => { selectedDate = todayLocal(); updateDeliverUI(); });
-    document.getElementById("pick-tomorrow").addEventListener("click", () => { selectedDate = addDays(todayLocal(), 1); updateDeliverUI(); });
-    document.getElementById("pick-nextweek").addEventListener("click", () => { selectedDate = addDays(todayLocal(), 7); updateDeliverUI(); });
-
-    // Quick mode wiring
-    const quickSlider = document.getElementById("quick-slider");
-    const quickHelp = document.getElementById("quick-help");
-
-    function applyQuickOffsetMinutes(offsetMin) {
-      const now = new Date();
-      const target = new Date(now.getTime() + offsetMin * 60 * 1000);
-      selectedDate = new Date(target.getFullYear(), target.getMonth(), target.getDate(), 0,0,0,0);
-      selectedMins = clamp(Math.round((target.getHours()*60 + target.getMinutes()) / 5) * 5, 0, 1439);
-      updateDeliverUI();
-      if (quickSlider) quickSlider.value = String(clamp(Math.round(offsetMin / 5) * 5, 10, 1440));
-      if (quickHelp) quickHelp.textContent = `Offset: ${offsetMin} minutes (snapped).`;
-    }
-
-    document.querySelectorAll("[data-quick]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const v = Number(btn.getAttribute("data-quick"));
-        if (!Number.isFinite(v)) return;
-        applyQuickOffsetMinutes(v);
-      });
-    });
-
-    if (quickSlider) {
-      quickSlider.addEventListener("input", () => {
-        const v = clamp(Number(quickSlider.value), 10, 1440);
-        const snapped = clamp(Math.round(v / 5) * 5, 10, 1440);
-        applyQuickOffsetMinutes(snapped);
-      });
-    }
-
-    // Send enabling (Setfeed-like)
-    const signedBody = document.getElementById("signed-body");
-    const signedCode = document.getElementById("signed-code");
     const btnSignedSend = document.getElementById("btn-signed-send");
     const btnSignedClear = document.getElementById("btn-signed-clear");
 
-    const rollingBody = document.getElementById("rolling-body");
     const rollingCode = document.getElementById("rolling-code");
+    const rollingBody = document.getElementById("rolling-body");
     const btnRollingSend = document.getElementById("btn-rolling-send");
     const btnRollingClear = document.getElementById("btn-rolling-clear");
 
+    // Local-only state (no silent storage)
+    let signedAuthed = false;
+
+    // ✅ App-consistent enabling:
+    // Enable when required fields are present.
+    // Auth is enforced on click (explicit error), not by silently disabling.
     function refreshSignedSendEnabled() {
-      const hasText = signedBody.value.trim().length > 0;
-      const hasCode = signedCode.value.trim().length > 0;
-      // Signed send is only truly allowed when authed (matches your earlier rule)
-      btnSignedSend.disabled = !(signedAuthed && hasText && hasCode);
+      const canAttempt = signedCode.value.trim().length > 0
+        && signedBody.value.trim().length > 0;
+      btnSignedSend.disabled = !canAttempt;
     }
 
     function refreshRollingSendEnabled() {
-      const hasText = rollingBody.value.trim().length > 0;
-      const hasCode = rollingCode.value.trim().length > 0;
-      btnRollingSend.disabled = !(hasText && hasCode);
+      const canAttempt = rollingCode.value.trim().length > 0
+        && rollingBody.value.trim().length > 0;
+      btnRollingSend.disabled = !canAttempt;
     }
 
-    signedBody.addEventListener("input", refreshSignedSendEnabled);
     signedCode.addEventListener("input", refreshSignedSendEnabled);
-
-    rollingBody.addEventListener("input", refreshRollingSendEnabled);
+    signedBody.addEventListener("input", refreshSignedSendEnabled);
     rollingCode.addEventListener("input", refreshRollingSendEnabled);
+    rollingBody.addEventListener("input", refreshRollingSendEnabled);
 
-    // Signed-only advanced window
-    const advancedWindow = document.getElementById("advanced-window");
-    const scheduleWindow = document.getElementById("schedule-window");
-
-    function refreshSignedOnlyUI() {
-      signedControls.classList.toggle("hidden", !signedAuthed);
-      advancedWindow.classList.toggle("hidden", !signedAuthed);
-      btnSignOut.disabled = !signedAuthed;
-      hydrateThemeSelect();
-      if (presetTimesInput) presetTimesInput.value = readPresetTimes().join(", ");
-      renderPresets();
-      refreshSignedSendEnabled();
-    }
-
-    // Auth stubs (replace later with Firebase)
+    // Signed auth stub (no network calls yet)
     btnSendLink.addEventListener("click", () => {
       const email = signedEmail.value.trim();
       if (!email) {
@@ -766,57 +265,50 @@
         return;
       }
       signedAuthed = true;
-      setStatus("good", "Sign-in link requested", "When Firebase is wired, a sign-in link will be sent to your email.");
-      refreshSignedOnlyUI();
+      btnSignOut.disabled = false;
+      setStatus("good", "Signed in", "Signed sending is available. (Firebase wiring pending.)");
+      refreshSignedSendEnabled();
     });
 
     btnSignOut.addEventListener("click", () => {
       signedAuthed = false;
-      setStatus("warn", "Signed out", "Signed sending is unavailable until you sign in again.");
-      refreshSignedOnlyUI();
+      btnSignOut.disabled = true;
+      setStatus("warn", "Signed out", "Signed sending requires sign-in.");
+      refreshSignedSendEnabled();
     });
 
-    // Preset editing (signed only)
-    function parsePresetInput(raw) {
-      const parts = (raw || "").split(",").map(s => s.trim()).filter(Boolean);
-      const mins = parts.map(fromHHMM).filter(x => x !== null);
-      if (mins.length < 3) return null;
-      return mins.slice(0,3).map(toHHMM);
-    }
+    // Send stubs (still deterministic, explicit)
+    btnSignedSend.addEventListener("click", () => {
+      const code = signedCode.value.trim();
+      const body = signedBody.value.trim();
 
-    btnSavePresets.addEventListener("click", () => {
+      if (!code || !body) {
+        setStatus("warn", "Missing details", "Add a code and a message, then try again.");
+        return;
+      }
       if (!signedAuthed) {
-        setStatus("warn", "Sign-in required", "Preset editing is available only after sign-in.");
+        setStatus("warn", "Sign-in required", "Secure and Personal sending require email-link sign-in.");
         return;
       }
-      const parsed = parsePresetInput(presetTimesInput.value);
-      if (!parsed) {
-        setStatus("warn", "Invalid presets", "Use three times like: 08:00, 13:00, 18:00");
-        return;
-      }
-      writeSignedPresetTimes(parsed);
-      setStatus("good", "Presets saved", "Your preset times were saved on this device.");
-      renderPresets();
+      setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the signed send function.");
     });
 
-    btnResetPresets.addEventListener("click", () => {
-      if (!signedAuthed) {
-        setStatus("warn", "Sign-in required", "Preset editing is available only after sign-in.");
-        return;
-      }
-      resetSignedPresetTimes();
-      presetTimesInput.value = guestPresets().join(", ");
-      setStatus("good", "Presets reset", "Presets reset to defaults for this device.");
-      renderPresets();
-    });
-
-    // Clear + send (stubs)
     btnSignedClear.addEventListener("click", () => {
       signedCode.value = "";
       signedBody.value = "";
-      if (scheduleWindow) scheduleWindow.value = "";
       refreshSignedSendEnabled();
       setStatus("warn", "Cleared", "Signed send fields cleared.");
+    });
+
+    btnRollingSend.addEventListener("click", () => {
+      const code = rollingCode.value.trim();
+      const body = rollingBody.value.trim();
+
+      if (!code || !body) {
+        setStatus("warn", "Missing details", "Add a rolling code and a message, then try again.");
+        return;
+      }
+      setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the rolling send function.");
     });
 
     btnRollingClear.addEventListener("click", () => {
@@ -826,66 +318,8 @@
       setStatus("warn", "Cleared", "Rolling send fields cleared.");
     });
 
-    function computeScheduledISO(dateObj, minsOfDay) {
-      const h = Math.floor(minsOfDay / 60);
-      const m = minsOfDay % 60;
-      // local time; server should interpret according to explicit rules later
-      const d = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), h, m, 0, 0);
-      return d.toISOString();
-    }
-
-    btnSignedSend.addEventListener("click", () => {
-      if (!signedAuthed) {
-        setStatus("warn", "Sign-in required", "Secure and Personal sending require email-link sign-in.");
-        return;
-      }
-      const code = signedCode.value.trim();
-      const body = signedBody.value.trim();
-      if (!code || !body) {
-        setStatus("warn", "Missing details", "Add a code and a message, then try again.");
-        return;
-      }
-      const iso = computeScheduledISO(selectedDate, selectedMins);
-      const win = scheduleWindow && scheduleWindow.value ? Number(scheduleWindow.value) : 0;
-      const safeWin = Number.isFinite(win) && win >= 0 ? win : 0;
-
-      setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the signed send function.");
-      statusLine.textContent = `Planned schedule: ${iso}${safeWin ? ` (window: ${safeWin}m)` : ""}.`;
-    });
-
-    btnRollingSend.addEventListener("click", () => {
-      const code = rollingCode.value.trim();
-      const body = rollingBody.value.trim();
-      if (!code || !body) {
-        setStatus("warn", "Missing details", "Add a rolling code and a message, then try again.");
-        return;
-      }
-      // Rolling constrained: tomorrow at selected preset time (default 18:00), deterministic
-      const iso = computeScheduledISO(addDays(todayLocal(), 1), selectedMins);
-      setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the rolling send function.");
-      statusLine.textContent = `Rolling schedule (default): ${iso}.`;
-    });
-
-    // Video reliability helper
-    const video = document.getElementById("walkthroughVideo");
-    const videoHelp = document.getElementById("video-help");
-    function setVideoHelp(text) { if (videoHelp) videoHelp.textContent = text; }
-    function nudgeVideoLoad() { try { if (video && video.readyState < 1) video.load(); } catch(e) {} }
-    if (video) {
-      window.addEventListener("load", () => setTimeout(nudgeVideoLoad, 50));
-      video.addEventListener("error", () => {
-        setVideoHelp("Video failed to initialize on this page. If direct URL works, serve it from Firebase Hosting/Storage to ensure correct headers.");
-      });
-    }
-
-    // Initial state: calm defaults
-    setScheduleMode("presets");
-    selectedDate = addDays(todayLocal(), 1);
-    selectedMins = 18 * 60;
-
-    renderPresets();
-    updateDeliverUI();
-    refreshSignedOnlyUI();
+    // Init
+    refreshSignedSendEnabled();
     refreshRollingSendEnabled();
   </script>
 </body>
