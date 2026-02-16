@@ -1,21 +1,38 @@
-/* Modern Dark — Refined Header + Logo Balance */
+/* Modern Dark (Setfeed-aligned)
+   - Neutral surfaces (no neon/crypto glow)
+   - One clear primary CTA
+   - Predictable, calm hierarchy
+*/
 
 :root{
+  /* Modern dark tokens (inspired by ModernDarkColorScheme) */
   --bg: #0F1114;
-  --surface: #12151A;
-  --surface-2: #1A1D22;
+  --surface: #0F1114;
+  --surface-1: #12151A;
+  --surface-2: #1A1D22;           /* surfaceVariant */
   --line: rgba(255,255,255,0.08);
 
   --text: rgba(255,255,255,0.92);
-  --muted: rgba(203,208,216,0.82);
-  --soft: rgba(203,208,216,0.65);
+  --muted: rgba(203,208,216,0.84); /* onSurfaceVariant-ish */
+  --soft: rgba(203,208,216,0.68);
 
+  /* Accent (kept restrained) */
   --primary: #B7C5FF;
   --primary-ink: #0B0D12;
   --primary-soft: rgba(183,197,255,0.14);
 
   --danger: #F2B8B5;
   --good: #86EFAC;
+
+  /* Spacing scale (leans toward phi without forcing it) */
+  --s-1: 8px;
+  --s-2: 12px;
+  --s-3: 16px;
+  --s-4: 20px;
+  --s-5: 26px;
+  --s-6: 34px;
+  --s-7: 44px;
+  --s-8: 58px;
 
   --radius-1: 14px;
   --radius-2: 18px;
@@ -37,97 +54,121 @@ html, body{
 a{ color: var(--primary); text-decoration:none; }
 a:hover{ text-decoration: underline; }
 
-.page-bg{
-  min-height: 100vh;
-  background:
-    radial-gradient(900px 520px at 18% -5%, rgba(183,197,255,0.08) 0%, rgba(15,17,20,0) 55%),
-    radial-gradient(700px 460px at 85% 10%, rgba(255,255,255,0.04) 0%, rgba(15,17,20,0) 62%);
+::selection{
+  background: rgba(183,197,255,0.22);
 }
 
 .wrap{
   max-width: var(--max);
   margin: 0 auto;
-  padding: 56px 20px 80px;
+  padding: var(--s-6) var(--s-4) var(--s-8);
 }
 
-/* =========================
-   HEADER
-========================= */
+/* Subtle, non-crypto background texture */
+.page-bg{
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 520px at 18% -5%, rgba(183,197,255,0.10) 0%, rgba(15,17,20,0) 55%),
+    radial-gradient(700px 460px at 85% 10%, rgba(255,255,255,0.05) 0%, rgba(15,17,20,0) 62%),
+    linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.00) 25%);
+}
 
+/* Header */
 .site-header{
   position: sticky;
   top: 0;
   z-index: 20;
   backdrop-filter: blur(10px);
-  background: rgba(15,17,20,0.85);
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
   border-bottom: 1px solid var(--line);
 }
 
 .header-inner{
   max-width: var(--max);
   margin: 0 auto;
-  padding: 18px 20px; /* more vertical breathing */
+  padding: 14px var(--s-4); /* slightly taller header */
   display:flex;
   align-items:center;
   justify-content:space-between;
+  gap: var(--s-3);
 }
 
 /* Brand */
-
-.brand a{
-  display:inline-flex;
+.brand{
+  font-weight: 650;
+  letter-spacing: -0.2px;
+  display:flex;
   align-items:center;
-  gap: 14px; /* more breathing between logo + text */
-  color: var(--text);
-  text-decoration:none;
-  font-weight: 600;
-  letter-spacing: -0.3px;
-  font-size: 18px;
 }
 
-/* LOGO FIX */
+.brand a{
+  color: var(--text);
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  gap: 12px;
+  line-height: 1;
+}
+
+/* Logo mark: larger + crisp + slight depth (not “crypto glow”) */
 .logo{
-  height: 40px;     /* balanced size */
-  width: auto;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
   display:block;
   object-fit: contain;
+  /* Small shadow helps readability on dark headers */
+  filter: drop-shadow(0 1px 0 rgba(255,255,255,0.08))
+          drop-shadow(0 10px 18px rgba(0,0,0,0.35));
+}
+
+/* If you want it even bigger on desktop, keep this */
+@media (min-width: 900px){
+  .logo{
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+}
+
+.brand span{
+  font-size: 16px;           /* a touch bigger so mark+word feel “locked” */
+  letter-spacing: -0.25px;
+  transform: translateY(0.5px);
 }
 
 /* Nav */
-
 .nav{
   display:flex;
-  gap: 10px;
+  flex-wrap:wrap;
+  gap: 6px;
+  justify-content:flex-end;
 }
 
 .nav a{
   color: var(--soft);
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: 999px;
-  font-size: 14px;
+  border: 1px solid transparent;
 }
-
 .nav a:hover{
   background: rgba(255,255,255,0.06);
   color: var(--text);
+  text-decoration:none;
 }
-
 .nav a[aria-current="page"]{
-  background: rgba(255,255,255,0.08);
   color: var(--text);
-  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.06);
+  border-color: var(--line);
 }
 
-/* =========================
-   CARD
-========================= */
-
+/* Card surface */
 .card{
-  margin-top: 48px;
-  background: rgba(26,29,34,0.78);
+  margin-top: var(--s-5);
+  background: rgba(26,29,34,0.72);
   border: 1px solid var(--line);
   border-radius: var(--radius-3);
-  padding: 44px;
+  padding: var(--s-6);
   backdrop-filter: blur(10px);
   box-shadow:
     0 1px 0 rgba(255,255,255,0.04) inset,
@@ -135,111 +176,267 @@ a:hover{ text-decoration: underline; }
 }
 
 /* Typography */
-
 h1{
-  margin:0 0 12px 0;
-  font-size: 36px;
-  letter-spacing: -0.8px;
+  margin:0 0 var(--s-2) 0;
+  font-size: 34px;
+  letter-spacing: -0.6px;
   line-height: 1.12;
+}
+@media (max-width: 520px){
+  h1{ font-size: 30px; }
 }
 
 .lead{
-  margin:0 0 28px 0;
+  margin:0 0 var(--s-4) 0;
   color: var(--muted);
-  font-size: 16px;
-  line-height: 1.7;
+  font-size: 15.5px;
+  line-height: 1.72;
   max-width: 70ch;
 }
 
 h2{
-  margin: 42px 0 10px 0;
-  font-size: 17px;
+  margin: var(--s-6) 0 var(--s-2) 0;
+  font-size: 16px;
+  letter-spacing: -0.1px;
+}
+h3{
+  margin: var(--s-4) 0 var(--s-2) 0;
+  font-size: 14px;
+  letter-spacing: -0.05px;
+  color: var(--text);
 }
 
 p, li, label{
   color: var(--muted);
-  line-height: 1.7;
-  font-size: 15px;
+  line-height: 1.72;
+  font-size: 14.8px;
 }
-
 ul{ margin: 0 0 0 18px; padding:0; }
 
-/* Pills */
+/* Hero layout (phi-weighted on desktop: ~1.618 / 1) */
+.hero{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-5);
+  align-items:start;
+}
+@media (min-width: 900px){
+  .hero{
+    grid-template-columns: 1.618fr 1fr;
+    gap: var(--s-6);
+  }
+}
 
+/* Pills / badges */
 .pills{
   display:flex;
   flex-wrap:wrap;
   gap: 10px;
-  margin-top: 24px;
+  margin-top: var(--s-4);
 }
-
 .pill{
   display:inline-flex;
   align-items:center;
   gap: 8px;
-  padding: 8px 14px;
+  padding: 7px 10px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: rgba(255,255,255,0.04);
   color: var(--soft);
   font-size: 13px;
 }
-
 .dot{
   width: 8px;
   height: 8px;
   border-radius: 999px;
   background: var(--soft);
 }
-
 .dot.good{ background: var(--good); }
+.dot.ok{ background: var(--good); }
 .dot.warn{ background: var(--danger); }
 
-/* Buttons */
+/* CTA panel */
+.panel{
+  border-radius: var(--radius-2);
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, rgba(183,197,255,0.10) 0%, rgba(255,255,255,0.03) 35%, rgba(255,255,255,0.02) 100%);
+  padding: var(--s-5);
+}
 
+.panel-title{
+  margin:0 0 8px 0;
+  font-size: 14px;
+  letter-spacing: -0.1px;
+  color: var(--text);
+}
+.panel-sub{
+  margin:0 0 var(--s-4) 0;
+  color: var(--muted);
+}
+
+/* Buttons */
 .actions{
   display:flex;
   flex-wrap:wrap;
-  gap: 12px;
-  margin-top: 28px;
+  gap: 10px;
+  margin-top: var(--s-3);
+  align-items:center;
 }
 
 .btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  padding: 12px 20px;
+  gap: 8px;
+  padding: 10px 14px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: rgba(255,255,255,0.04);
   color: var(--text);
-  font-size: 15px;
+  font-size: 14.2px;
+  text-decoration:none;
   cursor:pointer;
+  user-select:none;
+}
+.btn:hover{
+  background: rgba(255,255,255,0.07);
   text-decoration:none;
 }
-
-.btn:hover{
-  background: rgba(255,255,255,0.08);
+.btn:focus-visible{
+  outline: 2px solid rgba(183,197,255,0.50);
+  outline-offset: 2px;
 }
 
+/* Larger button size (fix for cramped label rendering) */
+.btn-lg{
+  padding: 12px 18px;
+  font-size: 14.6px;
+  min-height: 44px;      /* good tap target */
+  line-height: 1.2;
+}
+
+/* Primary CTA */
 .btn-primary{
   background: var(--primary);
   color: var(--primary-ink);
   border-color: rgba(183,197,255,0.55);
 }
-
 .btn-primary:hover{
   background: color-mix(in srgb, var(--primary) 92%, white);
 }
+.btn-primary:focus-visible{
+  outline-color: rgba(183,197,255,0.65);
+}
 
+/* Subtle secondary */
 .btn-quiet{
   background: rgba(255,255,255,0.03);
 }
 
-/* Footer */
+small.help{
+  display:block;
+  color: var(--soft);
+  margin-top: 10px;
+  line-height: 1.55;
+}
 
+/* Notes */
+.note{
+  border-left: 3px solid rgba(255,255,255,0.10);
+  padding-left: 12px;
+  margin-top: var(--s-4);
+}
+
+/* Forms */
+.field{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+  margin-top: var(--s-3);
+}
+input, textarea{
+  width: 100%;
+  border-radius: var(--radius-1);
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 14.5px;
+  outline: none;
+}
+textarea{ min-height: 120px; resize: vertical; }
+input:focus, textarea:focus{
+  border-color: rgba(183,197,255,0.45);
+  box-shadow: 0 0 0 4px rgba(183,197,255,0.10);
+}
+
+/* Tabs */
+.tabs{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top: var(--s-4);
+}
+.tab{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 9px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.03);
+  color: var(--soft);
+  cursor:pointer;
+  user-select:none;
+  font-size: 13.5px;
+}
+.tab[aria-selected="true"]{
+  background: rgba(183,197,255,0.14);
+  color: var(--text);
+  border-color: rgba(183,197,255,0.28);
+}
+
+.row{
+  display:flex;
+  gap: var(--s-4);
+  flex-wrap:wrap;
+  margin-top: var(--s-4);
+}
+.col{
+  flex: 1 1 320px;
+  min-width: 320px;
+}
+
+.hidden{ display:none !important; }
+
+/* Status */
+.status{
+  margin-top: var(--s-4);
+  border-radius: var(--radius-2);
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.02);
+  padding: 12px;
+}
+.status-title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-size: 14px;
+  letter-spacing: -0.1px;
+}
+.status-line{
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Footer */
 footer{
-  margin-top: 60px;
+  margin-top: var(--s-6);
   color: var(--soft);
   font-size: 13px;
   display:flex;
@@ -247,11 +444,9 @@ footer{
   justify-content:space-between;
   align-items:center;
   border-top: 1px solid var(--line);
-  padding-top: 20px;
+  padding-top: var(--s-4);
   flex-wrap: wrap;
 }
-
 footer a{ color: var(--soft); }
-footer a:hover{ color: var(--text); }
-
+footer a:hover{ color: var(--text); text-decoration:none; }
 .sep{ color: var(--soft); }
