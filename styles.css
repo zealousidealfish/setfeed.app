@@ -1,36 +1,32 @@
-/* Setfeed Web Theme — DEFAULT (Material-ish)
+/* Setfeed Web — Scheduling-aligned theme
    Goals:
-   - Calm, explicit, predictable
-   - Matches Setfeed DEFAULT visual language
-   - Respects system dark mode
-   - No crypto glow, no hype gradients
+   - Calm, explicit, deterministic
+   - Blue action buttons similar to scheduling UX
+   - Respect system dark mode
+   - No crypto glow / hype gradients
 */
 
-/* =========================
-   Theme tokens
-   ========================= */
-
 :root{
-  /* DEFAULT Light (Material-ish, Setfeed-aligned) */
-  --bg: #FFFBFE;                 /* M3 light background */
+  /* Light */
+  --bg: #FFFBFE;
   --surface: #FFFBFE;
   --surface-1: #FFFFFF;
-  --surface-2: #F7F2FA;          /* subtle lift */
-  --surface-variant: #E7E0EC;    /* M3 surfaceVariant */
+  --surface-2: #F6F3FA;
+  --surface-variant: #E7E0EC;
   --line: rgba(28,27,31,0.12);
 
-  --text: rgba(28,27,31,0.92);   /* onBackground-ish */
-  --muted: rgba(73,69,79,0.86);  /* onSurfaceVariant-ish */
+  --text: rgba(28,27,31,0.92);
+  --muted: rgba(73,69,79,0.86);
   --soft: rgba(73,69,79,0.70);
 
-  /* M3 Purple baseline (close to default templates) */
-  --primary: #6750A4;            /* Purple40-ish */
+  /* Scheduling-like action blues */
+  --primary: #4C8DFF;          /* calm blue */
   --on-primary: #FFFFFF;
-  --primary-soft: rgba(103,80,164,0.14);
+  --primary-soft: rgba(76,141,255,0.14);
 
-  --secondary: #625B71;          /* PurpleGrey40-ish */
+  --secondary: #5F5A6A;        /* neutral */
   --on-secondary: #FFFFFF;
-  --secondary-soft: rgba(98,91,113,0.14);
+  --secondary-soft: rgba(95,90,106,0.14);
 
   --danger: #B3261E;
   --good: #0F7B3D;
@@ -51,36 +47,31 @@
 
   --max: 980px;
 
-  /* Typography (calm) */
   --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   --fw-regular: 430;
   --fw-medium: 520;
-  --fw-semibold: 600; /* keep sparingly */
 }
 
-/* DEFAULT Dark — used when:
-   - user sets data-theme="dark"
-   - OR system prefers dark and no override
-*/
 @media (prefers-color-scheme: dark){
   :root{
-    --bg: #1C1B1F;                /* M3 dark background */
-    --surface: #1C1B1F;
-    --surface-1: #1C1B1F;
-    --surface-2: #222027;         /* subtle lift */
-    --surface-variant: #49454F;   /* M3 dark surfaceVariant */
+    --bg: #0F1114;
+    --surface: #0F1114;
+    --surface-1: #0F1114;
+    --surface-2: #12151A;
+    --surface-variant: #1A1D22;
     --line: rgba(255,255,255,0.12);
 
     --text: rgba(255,255,255,0.92);
-    --muted: rgba(202,196,208,0.86); /* onSurfaceVariant-ish */
-    --soft: rgba(202,196,208,0.68);
+    --muted: rgba(203,208,216,0.86);
+    --soft: rgba(203,208,216,0.68);
 
-    --primary: #D0BCFF;           /* Purple80-ish */
-    --on-primary: #1C1B1F;
-    --primary-soft: rgba(208,188,255,0.16);
+    /* Scheduling-like action blues (dark) */
+    --primary: #B7C5FF;
+    --on-primary: #0B0D12;
+    --primary-soft: rgba(183,197,255,0.16);
 
-    --secondary: #CCC2DC;         /* PurpleGrey80-ish */
-    --on-secondary: #1C1B1F;
+    --secondary: #CCC2DC;
+    --on-secondary: #0B0D12;
     --secondary-soft: rgba(204,194,220,0.16);
 
     --danger: #F2B8B5;
@@ -88,12 +79,12 @@
   }
 }
 
-/* Explicit overrides via data-theme attribute (signed-in toggle) */
+/* Explicit overrides (available only when signed in; applied by JS) */
 :root[data-theme="light"]{
   --bg: #FFFBFE;
   --surface: #FFFBFE;
   --surface-1: #FFFFFF;
-  --surface-2: #F7F2FA;
+  --surface-2: #F6F3FA;
   --surface-variant: #E7E0EC;
   --line: rgba(28,27,31,0.12);
 
@@ -101,36 +92,36 @@
   --muted: rgba(73,69,79,0.86);
   --soft: rgba(73,69,79,0.70);
 
-  --primary: #6750A4;
+  --primary: #4C8DFF;
   --on-primary: #FFFFFF;
-  --primary-soft: rgba(103,80,164,0.14);
+  --primary-soft: rgba(76,141,255,0.14);
 
-  --secondary: #625B71;
+  --secondary: #5F5A6A;
   --on-secondary: #FFFFFF;
-  --secondary-soft: rgba(98,91,113,0.14);
+  --secondary-soft: rgba(95,90,106,0.14);
 
   --danger: #B3261E;
   --good: #0F7B3D;
 }
 
 :root[data-theme="dark"]{
-  --bg: #1C1B1F;
-  --surface: #1C1B1F;
-  --surface-1: #1C1B1F;
-  --surface-2: #222027;
-  --surface-variant: #49454F;
+  --bg: #0F1114;
+  --surface: #0F1114;
+  --surface-1: #0F1114;
+  --surface-2: #12151A;
+  --surface-variant: #1A1D22;
   --line: rgba(255,255,255,0.12);
 
   --text: rgba(255,255,255,0.92);
-  --muted: rgba(202,196,208,0.86);
-  --soft: rgba(202,196,208,0.68);
+  --muted: rgba(203,208,216,0.86);
+  --soft: rgba(203,208,216,0.68);
 
-  --primary: #D0BCFF;
-  --on-primary: #1C1B1F;
-  --primary-soft: rgba(208,188,255,0.16);
+  --primary: #B7C5FF;
+  --on-primary: #0B0D12;
+  --primary-soft: rgba(183,197,255,0.16);
 
   --secondary: #CCC2DC;
-  --on-secondary: #1C1B1F;
+  --on-secondary: #0B0D12;
   --secondary-soft: rgba(204,194,220,0.16);
 
   --danger: #F2B8B5;
@@ -152,32 +143,26 @@ html, body{
   font-weight: var(--fw-regular);
 }
 
-a{
-  color: var(--primary);
-  text-decoration: none;
-}
+a{ color: var(--primary); text-decoration: none; }
 a:hover{ text-decoration: underline; }
 
-::selection{
-  background: var(--primary-soft);
-}
+::selection{ background: var(--primary-soft); }
 
-/* Calm background texture (subtle, non-crypto) */
+/* Calm background texture */
 .page-bg{
   min-height: 100vh;
   background:
-    radial-gradient(900px 520px at 18% -10%, color-mix(in srgb, var(--primary) 16%, transparent) 0%, transparent 58%),
+    radial-gradient(900px 520px at 18% -10%, color-mix(in srgb, var(--primary) 14%, transparent) 0%, transparent 58%),
     radial-gradient(700px 460px at 85% 0%, rgba(0,0,0,0.06) 0%, transparent 62%),
     linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.00) 28%);
 }
 :root[data-theme="dark"] .page-bg{
   background:
-    radial-gradient(900px 520px at 18% -10%, color-mix(in srgb, var(--primary) 14%, transparent) 0%, transparent 58%),
+    radial-gradient(900px 520px at 18% -10%, color-mix(in srgb, var(--primary) 12%, transparent) 0%, transparent 58%),
     radial-gradient(700px 460px at 85% 0%, rgba(255,255,255,0.06) 0%, transparent 62%),
     linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.00) 28%);
 }
 
-/* Layout container */
 .wrap{
   max-width: var(--max);
   margin: 0 auto;
@@ -185,7 +170,7 @@ a:hover{ text-decoration: underline; }
 }
 
 /* =========================
-   Header
+   Header (center title between logo and nav)
    ========================= */
 
 .site-header{
@@ -201,15 +186,12 @@ a:hover{ text-decoration: underline; }
   max-width: var(--max);
   margin: 0 auto;
   padding: 12px var(--s-4);
-
-  /* Grid so title can center between logo and nav */
   display: grid;
   grid-template-columns: 44px 1fr auto;
   align-items: center;
   gap: var(--s-3);
 }
 
-/* Logo / mark */
 .brand-mark{
   display: inline-flex;
   align-items: center;
@@ -219,7 +201,7 @@ a:hover{ text-decoration: underline; }
   border-radius: 12px;
 }
 .brand-mark:hover{
-  background: color-mix(in srgb, var(--surface-variant) 28%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 22%, transparent);
   text-decoration: none;
 }
 
@@ -229,22 +211,19 @@ a:hover{ text-decoration: underline; }
   display: block;
   object-fit: contain;
   filter: drop-shadow(0 1px 0 rgba(255,255,255,0.08))
-          drop-shadow(0 10px 18px rgba(0,0,0,0.22));
+          drop-shadow(0 10px 18px rgba(0,0,0,0.18));
 }
 
-/* Centered title */
 .brand-title{
   justify-self: center;
   color: var(--text);
   text-decoration: none;
-  letter-spacing: -0.15px;
-  font-weight: var(--fw-medium);       /* calmer than bold */
+  letter-spacing: -0.12px;
+  font-weight: var(--fw-medium); /* calmer */
   font-size: 15px;
   line-height: 1;
   padding: 8px 10px;
   border-radius: 999px;
-
-  /* Keep it visually calm, not shouting */
   opacity: 0.92;
 }
 .brand-title:hover{
@@ -253,7 +232,6 @@ a:hover{ text-decoration: underline; }
   opacity: 1;
 }
 
-/* Nav */
 .nav{
   display: flex;
   flex-wrap: wrap;
@@ -268,7 +246,6 @@ a:hover{ text-decoration: underline; }
   border-radius: 999px;
   border: 1px solid transparent;
   font-size: 13.5px;
-  font-weight: var(--fw-regular);
 }
 .nav a:hover{
   background: color-mix(in srgb, var(--surface-variant) 22%, transparent);
@@ -281,7 +258,6 @@ a:hover{ text-decoration: underline; }
   border-color: var(--line);
 }
 
-/* Small screens: allow title to stay calm but not fight nav */
 @media (max-width: 720px){
   .header-inner{
     grid-template-columns: 44px 1fr;
@@ -300,39 +276,32 @@ a:hover{ text-decoration: underline; }
 }
 
 /* =========================
-   Card / surfaces
+   Card / typography
    ========================= */
 
 .card{
   margin-top: var(--s-5);
-  background: color-mix(in srgb, var(--surface-1) 86%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 90%, transparent);
   border: 1px solid var(--line);
   border-radius: var(--radius-3);
   padding: var(--s-6);
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.30) inset,
+    0 1px 0 rgba(255,255,255,0.35) inset,
     0 14px 36px rgba(0,0,0,0.10);
 }
 :root[data-theme="dark"] .card{
-  background: color-mix(in srgb, var(--surface-2) 84%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 86%, transparent);
   box-shadow:
     0 1px 0 rgba(255,255,255,0.05) inset,
     0 18px 40px rgba(0,0,0,0.30);
 }
 
-/* =========================
-   Typography (calm)
-   ========================= */
-
 h1{
   margin: 0 0 var(--s-2) 0;
-  font-size: 30px;                  /* slightly calmer */
+  font-size: 30px;
   letter-spacing: -0.4px;
   line-height: 1.16;
-  font-weight: var(--fw-medium);    /* reduce boldness */
-}
-@media (max-width: 520px){
-  h1{ font-size: 28px; }
+  font-weight: var(--fw-medium); /* calm */
 }
 
 .lead{
@@ -362,30 +331,12 @@ p, li, label{
   color: var(--muted);
   line-height: 1.72;
   font-size: 14.6px;
-  font-weight: var(--fw-regular);
 }
 
 ul{ margin: 0 0 0 18px; padding: 0; }
 
 /* =========================
-   Hero layout
-   ========================= */
-
-.hero{
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--s-5);
-  align-items: start;
-}
-@media (min-width: 900px){
-  .hero{
-    grid-template-columns: 1.618fr 1fr;
-    gap: var(--s-6);
-  }
-}
-
-/* =========================
-   Pills / badges
+   Pills
    ========================= */
 
 .pills{
@@ -402,7 +353,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   padding: 7px 10px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 22%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 20%, transparent);
   color: var(--soft);
   font-size: 13px;
 }
@@ -418,37 +369,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 .dot.warn{ background: var(--danger); }
 
 /* =========================
-   Panels / notes
-   ========================= */
-
-.panel{
-  border-radius: var(--radius-2);
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 16%, transparent);
-  padding: var(--s-5);
-}
-
-.panel-title{
-  margin: 0 0 8px 0;
-  font-size: 13.8px;
-  letter-spacing: -0.05px;
-  font-weight: var(--fw-medium);
-  color: var(--text);
-}
-
-.panel-sub{
-  margin: 0 0 var(--s-4) 0;
-  color: var(--muted);
-}
-
-.note{
-  border-left: 3px solid color-mix(in srgb, var(--secondary) 34%, transparent);
-  padding-left: 12px;
-  margin-top: var(--s-4);
-}
-
-/* =========================
-   Rows / columns helpers
+   Rows / columns
    ========================= */
 
 .row{
@@ -457,12 +378,10 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   flex-wrap: wrap;
   margin-top: var(--s-4);
 }
-
 .col{
   flex: 1 1 320px;
   min-width: 320px;
 }
-
 .inline-row{
   display: flex;
   flex-wrap: wrap;
@@ -471,7 +390,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 }
 
 /* =========================
-   Tabs (calm chips)
+   Tabs
    ========================= */
 
 .tabs{
@@ -491,7 +410,6 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   cursor: pointer;
   user-select: none;
   font-size: 13.5px;
-  font-weight: var(--fw-regular);
 }
 
 .tab:hover{
@@ -531,10 +449,11 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   color: var(--text);
 
   font-size: 14px;
-  font-weight: var(--fw-regular);
   text-decoration: none;
   cursor: pointer;
   user-select: none;
+
+  transition: background 120ms ease, opacity 120ms ease, transform 80ms ease;
 }
 
 .btn:hover{
@@ -542,21 +461,15 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   text-decoration: none;
 }
 
-.btn:focus-visible,
-.tab:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible{
-  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
-  outline-offset: 2px;
+.btn:active{
+  transform: translateY(0.5px);
 }
 
 .btn:disabled{
-  opacity: 0.55;
+  opacity: 0.52;
   cursor: not-allowed;
 }
 
-/* Larger button size (tap target) */
 .btn-lg{
   padding: 12px 18px;
   font-size: 14.4px;
@@ -564,7 +477,7 @@ select:focus-visible{
   line-height: 1.2;
 }
 
-/* Primary */
+/* Primary (blue scheduling feel) */
 .btn-primary{
   background: var(--primary);
   color: var(--on-primary);
@@ -579,20 +492,45 @@ select:focus-visible{
 
 /* Secondary */
 .btn-secondary{
-  background: var(--secondary);
-  color: var(--on-secondary);
-  border-color: color-mix(in srgb, var(--secondary) 62%, var(--line));
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface-variant));
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--primary) 26%, var(--line));
 }
 .btn-secondary:hover{
-  background: color-mix(in srgb, var(--secondary) 92%, white);
-}
-:root[data-theme="dark"] .btn-secondary:hover{
-  background: color-mix(in srgb, var(--secondary) 92%, black);
+  background: color-mix(in srgb, var(--primary) 24%, var(--surface-variant));
 }
 
 /* Quiet */
 .btn-quiet{
   background: color-mix(in srgb, var(--surface-variant) 8%, transparent);
+}
+
+/* Chip buttons (time presets) */
+.chips{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: var(--s-3);
+}
+.chip{
+  appearance: none;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-variant) 12%, transparent);
+  color: var(--soft);
+  border-radius: 999px;
+  padding: 9px 12px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13.5px;
+}
+.chip:hover{
+  background: color-mix(in srgb, var(--surface-variant) 22%, transparent);
+  color: var(--text);
+}
+.chip[aria-pressed="true"]{
+  background: var(--primary-soft);
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--primary) 34%, var(--line));
 }
 
 /* =========================
@@ -609,14 +547,13 @@ select:focus-visible{
 label{
   color: var(--soft);
   font-size: 13.2px;
-  font-weight: var(--fw-regular);
 }
 
 input, textarea, select{
   width: 100%;
   border-radius: var(--radius-1);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 90%, transparent);
   color: var(--text);
   padding: 10px 12px;
   font-size: 14.5px;
@@ -642,17 +579,35 @@ small.help{
   font-size: 13.2px;
 }
 
-/* Range sliders (keep calm and consistent) */
-input[type="range"]{
-  padding: 0;
-  background: transparent;
-  border: none;
-  box-shadow: none;
+/* =========================
+   Notes / panels / status
+   ========================= */
+
+.note{
+  border-left: 3px solid color-mix(in srgb, var(--primary) 34%, transparent);
+  padding-left: 12px;
+  margin-top: var(--s-4);
 }
 
-/* =========================
-   Status
-   ========================= */
+.panel{
+  border-radius: var(--radius-2);
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-variant) 14%, transparent);
+  padding: var(--s-5);
+}
+
+.panel-title{
+  margin: 0 0 8px 0;
+  font-size: 13.8px;
+  letter-spacing: -0.05px;
+  font-weight: var(--fw-medium);
+  color: var(--text);
+}
+
+.panel-sub{
+  margin: 0 0 var(--s-4) 0;
+  color: var(--muted);
+}
 
 .status{
   margin-top: var(--s-4);
@@ -725,7 +680,6 @@ footer{
 
 footer a{ color: var(--soft); }
 footer a:hover{ color: var(--text); text-decoration: none; }
-
 .sep{ color: var(--soft); }
 
 /* =========================
