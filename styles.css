@@ -148,19 +148,31 @@ a:hover{ text-decoration: underline; }
 
 ::selection{ background: var(--primary-soft); }
 
-/* Calm background texture */
+/* Calm background texture (reduced top-left glow to protect logo contrast) */
 .page-bg{
   min-height: 100vh;
   background:
-    radial-gradient(900px 520px at 18% -10%, color-mix(in srgb, var(--primary) 14%, transparent) 0%, transparent 58%),
-    radial-gradient(700px 460px at 85% 0%, rgba(0,0,0,0.06) 0%, transparent 62%),
-    linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.00) 28%);
+    radial-gradient(900px 520px at 18% -10%,
+      color-mix(in srgb, var(--primary) 6%, transparent) 0%,
+      transparent 52%),
+    radial-gradient(700px 460px at 85% 0%,
+      rgba(0,0,0,0.05) 0%,
+      transparent 62%),
+    linear-gradient(180deg,
+      rgba(255,255,255,0.03) 0%,
+      rgba(255,255,255,0.00) 28%);
 }
 :root[data-theme="dark"] .page-bg{
   background:
-    radial-gradient(900px 520px at 18% -10%, color-mix(in srgb, var(--primary) 12%, transparent) 0%, transparent 58%),
-    radial-gradient(700px 460px at 85% 0%, rgba(255,255,255,0.06) 0%, transparent 62%),
-    linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.00) 28%);
+    radial-gradient(900px 520px at 18% -10%,
+      color-mix(in srgb, var(--primary) 7%, transparent) 0%,
+      transparent 54%),
+    radial-gradient(700px 460px at 85% 0%,
+      rgba(255,255,255,0.05) 0%,
+      transparent 62%),
+    linear-gradient(180deg,
+      rgba(255,255,255,0.025) 0%,
+      rgba(255,255,255,0.00) 28%);
 }
 
 .wrap{
