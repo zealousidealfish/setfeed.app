@@ -1,9 +1,9 @@
 /* Setfeed Web — Scheduling-aligned theme
    Goals:
-   - Calm, explicit, deterministic
+   - Calm, deterministic
    - Blue action buttons similar to scheduling UX
    - Respect system dark mode
-   - No crypto glow / hype gradients
+   - Reduce typographic “shout” (lighter bolds)
 */
 
 :root{
@@ -20,11 +20,11 @@
   --soft: rgba(73,69,79,0.70);
 
   /* Scheduling-like action blues */
-  --primary: #4C8DFF;          /* calm blue */
+  --primary: #4C8DFF;
   --on-primary: #FFFFFF;
   --primary-soft: rgba(76,141,255,0.14);
 
-  --secondary: #5F5A6A;        /* neutral */
+  --secondary: #5F5A6A;
   --on-secondary: #FFFFFF;
   --secondary-soft: rgba(95,90,106,0.14);
 
@@ -48,8 +48,11 @@
   --max: 980px;
 
   --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  --fw-regular: 430;
-  --fw-medium: 520;
+
+  /* ↓ Reduced global bold intensity */
+  --fw-regular: 420;
+  --fw-medium: 480;
+  --fw-bold: 520;
 }
 
 @media (prefers-color-scheme: dark){
@@ -65,7 +68,6 @@
     --muted: rgba(203,208,216,0.86);
     --soft: rgba(203,208,216,0.68);
 
-    /* Scheduling-like action blues (dark) */
     --primary: #B7C5FF;
     --on-primary: #0B0D12;
     --primary-soft: rgba(183,197,255,0.16);
@@ -143,12 +145,16 @@ html, body{
   font-weight: var(--fw-regular);
 }
 
+strong, b{
+  font-weight: var(--fw-bold);
+}
+
 a{ color: var(--primary); text-decoration: none; }
 a:hover{ text-decoration: underline; }
 
 ::selection{ background: var(--primary-soft); }
 
-/* Calm background texture (reduced top-left glow to protect logo contrast) */
+/* Calm background texture (subtle top-left glow) */
 .page-bg{
   min-height: 100vh;
   background:
@@ -182,7 +188,7 @@ a:hover{ text-decoration: underline; }
 }
 
 /* =========================
-   Header (center title between logo and nav)
+   Header
    ========================= */
 
 .site-header{
@@ -222,8 +228,8 @@ a:hover{ text-decoration: underline; }
   height: 36px;
   display: block;
   object-fit: contain;
-  filter: drop-shadow(0 1px 0 rgba(255,255,255,0.08))
-          drop-shadow(0 10px 18px rgba(0,0,0,0.18));
+  filter: drop-shadow(0 1px 0 rgba(255,255,255,0.06))
+          drop-shadow(0 10px 18px rgba(0,0,0,0.16));
 }
 
 .brand-title{
@@ -231,7 +237,7 @@ a:hover{ text-decoration: underline; }
   color: var(--text);
   text-decoration: none;
   letter-spacing: -0.12px;
-  font-weight: var(--fw-medium); /* calmer */
+  font-weight: var(--fw-medium);
   font-size: 15px;
   line-height: 1;
   padding: 8px 10px;
@@ -270,6 +276,16 @@ a:hover{ text-decoration: underline; }
   border-color: var(--line);
 }
 
+/* Download app nav button */
+.nav a.nav-cta{
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface-variant));
+  border: 1px solid color-mix(in srgb, var(--primary) 26%, var(--line));
+  color: var(--text);
+}
+.nav a.nav-cta:hover{
+  background: color-mix(in srgb, var(--primary) 24%, var(--surface-variant));
+}
+
 @media (max-width: 720px){
   .header-inner{
     grid-template-columns: 44px 1fr;
@@ -298,7 +314,7 @@ a:hover{ text-decoration: underline; }
   border-radius: var(--radius-3);
   padding: var(--s-6);
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.35) inset,
+    0 1px 0 rgba(255,255,255,0.30) inset,
     0 14px 36px rgba(0,0,0,0.10);
 }
 :root[data-theme="dark"] .card{
@@ -313,7 +329,7 @@ h1{
   font-size: 30px;
   letter-spacing: -0.4px;
   line-height: 1.16;
-  font-weight: var(--fw-medium); /* calm */
+  font-weight: var(--fw-medium);
 }
 
 .lead{
@@ -346,6 +362,30 @@ p, li, label{
 }
 
 ul{ margin: 0 0 0 18px; padding: 0; }
+
+/* =========================
+   Hero layout (Receive/Security)
+   ========================= */
+
+.hero{
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: var(--s-6);
+  align-items: start;
+}
+
+.hero .panel-aside{
+  margin-top: var(--s-2); /* nudges the "Next step" panel slightly lower */
+}
+
+@media (max-width: 900px){
+  .hero{
+    grid-template-columns: 1fr;
+  }
+  .hero .panel-aside{
+    margin-top: var(--s-4);
+  }
+}
 
 /* =========================
    Pills
