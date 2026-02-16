@@ -17,7 +17,7 @@
   --soft: rgba(203,208,216,0.68);
 
   /* Accent (kept restrained) */
-  --primary: #B7C5FF;             /* calm per your site */
+  --primary: #B7C5FF;
   --primary-ink: #0B0D12;
   --primary-soft: rgba(183,197,255,0.14);
 
@@ -106,30 +106,22 @@ a:hover{ text-decoration: underline; }
   display:inline-flex;
   align-items:center;
   gap: 10px;
+  line-height: 1;
 }
 
-/* ✅ Logo sizing + crisp alignment */
-.brand-mark{
-  width: 36px;
-  height: 36px;
+/* ✅ Logo sizing (fixes “too small” header mark) */
+.logo{
+  width: 28px;
+  height: 28px;
   display:block;
   object-fit: contain;
-  border-radius: 10px;
-  /* subtle edge separation on dark bg (no glow) */
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.06) inset;
+  border-radius: 8px; /* matches your brand rounding */
 }
 @media (min-width: 900px){
-  .brand-mark{
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
+  .logo{
+    width: 32px;
+    height: 32px;
   }
-}
-
-/* If your logo image has a lot of transparent padding,
-   this helps it feel visually centered without looking "crypto-glowy". */
-.brand-mark{
-  transform: translateY(0.5px);
 }
 
 .nav{
@@ -249,7 +241,7 @@ ul{ margin: 0 0 0 18px; padding:0; }
 .dot.ok{ background: var(--good); }
 .dot.warn{ background: var(--danger); }
 
-/* CTA panel (psych placement: visually anchored, minimal choice) */
+/* CTA panel */
 .panel{
   border-radius: var(--radius-2);
   border: 1px solid var(--line);
@@ -278,6 +270,7 @@ ul{ margin: 0 0 0 18px; padding:0; }
   align-items:center;
 }
 
+/* Base button */
 .btn{
   display:inline-flex;
   align-items:center;
@@ -289,9 +282,11 @@ ul{ margin: 0 0 0 18px; padding:0; }
   background: rgba(255,255,255,0.04);
   color: var(--text);
   font-size: 14.2px;
+  line-height: 1.1;
   text-decoration:none;
   cursor:pointer;
   user-select:none;
+  white-space: nowrap; /* keeps “Encrypt & send” from looking cramped */
 }
 .btn:hover{
   background: rgba(255,255,255,0.07);
@@ -300,6 +295,17 @@ ul{ margin: 0 0 0 18px; padding:0; }
 .btn:focus-visible{
   outline: 2px solid rgba(183,197,255,0.50);
   outline-offset: 2px;
+}
+.btn:disabled{
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ✅ Large button (fixes cramped text + small hit target) */
+.btn-lg{
+  padding: 12px 18px;
+  font-size: 15px;
+  min-height: 44px; /* accessible touch target */
 }
 
 /* Primary CTA */
