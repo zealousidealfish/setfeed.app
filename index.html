@@ -6,9 +6,10 @@
   <title>Setfeed</title>
   <meta name="description" content="Setfeed is a calm, local-first scheduled messaging app." />
 
-  <meta name="theme-color" content="#FFFBFE" data-theme-color="light" />
-  <meta name="theme-color" content="#1C1B1F" data-theme-color="dark" />
+  <!-- Single theme-color (updated deterministically by script) -->
+  <meta name="theme-color" content="#FFFBFE" id="meta-theme-color" />
 
+  <!-- Favicons -->
   <link rel="icon" href="./favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
   <link rel="icon" type="image/png" href="./favicon-16.png" sizes="16x16">
@@ -18,18 +19,21 @@
 
   <script>
     (function(){
-      const key = "sf_theme_override";
-      const override = localStorage.getItem(key) || "system";
+      // Keep consistent with send.html/styles.css
+      const key = "sf_theme_mode"; // "system" | "light" | "dark"
+      const stored = localStorage.getItem(key) || "system";
       const root = document.documentElement;
 
-      if (override === "light" || override === "dark") root.setAttribute("data-theme", override);
+      // Apply explicit override only if set; otherwise respect system via CSS prefers-color-scheme
+      if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
       else root.removeAttribute("data-theme");
 
-      const effective = root.getAttribute("data-theme")
-        || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      const effective =
+        root.getAttribute("data-theme") ||
+        (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 
-      const m = document.querySelector('meta[name="theme-color"][data-theme-color="'+effective+'"]');
-      if (m) m.content = effective === "dark" ? "#1C1B1F" : "#FFFBFE";
+      const meta = document.getElementById("meta-theme-color");
+      if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
     })();
   </script>
 </head>
@@ -57,7 +61,8 @@
     <div class="card">
       <h1>Scheduled messages. Kept simple.</h1>
       <p class="lead">
-        A calm, local-first scheduled messaging app — predictable behavior, explicit actions, and no surprise state changes.
+        A calm, local-first scheduled messaging app — predictable behavior, explicit actions,
+        and no surprise state changes.
       </p>
 
       <div class="pills" aria-label="Product principles">
