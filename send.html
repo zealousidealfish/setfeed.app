@@ -1,3 +1,4 @@
+<!-- send.html (FULL FILE REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -5,7 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Send — Setfeed</title>
   <meta name="description" content="Send an end-to-end encrypted message to Setfeed." />
-  <meta name="theme-color" content="#0F1114" />
+  <meta name="theme-color" content="#0F1114" id="meta-theme-color" />
 
   <link rel="icon" href="./favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
@@ -15,15 +16,16 @@
   <link rel="stylesheet" href="./styles.css" />
 
   <!-- =========================
-       FIREBASE + APP CHECK
+       FIREBASE (AUTH + FUNCTIONS + APP CHECK)
        ========================= -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 
   <script>
     // =========================
-    // 🔐 PLACEHOLDERS (fill these)
+    // ✅ Firebase config (yours)
     // =========================
     const firebaseConfig = {
       apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",
@@ -34,9 +36,11 @@
       appId: "1:553573263069:web:e5c9884101ca38eaee1d34"
     };
 
-    // Your App Check reCAPTCHA v3 site key (Firebase Console → App Check → Web app)
+    // TODO: replace with your real App Check reCAPTCHA v3 site key
     const RECAPTCHA_SITE_KEY = "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI";
-    // =========================
+
+    // Your public site URL (GitHub Pages custom domain)
+    const SITE_ORIGIN = "https://setfeed.app";
 
     firebase.initializeApp(firebaseConfig);
 
@@ -48,10 +52,9 @@
         firebase.appCheck().activate(RECAPTCHA_SITE_KEY, true);
         console.log("[AppCheck] activated");
       } catch (e) {
-        console.error("[AppCheck] init failed:", e);
+        console.warn("[AppCheck] init failed:", e);
       }
     }
-
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", startAppCheck, { once: true });
     } else {
@@ -60,65 +63,41 @@
   </script>
 
   <!-- =========================
-       THEME + AUTH EARLY LOGIC
+       THEME (deterministic)
        ========================= -->
   <script>
     (function(){
-      const THEME_KEY = "sf_theme_mode";
-      const AUTH_KEY = "sf_signed_authed";
+      const THEME_KEY = "sf_theme_mode"; // "system" | "light" | "dark"
       const root = document.documentElement;
 
-      function readThemeMode(){
-        try { return localStorage.getItem(THEME_KEY) || "system"; }
-        catch(e){ return "system"; }
-      }
+      function applyTheme(){
+        let stored = "system";
+        try { stored = localStorage.getItem(THEME_KEY) || "system"; } catch (_) {}
 
-      function applyThemeAttr(){
-        const stored = readThemeMode();
         if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
         else root.removeAttribute("data-theme");
+
+        const effective =
+          root.getAttribute("data-theme") ||
+          (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+
+        const meta = document.getElementById("meta-theme-color");
+        if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
       }
 
-      applyThemeAttr();
-
-      function isSystemDark(){
-        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      }
-
-      function setThemeColor(){
-        const meta = document.querySelector('meta[name="theme-color"]');
-        if (!meta) return;
-
-        const mode = readThemeMode();
-        const effectiveDark = (mode === "dark") ? true : (mode === "light") ? false : isSystemDark();
-        meta.setAttribute("content", effectiveDark ? "#0F1114" : "#FFFBFE");
-      }
-
-      setThemeColor();
-
-      function applyAuthVisibility(){
-        const authed = (localStorage.getItem(AUTH_KEY) === "true");
-        document.querySelectorAll(".auth-only").forEach(el => {
-          el.classList.toggle("hidden", !authed);
-        });
-      }
-
-      applyAuthVisibility();
-      document.addEventListener("DOMContentLoaded", applyAuthVisibility);
+      applyTheme();
 
       window.addEventListener("storage", (e) => {
         if (!e) return;
-        if (e.key === AUTH_KEY) applyAuthVisibility();
-        if (e.key === THEME_KEY){
-          applyThemeAttr();
-          setThemeColor();
-        }
+        if (e.key === THEME_KEY) applyTheme();
       });
     })();
   </script>
 
   <!-- Minimal modal styles (self-contained) -->
   <style>
+    .hidden{ display:none !important; }
+
     .sf-modal-backdrop{
       position: fixed;
       inset: 0;
@@ -171,6 +150,48 @@
     .sf-modal-btn-quiet{
       background: rgba(255,255,255,0.08);
       color: rgba(233,238,246,0.9);
+    }
+
+    .sf-adv-row{
+      display:flex;
+      gap:10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .sf-adv-btn{
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: rgba(233,238,246,0.9);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .sf-adv-btn[aria-pressed="true"]{
+      border-color: rgba(59,130,246,0.55);
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.14);
+    }
+
+    .sf-google-icon{
+      width: 18px;
+      height: 18px;
+      display:inline-block;
+    }
+
+    .sf-auth-banner{
+      margin-top: 10px;
+      display:flex;
+      justify-content: space-between;
+      align-items:center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.06);
+      color: rgba(233,238,246,0.92);
+      font-weight: 600;
+      font-size: 13px;
     }
   </style>
 </head>
@@ -231,12 +252,30 @@
 
             <div class="actions">
               <button class="btn btn-lg" id="btn-send-link" type="button">Send sign-in link</button>
+
+              <button class="btn btn-lg btn-primary" id="btn-google" type="button" aria-label="Continue with Google">
+                <span aria-hidden="true" class="sf-google-icon">
+                  <svg viewBox="0 0 48 48" width="18" height="18" role="img" aria-hidden="true">
+                    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.1-.1-2.2-.4-3.5z"/>
+                    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
+                    <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.2C29.4 35.1 26.8 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.6 5.1C9.3 39.7 16.1 44 24 44z"/>
+                    <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.1 3-3.3 5.3-6 6.8l.1.1 6.3 5.2C39.4 36.9 44 31.9 44 24c0-1.1-.1-2.2-.4-3.5z"/>
+                  </svg>
+                </span>
+                <span>Google</span>
+              </button>
+
               <button class="btn btn-lg btn-quiet" id="btn-sign-out" type="button" disabled>Sign out</button>
+            </div>
+
+            <div class="sf-auth-banner hidden" id="sf-auth-banner">
+              <span id="sf-auth-label">Signed in</span>
+              <button class="btn btn-secondary" id="btn-go-inbox" type="button">Go to Inbox</button>
             </div>
 
             <div class="note">
               <p style="margin:0;">
-                Signed send requires email-link sign-in. It is required for Secure and Personal codes.
+                Signed send requires sign-in (Email link or Google). It is required for Secure and Personal codes.
               </p>
             </div>
 
@@ -282,15 +321,25 @@
             <h2>Delivery</h2>
             <div class="panel">
               <p class="panel-sub" id="signed-delivery-sub" style="margin-bottom: var(--s-3);">
-                Sign in to unlock advanced scheduling. Otherwise, signed sends are constrained to tomorrow with preset times.
+                Signed sends can schedule sooner (e.g., 10 minutes / 1 hour) or use tomorrow presets.
               </p>
-              <div class="chips" aria-label="Default times">
+
+              <!-- Preset time chips (tomorrow) -->
+              <div class="chips" aria-label="Tomorrow preset times (signed)">
                 <button class="chip" type="button" aria-pressed="false" data-time="08:00">8am</button>
-                <button class="chip" type="button" aria-pressed="true" data-time="13:00">1pm</button>
+                <button class="chip" type="button" aria-pressed="true"  data-time="13:00">1pm</button>
                 <button class="chip" type="button" aria-pressed="false" data-time="18:00">6pm</button>
               </div>
+
+              <!-- Advanced options (only when signed in) -->
+              <div class="sf-adv-row hidden" id="signed-advanced-row">
+                <button class="sf-adv-btn" type="button" aria-pressed="true" data-mode="preset">Tomorrow preset</button>
+                <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="10m">In 10 minutes</button>
+                <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="1h">In 1 hour</button>
+              </div>
+
               <small class="help" id="signed-delivery-help" style="margin-top: 10px;">
-                Advanced scheduling becomes available after sign-in.
+                Recipient device will store silently in Upcoming and reveal at the scheduled time.
               </small>
             </div>
           </div>
@@ -340,6 +389,18 @@
               Rolling is meant for temporary sharing. It may expire or become invalid after use.
             </small>
 
+            <h2>Delivery (rolling)</h2>
+            <div class="panel">
+              <p class="panel-sub" style="margin-bottom: var(--s-3);">
+                Rolling is always constrained to tomorrow at 08:00, 13:00, or 18:00 (your local time).
+              </p>
+              <div class="chips" aria-label="Tomorrow preset times (rolling)" id="rolling-chips">
+                <button class="chip" type="button" aria-pressed="false" data-time="08:00">8am</button>
+                <button class="chip" type="button" aria-pressed="true"  data-time="13:00">1pm</button>
+                <button class="chip" type="button" aria-pressed="false" data-time="18:00">6pm</button>
+              </div>
+            </div>
+
             <h2 style="margin-top: var(--s-6);">What to expect</h2>
             <ul>
               <li>No sign-in required.</li>
@@ -362,9 +423,7 @@
           <span class="dot" id="status-dot"></span>
           <span id="status-title">Not connected</span>
         </div>
-        <p class="status-line" id="status-line">
-          Ready.
-        </p>
+        <p class="status-line" id="status-line">Ready.</p>
       </div>
 
       <footer>
@@ -397,7 +456,9 @@
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
 
+    // -------------------------
     // Tabs
+    // -------------------------
     const tabSigned = document.getElementById("tab-signed");
     const tabRolling = document.getElementById("tab-rolling");
     const panelSigned = document.getElementById("panel-signed");
@@ -410,11 +471,12 @@
       panelSigned.classList.toggle("hidden", !signed);
       panelRolling.classList.toggle("hidden", signed);
     }
-
     tabSigned.addEventListener("click", () => setTab("signed"));
     tabRolling.addEventListener("click", () => setTab("rolling"));
 
+    // -------------------------
     // Status helper
+    // -------------------------
     const statusDot = document.getElementById("status-dot");
     const statusTitle = document.getElementById("status-title");
     const statusLine = document.getElementById("status-line");
@@ -427,36 +489,42 @@
       statusLine.textContent = line;
     }
 
-    // ✅ Modal helpers
+    // -------------------------
+    // Modal helpers
+    // -------------------------
     const modal = document.getElementById("sf-modal");
-    const modalTitle = document.getElementById("sf-modal-title");
     const modalBody = document.getElementById("sf-modal-body");
     const modalClose = document.getElementById("sf-modal-close");
     const modalOk = document.getElementById("sf-modal-ok");
 
     function showScheduledDialog(message) {
-      modalTitle.textContent = "Message scheduled";
       modalBody.textContent = message || "Your message is scheduled. You can close this tab — Setfeed will deliver it at the selected time.";
       modal.classList.add("show");
     }
     function hideScheduledDialog() { modal.classList.remove("show"); }
-
     modalClose.addEventListener("click", hideScheduledDialog);
     modalOk.addEventListener("click", hideScheduledDialog);
     modal.addEventListener("click", (e) => { if (e.target === modal) hideScheduledDialog(); });
     window.addEventListener("keydown", (e) => { if (e.key === "Escape") hideScheduledDialog(); });
 
+    // -------------------------
     // Elements
+    // -------------------------
     const signedEmail = document.getElementById("signed-email");
     const signedCode = document.getElementById("signed-code");
     const signedBody = document.getElementById("signed-body");
     const btnSendLink = document.getElementById("btn-send-link");
+    const btnGoogle = document.getElementById("btn-google");
     const btnSignOut = document.getElementById("btn-sign-out");
+    const btnGoInbox = document.getElementById("btn-go-inbox");
     const btnSignedSend = document.getElementById("btn-signed-send");
     const btnSignedClear = document.getElementById("btn-signed-clear");
     const videoSigned = document.getElementById("video-signed");
     const signedDeliverySub = document.getElementById("signed-delivery-sub");
     const signedDeliveryHelp = document.getElementById("signed-delivery-help");
+    const signedAdvancedRow = document.getElementById("signed-advanced-row");
+    const authBanner = document.getElementById("sf-auth-banner");
+    const authLabel = document.getElementById("sf-auth-label");
 
     const rollingCodeInput = document.getElementById("rolling-code");
     const rollingBodyInput = document.getElementById("rolling-body");
@@ -464,16 +532,20 @@
     const btnRollingClear = document.getElementById("btn-rolling-clear");
     const videoRolling = document.getElementById("video-rolling");
 
-    let signedAuthed = (localStorage.getItem("sf_signed_authed") === "true");
+    // -------------------------
+    // Auth (real)
+    // -------------------------
+    const AUTH_KEY = "sf_signed_authed";
+    const EMAIL_FOR_SIGNIN_KEY = "sf_email_for_signin";
+    const auth = firebase.auth();
 
-    function refreshNavAuthOnly() {
-      document.querySelectorAll(".auth-only").forEach(el => {
-        el.classList.toggle("hidden", !signedAuthed);
-      });
+    function setSignedAuthedFlag(isAuthed) {
+      try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
+      document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
     }
 
-    function refreshSignedSendEnabled() {
-      const canSend = signedAuthed
+    function refreshSignedSendEnabled(isAuthed) {
+      const canSend = isAuthed
         && signedCode.value.trim().length > 0
         && signedBody.value.trim().length > 0;
       btnSignedSend.disabled = !canSend;
@@ -485,74 +557,165 @@
       btnRollingSend.disabled = !canSend;
     }
 
-    function applySignedAuthUI() {
-      btnSignOut.disabled = !signedAuthed;
+    function renderAuthUI(user) {
+      const isAuthed = !!user;
+      setSignedAuthedFlag(isAuthed);
 
-      // When signed in, do NOT show walkthrough video in either tab.
-      if (videoSigned) videoSigned.classList.toggle("hidden", signedAuthed);
-      if (videoRolling) videoRolling.classList.toggle("hidden", signedAuthed);
+      btnSignOut.disabled = !isAuthed;
+
+      // when authed, hide walkthrough (both tabs)
+      if (videoSigned) videoSigned.classList.toggle("hidden", isAuthed);
+      if (videoRolling) videoRolling.classList.toggle("hidden", isAuthed);
+
+      // advanced scheduling visible only when authed
+      if (signedAdvancedRow) signedAdvancedRow.classList.toggle("hidden", !isAuthed);
+
+      // show small banner with email
+      if (authBanner && authLabel) {
+        authBanner.classList.toggle("hidden", !isAuthed);
+        if (isAuthed) authLabel.textContent = user.email || "Signed in";
+      }
 
       if (signedDeliverySub && signedDeliveryHelp) {
-        if (signedAuthed) {
-          signedDeliverySub.textContent = "Signed in: advanced scheduling becomes available in the next step (Phase 1 stub).";
-          signedDeliveryHelp.textContent = "For now, default is still tomorrow with preset times until scheduling UI is expanded.";
+        if (isAuthed) {
+          signedDeliverySub.textContent = "Signed in: you can schedule sooner (e.g., 10 minutes / 1 hour) or use tomorrow presets.";
+          signedDeliveryHelp.textContent = "Recipient device will store silently in Upcoming and reveal at the scheduled time.";
         } else {
-          signedDeliverySub.textContent = "Not signed in: signed sends are constrained to tomorrow with preset times. Sign in to unlock advanced scheduling.";
-          signedDeliveryHelp.textContent = "Advanced scheduling becomes available after sign-in.";
+          signedDeliverySub.textContent = "Sign in (Email link or Google) to send Signed (Secure / Personal).";
+          signedDeliveryHelp.textContent = "Rolling is always available without signing in.";
         }
       }
 
-      refreshNavAuthOnly();
-      refreshSignedSendEnabled();
+      refreshSignedSendEnabled(isAuthed);
     }
 
-    window.addEventListener("storage", (e) => {
-      if (!e || e.key !== "sf_signed_authed") return;
-      signedAuthed = (localStorage.getItem("sf_signed_authed") === "true");
-      applySignedAuthUI();
+    auth.onAuthStateChanged((user) => {
+      renderAuthUI(user);
     });
 
-    signedCode.addEventListener("input", refreshSignedSendEnabled);
-    signedBody.addEventListener("input", refreshSignedSendEnabled);
-    rollingCodeInput.addEventListener("input", refreshRollingSendEnabled);
-    rollingBodyInput.addEventListener("input", refreshRollingSendEnabled);
+    // Google popup
+    btnGoogle.addEventListener("click", async () => {
+      try {
+        setStatus("good", "Signing in…", "Opening Google sign-in…");
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: "select_account" });
+        await auth.signInWithPopup(provider);
+        setStatus("good", "Signed in", "You can send Signed messages now.");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t sign in", "Google sign-in failed. Check pop-up blocking and try again.");
+      }
+    });
 
-    btnSendLink.addEventListener("click", () => {
+    // Email link (passwordless)
+    btnSendLink.addEventListener("click", async () => {
       const email = signedEmail.value.trim();
       if (!email) {
         setStatus("warn", "Email needed", "Enter your email to request a sign-in link.");
         return;
       }
-      setStatus("good", "Sign-in link requested", "Sign-in flow is stubbed for now; local auth flag enabled.");
-      signedAuthed = true;
-      localStorage.setItem("sf_signed_authed", "true");
-      applySignedAuthUI();
+
+      try {
+        setStatus("good", "Sending link…", "Check your inbox for the sign-in link.");
+        const actionCodeSettings = {
+          url: `${SITE_ORIGIN}/send.html#finishSignIn`,
+          handleCodeInApp: true
+        };
+
+        await auth.sendSignInLinkToEmail(email, actionCodeSettings);
+        try { localStorage.setItem(EMAIL_FOR_SIGNIN_KEY, email); } catch (_) {}
+        setStatus("good", "Link sent", "Open the link from your email on this device to finish signing in.");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t send link", "Email-link sign-in failed. Verify Auth is enabled and your domain is authorized.");
+      }
     });
 
-    btnSignOut.addEventListener("click", () => {
-      signedAuthed = false;
-      localStorage.setItem("sf_signed_authed", "false");
-      applySignedAuthUI();
-      setStatus("warn", "Signed out", "Signed sending is unavailable until you sign in again.");
+    // Complete email-link sign-in if we landed here from the email
+    (async function finishEmailLinkIfPresent(){
+      try {
+        const href = window.location.href;
+        if (!auth.isSignInWithEmailLink(href)) return;
+
+        let email = "";
+        try { email = localStorage.getItem(EMAIL_FOR_SIGNIN_KEY) || ""; } catch (_) {}
+        if (!email) {
+          email = window.prompt("Confirm your email to finish sign-in:");
+          if (!email) {
+            setStatus("warn", "Sign-in not finished", "Email is required to finish sign-in.");
+            return;
+          }
+        }
+
+        setStatus("good", "Signing in…", "Finishing email-link sign-in…");
+        await auth.signInWithEmailLink(email, href);
+
+        try { localStorage.removeItem(EMAIL_FOR_SIGNIN_KEY); } catch (_) {}
+        setStatus("good", "Signed in", "You can send Signed messages now.");
+
+        // Clean URL (remove oobCode, etc.), keep #signin
+        history.replaceState(null, "", "./send.html#signin");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Sign-in failed", "Couldn’t finish email-link sign-in. Try sending a new link.");
+      }
+    })();
+
+    btnSignOut.addEventListener("click", async () => {
+      try {
+        await auth.signOut();
+        setStatus("warn", "Signed out", "Signed sending is unavailable until you sign in again.");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t sign out", "Try again.");
+      }
+    });
+
+    btnGoInbox.addEventListener("click", () => {
+      window.location.href = "./inbox.html";
     });
 
     // -------------------------
-    // ✅ Crypto helpers (WebCrypto)
+    // Scheduling UI state
+    // -------------------------
+    let signedPresetTime = "13:00";
+    let signedMode = "preset"; // "preset" | "10m" | "1h"
+
+    document.querySelectorAll('#panel-signed .chip[data-time]').forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll('#panel-signed .chip[data-time]').forEach(b => b.setAttribute("aria-pressed", "false"));
+        btn.setAttribute("aria-pressed", "true");
+        signedPresetTime = btn.getAttribute("data-time") || "13:00";
+      });
+    });
+
+    document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]').forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]').forEach(b => b.setAttribute("aria-pressed", "false"));
+        btn.setAttribute("aria-pressed", "true");
+        signedMode = btn.getAttribute("data-mode") || "preset";
+      });
+    });
+
+    let rollingPresetTime = "13:00";
+    document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(b => b.setAttribute("aria-pressed", "false"));
+        btn.setAttribute("aria-pressed", "true");
+        rollingPresetTime = btn.getAttribute("data-time") || "13:00";
+      });
+    });
+
+    // -------------------------
+    // Crypto helpers (WebCrypto)
     // Must match Android:
-    // - passphrase normalization for PBKDF2 + hashing
-    // - PBKDF2WithHmacSHA256, iter=100_000, keylen=256
-    // - AES/GCM/NoPadding, iv=12 bytes
+    // - normalize: trim, UPPERCASE, remove spaces and hyphens
+    // - PBKDF2 SHA-256, iter=100_000, keylen=256
+    // - AES-GCM, iv=12 bytes
     // -------------------------
-
-    // EXACTLY match Android ReceiveCodeService.normalizeCode():
-    // trim, UPPERCASE, remove spaces and hyphens
     function normalizeCodeAndroid(raw) {
-      return raw
-        .trim()
-        .toUpperCase()
-        .replace(/[\s-]/g, "");
+      return raw.trim().toUpperCase().replace(/[\s-]/g, "");
     }
-
 
     function bytesToB64(bytes) {
       let binary = "";
@@ -563,9 +726,7 @@
       return btoa(binary);
     }
 
-    function abToB64(ab) {
-      return bytesToB64(new Uint8Array(ab));
-    }
+    function abToB64(ab) { return bytesToB64(new Uint8Array(ab)); }
 
     async function sha256Hex(str) {
       const data = new TextEncoder().encode(str);
@@ -575,22 +736,9 @@
 
     async function deriveAesKeyFromPassphrase(passphrase, saltBytes) {
       const passBytes = new TextEncoder().encode(passphrase);
-
-      const baseKey = await crypto.subtle.importKey(
-        "raw",
-        passBytes,
-        { name: "PBKDF2" },
-        false,
-        ["deriveKey"]
-      );
-
+      const baseKey = await crypto.subtle.importKey("raw", passBytes, { name: "PBKDF2" }, false, ["deriveKey"]);
       return await crypto.subtle.deriveKey(
-        {
-          name: "PBKDF2",
-          salt: saltBytes,
-          iterations: 100000,
-          hash: "SHA-256"
-        },
+        { name: "PBKDF2", salt: saltBytes, iterations: 100000, hash: "SHA-256" },
         baseKey,
         { name: "AES-GCM", length: 256 },
         false,
@@ -599,26 +747,18 @@
     }
 
     async function encryptBodyForCode(rawCode, plaintext) {
-      const passphrase = normalizeCodeAndroid(rawCode); // IMPORTANT (matches Android)
-      const salt = crypto.getRandomValues(new Uint8Array(16)); // 16 bytes
-      const iv = crypto.getRandomValues(new Uint8Array(12));   // 12 bytes for GCM
+      const passphrase = normalizeCodeAndroid(rawCode);
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
 
       const key = await deriveAesKeyFromPassphrase(passphrase, salt);
-
       const ptBytes = new TextEncoder().encode(plaintext);
-      const ct = await crypto.subtle.encrypt(
-        { name: "AES-GCM", iv },
-        key,
-        ptBytes
-      );
+      const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, ptBytes);
 
       return {
-        // base64 strings for Firestore + Android
         ciphertextB64: abToB64(ct),
         ivB64: bytesToB64(iv),
         saltB64: bytesToB64(salt),
-
-        // for docId addressing
         normalizedPassphrase: passphrase
       };
     }
@@ -627,63 +767,60 @@
       return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
     }
 
-    // Backend requires: TOMORROW (local) at 08:00 / 13:00 / 18:00.
-    // Default: 13:00.
-    function deliverAtLocalIsoTomorrow(presetHHMM) {
-      const tz = getUserTimezone();
-      const now = new Date();
+    function pad2(n) { return String(n).padStart(2, "0"); }
 
-      // compute "tomorrow" date parts in local device time (good enough for browser tests)
-      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12, 0, 0, 0);
+    function toLocalIsoWithOffset(date) {
+      const d = new Date(date.getTime());
+      d.setSeconds(0, 0);
 
-      const [hh, mm] = (presetHHMM || "13:00").split(":").map(n => parseInt(n, 10));
-      tomorrow.setHours(hh, mm, 0, 0);
-
-      // include offset (required)
-      const pad2 = (n) => String(n).padStart(2, "0");
-      const offMin = -tomorrow.getTimezoneOffset(); // minutes east of UTC
+      const offMin = -d.getTimezoneOffset();
       const sign = offMin >= 0 ? "+" : "-";
       const abs = Math.abs(offMin);
       const offH = pad2(Math.floor(abs / 60));
       const offM = pad2(abs % 60);
 
-      const yyyy = tomorrow.getFullYear();
-      const mon = pad2(tomorrow.getMonth() + 1);
-      const day = pad2(tomorrow.getDate());
-      const hour = pad2(tomorrow.getHours());
-      const minute = pad2(tomorrow.getMinutes());
+      const yyyy = d.getFullYear();
+      const mon = pad2(d.getMonth() + 1);
+      const day = pad2(d.getDate());
+      const hour = pad2(d.getHours());
+      const minute = pad2(d.getMinutes());
 
-      // "local ISO with offset"
       return `${yyyy}-${mon}-${day}T${hour}:${minute}:00${sign}${offH}:${offM}`;
+    }
+
+    function deliverAtLocalIsoTomorrow(presetHHMM) {
+      const now = new Date();
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12, 0, 0, 0);
+      const [hh, mm] = (presetHHMM || "13:00").split(":").map(n => parseInt(n, 10));
+      tomorrow.setHours(hh, mm, 0, 0);
+      return toLocalIsoWithOffset(tomorrow);
+    }
+
+    function deliverAtLocalIsoInMinutes(minutes) {
+      const d = new Date(Date.now() + minutes * 60 * 1000);
+      d.setSeconds(0, 0);
+      return toLocalIsoWithOffset(d);
     }
 
     function randomClientRequestId(prefix) {
       return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     }
 
-    // Delivery chip selection (Signed panel only for now; rolling always uses 13:00)
-    let signedPresetTime = "13:00";
-    document.querySelectorAll('#panel-signed .chip[data-time]').forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll('#panel-signed .chip[data-time]').forEach(b => b.setAttribute("aria-pressed", "false"));
-        btn.setAttribute("aria-pressed", "true");
-        signedPresetTime = btn.getAttribute("data-time") || "13:00";
-      });
-    });
-
     // -------------------------
-    // ✅ "Send" handlers
-    // Rolling: REAL encryption + REAL callable: sendRollingCiphertext
-    // Signed: REAL encryption + callable name placeholder (you can change it)
-    // Both: show “Message scheduled” dialog on success
+    // Send handlers
     // -------------------------
+    signedCode.addEventListener("input", () => refreshSignedSendEnabled(!!auth.currentUser));
+    signedBody.addEventListener("input", () => refreshSignedSendEnabled(!!auth.currentUser));
+    rollingCodeInput.addEventListener("input", refreshRollingSendEnabled);
+    rollingBodyInput.addEventListener("input", refreshRollingSendEnabled);
 
     btnSignedSend.addEventListener("click", async () => {
+      const user = auth.currentUser;
       const code = signedCode.value.trim();
       const body = signedBody.value.trim();
 
-      if (!signedAuthed) {
-        setStatus("warn", "Sign-in required", "Secure and Personal sending require email-link sign-in.");
+      if (!user) {
+        setStatus("warn", "Sign-in required", "Sign in (Email link or Google) to send Signed messages.");
         return;
       }
       if (!code || !body) {
@@ -697,15 +834,15 @@
         const enc = await encryptBodyForCode(code, body);
         const codeHash = await sha256Hex(enc.normalizedPassphrase);
 
-        const deliverAtLocalIso = deliverAtLocalIsoTomorrow(signedPresetTime);
+        let deliverAtLocalIso;
+        if (signedMode === "10m") deliverAtLocalIso = deliverAtLocalIsoInMinutes(10);
+        else if (signedMode === "1h") deliverAtLocalIso = deliverAtLocalIsoInMinutes(60);
+        else deliverAtLocalIso = deliverAtLocalIsoTomorrow(signedPresetTime);
+
         const userTimezone = getUserTimezone();
         const clientRequestId = randomClientRequestId("signed");
 
-        // ✅ Change this to your real signed callable when it exists.
-        // If you already have one, replace "sendSignedCiphertext" with your deployed name.
-        const callableName = "sendSignedCiphertext";
-
-        const callable = functions.httpsCallable(callableName);
+        const callable = functions.httpsCallable("sendSignedCiphertext");
         await callable({
           codeHash,
           ciphertext: enc.ciphertextB64,
@@ -738,17 +875,22 @@
         setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
 
         const enc = await encryptBodyForCode(code, body);
-
-        // ✅ docId = codeHash, must match Android
         const codeHash = await sha256Hex(enc.normalizedPassphrase);
 
-        // ✅ Backend guardrails (tomorrow + preset); default 13:00
-        const deliverAtLocalIso = deliverAtLocalIsoTomorrow("13:00");
+        const deliverAtLocalIso = deliverAtLocalIsoTomorrow(rollingPresetTime);
         const userTimezone = getUserTimezone();
         const clientRequestId = randomClientRequestId("rolling");
 
+        // Best-effort provision to avoid CODE_NOT_FOUND
+        try {
+          const provision = functions.httpsCallable("provisionRollingEnvelope");
+          await provision({ codeHash });
+        } catch (e) {
+          console.warn("[Rolling] provision failed (continuing):", e);
+        }
+
         const callable = functions.httpsCallable("sendRollingCiphertext");
-        const res = await callable({
+        await callable({
           codeHash,
           ciphertext: enc.ciphertextB64,
           iv: enc.ivB64,
@@ -757,12 +899,6 @@
           userTimezone,
           clientRequestId
         });
-
-        // Optional: show where it landed (helps debugging)
-        try {
-          console.log("[Rolling] send ok:", res && res.data ? res.data : res);
-          console.log("[Rolling] codeHash(docId):", codeHash);
-        } catch (_) {}
 
         setStatus("good", "Scheduled", "Message scheduled.");
         showScheduledDialog("Your rolling message is scheduled. You can close this tab — Setfeed will deliver it on time.");
@@ -777,7 +913,7 @@
     btnSignedClear.addEventListener("click", () => {
       signedCode.value = "";
       signedBody.value = "";
-      refreshSignedSendEnabled();
+      refreshSignedSendEnabled(!!auth.currentUser);
       setStatus("warn", "Cleared", "Signed send fields cleared.");
     });
 
@@ -789,9 +925,13 @@
     });
 
     // Init
-    applySignedAuthUI();
     refreshRollingSendEnabled();
-    setStatus("good", "Ready", "App Check is active. Encryption + rolling send are wired.");
+    setStatus("good", "Ready", "App Check is active. Encryption + sending are wired.");
+
+    // If someone lands here with #signin, keep Signed tab selected.
+    if (window.location.hash && window.location.hash.toLowerCase().includes("signin")) {
+      setTab("signed");
+    }
   </script>
 </body>
 </html>
