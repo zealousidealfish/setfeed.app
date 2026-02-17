@@ -17,22 +17,24 @@
   <!-- =========================
        FIREBASE + APP CHECK
        ========================= -->
-
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 
   <script>
+    // =========================
+    // 🔐 PLACEHOLDERS (fill these)
+    // =========================
     const firebaseConfig = {
-      apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",
-      authDomain: "setfeed-fcd7a.firebaseapp.com",
-      projectId: "setfeed-fcd7a",
-      storageBucket: "setfeed-fcd7a.firebasestorage.app",
-      messagingSenderId: "553573263069",
-      appId: "1:553573263069:web:e5c9884101ca38eaee1d34"
+      // apiKey: "…",
+      // authDomain: "…",
+      // projectId: "…",
+      // appId: "…",
+      // etc
     };
 
-    const RECAPTCHA_SITE_KEY = "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI";
+    // Your App Check reCAPTCHA v3 site key (Firebase Console → App Check → Web app)
+    const RECAPTCHA_SITE_KEY = "PASTE_YOUR_RECAPTCHA_V3_SITE_KEY_HERE";
     // =========================
 
     firebase.initializeApp(firebaseConfig);
@@ -59,7 +61,6 @@
   <!-- =========================
        THEME + AUTH EARLY LOGIC
        ========================= -->
-
   <script>
     (function(){
       const THEME_KEY = "sf_theme_mode";
@@ -147,6 +148,7 @@
       color: rgba(233,238,246,0.85);
       line-height: 1.35;
       font-size: 14px;
+      word-break: break-word;
     }
     .sf-modal-actions{
       display: flex;
@@ -282,9 +284,9 @@
                 Sign in to unlock advanced scheduling. Otherwise, signed sends are constrained to tomorrow with preset times.
               </p>
               <div class="chips" aria-label="Default times">
-                <button class="chip" type="button" aria-pressed="true">8am</button>
-                <button class="chip" type="button" aria-pressed="false">1pm</button>
-                <button class="chip" type="button" aria-pressed="false">6pm</button>
+                <button class="chip" type="button" aria-pressed="false" data-time="08:00">8am</button>
+                <button class="chip" type="button" aria-pressed="true" data-time="13:00">1pm</button>
+                <button class="chip" type="button" aria-pressed="false" data-time="18:00">6pm</button>
               </div>
               <small class="help" id="signed-delivery-help" style="margin-top: 10px;">
                 Advanced scheduling becomes available after sign-in.
@@ -360,7 +362,7 @@
           <span id="status-title">Not connected</span>
         </div>
         <p class="status-line" id="status-line">
-          This page is ready for Firebase + encryption wiring. No data is sent yet.
+          Ready.
         </p>
       </div>
 
@@ -435,12 +437,8 @@
       modalTitle.textContent = "Message scheduled";
       modalBody.textContent = message || "Your message is scheduled. You can close this tab — Setfeed will deliver it at the selected time.";
       modal.classList.add("show");
-      // Keep it calm: no auto-close.
     }
-
-    function hideScheduledDialog() {
-      modal.classList.remove("show");
-    }
+    function hideScheduledDialog() { modal.classList.remove("show"); }
 
     modalClose.addEventListener("click", hideScheduledDialog);
     modalOk.addEventListener("click", hideScheduledDialog);
@@ -459,8 +457,8 @@
     const signedDeliverySub = document.getElementById("signed-delivery-sub");
     const signedDeliveryHelp = document.getElementById("signed-delivery-help");
 
-    const rollingCode = document.getElementById("rolling-code");
-    const rollingBody = document.getElementById("rolling-body");
+    const rollingCodeInput = document.getElementById("rolling-code");
+    const rollingBodyInput = document.getElementById("rolling-body");
     const btnRollingSend = document.getElementById("btn-rolling-send");
     const btnRollingClear = document.getElementById("btn-rolling-clear");
     const videoRolling = document.getElementById("video-rolling");
@@ -481,8 +479,8 @@
     }
 
     function refreshRollingSendEnabled() {
-      const canSend = rollingCode.value.trim().length > 0
-        && rollingBody.value.trim().length > 0;
+      const canSend = rollingCodeInput.value.trim().length > 0
+        && rollingBodyInput.value.trim().length > 0;
       btnRollingSend.disabled = !canSend;
     }
 
@@ -515,8 +513,8 @@
 
     signedCode.addEventListener("input", refreshSignedSendEnabled);
     signedBody.addEventListener("input", refreshSignedSendEnabled);
-    rollingCode.addEventListener("input", refreshRollingSendEnabled);
-    rollingBody.addEventListener("input", refreshRollingSendEnabled);
+    rollingCodeInput.addEventListener("input", refreshRollingSendEnabled);
+    rollingBodyInput.addEventListener("input", refreshRollingSendEnabled);
 
     btnSendLink.addEventListener("click", () => {
       const email = signedEmail.value.trim();
@@ -524,7 +522,7 @@
         setStatus("warn", "Email needed", "Enter your email to request a sign-in link.");
         return;
       }
-      setStatus("good", "Sign-in link requested", "When Firebase is wired, a sign-in link will be sent to your email.");
+      setStatus("good", "Sign-in link requested", "Sign-in flow is stubbed for now; local auth flag enabled.");
       signedAuthed = true;
       localStorage.setItem("sf_signed_authed", "true");
       applySignedAuthUI();
@@ -538,14 +536,142 @@
     });
 
     // -------------------------
-    // ✅ "Send" handlers
-    // Shows “Message scheduled” dialog on success for BOTH signed and rolling.
+    // ✅ Crypto helpers (WebCrypto)
+    // Must match Android:
+    // - passphrase normalization for PBKDF2 + hashing
+    // - PBKDF2WithHmacSHA256, iter=100_000, keylen=256
+    // - AES/GCM/NoPadding, iv=12 bytes
     // -------------------------
 
-    async function simulateSendDelay() {
-      // calm, quick confirmation; remove/replace with real encryption + callable
-      await new Promise(r => setTimeout(r, 250));
+    // EXACTLY match Android ReceiveCodeService.normalizeCode():
+    // trim, UPPERCASE, remove spaces and hyphens
+    function normalizeCodeAndroid(raw) {
+      return raw.trim()
+        .toUpperCase()
+        .replace(/ /g, "")
+        .replace(/-/g, "");
     }
+
+    function bytesToB64(bytes) {
+      let bin = "";
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin);
+    }
+
+    function abToB64(ab) {
+      return bytesToB64(new Uint8Array(ab));
+    }
+
+    async function sha256Hex(str) {
+      const data = new TextEncoder().encode(str);
+      const hash = await crypto.subtle.digest("SHA-256", data);
+      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function deriveAesKeyFromPassphrase(passphrase, saltBytes) {
+      const passBytes = new TextEncoder().encode(passphrase);
+
+      const baseKey = await crypto.subtle.importKey(
+        "raw",
+        passBytes,
+        { name: "PBKDF2" },
+        false,
+        ["deriveKey"]
+      );
+
+      return await crypto.subtle.deriveKey(
+        {
+          name: "PBKDF2",
+          salt: saltBytes,
+          iterations: 100000,
+          hash: "SHA-256"
+        },
+        baseKey,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    }
+
+    async function encryptBodyForCode(rawCode, plaintext) {
+      const passphrase = normalizeCodeAndroid(rawCode); // IMPORTANT (matches Android)
+      const salt = crypto.getRandomValues(new Uint8Array(16)); // 16 bytes
+      const iv = crypto.getRandomValues(new Uint8Array(12));   // 12 bytes for GCM
+
+      const key = await deriveAesKeyFromPassphrase(passphrase, salt);
+
+      const ptBytes = new TextEncoder().encode(plaintext);
+      const ct = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        key,
+        ptBytes
+      );
+
+      return {
+        // base64 strings for Firestore + Android
+        ciphertextB64: abToB64(ct),
+        ivB64: bytesToB64(iv),
+        saltB64: bytesToB64(salt),
+
+        // for docId addressing
+        normalizedPassphrase: passphrase
+      };
+    }
+
+    function getUserTimezone() {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    }
+
+    // Backend requires: TOMORROW (local) at 08:00 / 13:00 / 18:00.
+    // Default: 13:00.
+    function deliverAtLocalIsoTomorrow(presetHHMM) {
+      const tz = getUserTimezone();
+      const now = new Date();
+
+      // compute "tomorrow" date parts in local device time (good enough for browser tests)
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12, 0, 0, 0);
+
+      const [hh, mm] = (presetHHMM || "13:00").split(":").map(n => parseInt(n, 10));
+      tomorrow.setHours(hh, mm, 0, 0);
+
+      // include offset (required)
+      const pad2 = (n) => String(n).padStart(2, "0");
+      const offMin = -tomorrow.getTimezoneOffset(); // minutes east of UTC
+      const sign = offMin >= 0 ? "+" : "-";
+      const abs = Math.abs(offMin);
+      const offH = pad2(Math.floor(abs / 60));
+      const offM = pad2(abs % 60);
+
+      const yyyy = tomorrow.getFullYear();
+      const mon = pad2(tomorrow.getMonth() + 1);
+      const day = pad2(tomorrow.getDate());
+      const hour = pad2(tomorrow.getHours());
+      const minute = pad2(tomorrow.getMinutes());
+
+      // "local ISO with offset"
+      return `${yyyy}-${mon}-${day}T${hour}:${minute}:00${sign}${offH}:${offM}`;
+    }
+
+    function randomClientRequestId(prefix) {
+      return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    // Delivery chip selection (Signed panel only for now; rolling always uses 13:00)
+    let signedPresetTime = "13:00";
+    document.querySelectorAll('#panel-signed .chip[data-time]').forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll('#panel-signed .chip[data-time]').forEach(b => b.setAttribute("aria-pressed", "false"));
+        btn.setAttribute("aria-pressed", "true");
+        signedPresetTime = btn.getAttribute("data-time") || "13:00";
+      });
+    });
+
+    // -------------------------
+    // ✅ "Send" handlers
+    // Rolling: REAL encryption + REAL callable: sendRollingCiphertext
+    // Signed: REAL encryption + callable name placeholder (you can change it)
+    // Both: show “Message scheduled” dialog on success
+    // -------------------------
 
     btnSignedSend.addEventListener("click", async () => {
       const code = signedCode.value.trim();
@@ -563,23 +689,40 @@
       try {
         setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
 
-        // TODO (wire): encrypt in browser, then call your signed function.
-        // Example shape:
-        // const callable = functions.httpsCallable("sendSignedCiphertext");
-        // await callable({ ...payload });
-        await simulateSendDelay();
+        const enc = await encryptBodyForCode(code, body);
+        const codeHash = await sha256Hex(enc.normalizedPassphrase);
+
+        const deliverAtLocalIso = deliverAtLocalIsoTomorrow(signedPresetTime);
+        const userTimezone = getUserTimezone();
+        const clientRequestId = randomClientRequestId("signed");
+
+        // ✅ Change this to your real signed callable when it exists.
+        // If you already have one, replace "sendSignedCiphertext" with your deployed name.
+        const callableName = "sendSignedCiphertext";
+
+        const callable = functions.httpsCallable(callableName);
+        await callable({
+          codeHash,
+          ciphertext: enc.ciphertextB64,
+          iv: enc.ivB64,
+          salt: enc.saltB64,
+          deliverAtLocalIso,
+          userTimezone,
+          clientRequestId
+        });
 
         setStatus("good", "Scheduled", "Message scheduled.");
         showScheduledDialog("Your signed message is scheduled. You can close this tab — Setfeed will deliver it on time.");
       } catch (e) {
         console.error(e);
-        setStatus("warn", "Couldn’t send", "Something went wrong while scheduling the message. Try again.");
+        const msg = (e && e.message) ? e.message : "Something went wrong while scheduling the message. Try again.";
+        setStatus("warn", "Couldn’t send", msg);
       }
     });
 
     btnRollingSend.addEventListener("click", async () => {
-      const code = rollingCode.value.trim();
-      const body = rollingBody.value.trim();
+      const code = rollingCodeInput.value.trim();
+      const body = rollingBodyInput.value.trim();
 
       if (!code || !body) {
         setStatus("warn", "Missing details", "Add a rolling code and a message, then try again.");
@@ -589,16 +732,40 @@
       try {
         setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
 
-        // TODO (wire): encrypt in browser, then call sendRollingCiphertext
-        // const callable = functions.httpsCallable("sendRollingCiphertext");
-        // await callable({ ...payload });
-        await simulateSendDelay();
+        const enc = await encryptBodyForCode(code, body);
+
+        // ✅ docId = codeHash, must match Android
+        const codeHash = await sha256Hex(enc.normalizedPassphrase);
+
+        // ✅ Backend guardrails (tomorrow + preset); default 13:00
+        const deliverAtLocalIso = deliverAtLocalIsoTomorrow("13:00");
+        const userTimezone = getUserTimezone();
+        const clientRequestId = randomClientRequestId("rolling");
+
+        const callable = functions.httpsCallable("sendRollingCiphertext");
+        const res = await callable({
+          codeHash,
+          ciphertext: enc.ciphertextB64,
+          iv: enc.ivB64,
+          salt: enc.saltB64,
+          deliverAtLocalIso,
+          userTimezone,
+          clientRequestId
+        });
+
+        // Optional: show where it landed (helps debugging)
+        try {
+          console.log("[Rolling] send ok:", res && res.data ? res.data : res);
+          console.log("[Rolling] codeHash(docId):", codeHash);
+        } catch (_) {}
 
         setStatus("good", "Scheduled", "Message scheduled.");
         showScheduledDialog("Your rolling message is scheduled. You can close this tab — Setfeed will deliver it on time.");
       } catch (e) {
         console.error(e);
-        setStatus("warn", "Couldn’t send", "Something went wrong while scheduling the message. Try again.");
+        const code = e && e.code ? e.code : "";
+        const msg = (e && e.message) ? e.message : "Something went wrong while scheduling the message. Try again.";
+        setStatus("warn", "Couldn’t send", (code ? `${code}: ` : "") + msg);
       }
     });
 
@@ -610,35 +777,16 @@
     });
 
     btnRollingClear.addEventListener("click", () => {
-      rollingCode.value = "";
-      rollingBody.value = "";
+      rollingCodeInput.value = "";
+      rollingBodyInput.value = "";
       refreshRollingSendEnabled();
       setStatus("warn", "Cleared", "Rolling send fields cleared.");
     });
 
-    function normalizeCode(code) {
-      return code
-      .trim()
-      .replace(/\s+/g, " ")
-      .toLowerCase();
-    }
-
-    async function sha256Hex(input) {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(input);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-    }
-
-    async function computeCodeHash(rawCode) {
-      const normalized = normalizeCode(rawCode);
-      return await sha256Hex(normalized);
-    }
-
-
+    // Init
     applySignedAuthUI();
     refreshRollingSendEnabled();
+    setStatus("good", "Ready", "App Check is active. Encryption + rolling send are wired.");
   </script>
 </body>
 </html>
