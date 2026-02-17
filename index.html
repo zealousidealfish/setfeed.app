@@ -1,3 +1,4 @@
+<!-- index.html (FULL FILE REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -17,38 +18,113 @@
 
   <link rel="stylesheet" href="./styles.css" />
 
+  <!-- =========================
+       FIREBASE (AUTH + APP CHECK)
+       ========================= -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+
+  <script>
+    // =========================
+    // ✅ Firebase config (yours)
+    // =========================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",
+      authDomain: "setfeed-fcd7a.firebaseapp.com",
+      projectId: "setfeed-fcd7a",
+      storageBucket: "setfeed-fcd7a.firebasestorage.app",
+      messagingSenderId: "553573263069",
+      appId: "1:553573263069:web:e5c9884101ca38eaee1d34"
+    };
+
+    // TODO: replace this with your real App Check reCAPTCHA v3 site key
+    const RECAPTCHA_SITE_KEY = "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI";
+
+    firebase.initializeApp(firebaseConfig);
+
+    // App Check (required for callable + abuse resistance)
+    function startAppCheck() {
+      try {
+        firebase.appCheck().activate(RECAPTCHA_SITE_KEY, true);
+        console.log("[AppCheck] activated");
+      } catch (e) {
+        console.warn("[AppCheck] init failed:", e);
+      }
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", startAppCheck, { once: true });
+    } else {
+      startAppCheck();
+    }
+  </script>
+
   <script>
     (function(){
       // Theme mode
-      const themeKey = "sf_theme_mode"; // "system" | "light" | "dark"
-      const stored = localStorage.getItem(themeKey) || "system";
+      const THEME_KEY = "sf_theme_mode"; // "system" | "light" | "dark"
       const root = document.documentElement;
 
-      if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
-      else root.removeAttribute("data-theme");
+      function applyTheme(){
+        const stored = localStorage.getItem(THEME_KEY) || "system";
+        if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
+        else root.removeAttribute("data-theme");
 
-      const effective =
-        root.getAttribute("data-theme") ||
-        (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        const effective =
+          root.getAttribute("data-theme") ||
+          (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 
-      const meta = document.getElementById("meta-theme-color");
-      if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
-
-      function applyAuthVisibility(){
-        const authed = localStorage.getItem("sf_signed_authed") === "true";
-        document.querySelectorAll(".auth-only").forEach(el => {
-          el.classList.toggle("hidden", !authed);
-        });
+        const meta = document.getElementById("meta-theme-color");
+        if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
       }
 
-      document.addEventListener("DOMContentLoaded", applyAuthVisibility);
+      applyTheme();
 
-      // Cross-tab / other-page live update
       window.addEventListener("storage", (e) => {
-        if (e && e.key === "sf_signed_authed") applyAuthVisibility();
+        if (!e) return;
+        if (e.key === THEME_KEY) applyTheme();
       });
     })();
   </script>
+
+  <style>
+    .hidden{ display:none !important; }
+    .sr-only{
+      position:absolute !important;
+      width:1px !important;
+      height:1px !important;
+      padding:0 !important;
+      margin:-1px !important;
+      overflow:hidden !important;
+      clip:rect(0,0,0,0) !important;
+      white-space:nowrap !important;
+      border:0 !important;
+    }
+    .sf-auth-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top: 10px;
+    }
+    .sf-auth-pill{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: rgba(233,238,246,0.9);
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .sf-google-icon{
+      width: 18px;
+      height: 18px;
+      display:inline-block;
+    }
+  </style>
 </head>
 
 <body class="page-bg">
@@ -74,7 +150,7 @@
 
   <div class="wrap">
     <div class="card">
-      <h1>Scheduled messages. Kept simple.</h1>
+      <h1>Scheduled messages</h1>
       <p class="lead">
         A calm, local-first scheduled messaging app — predictable behavior, gentle defaults,
         and no surprise state changes.
@@ -94,27 +170,39 @@
 
       <div class="panel" style="margin-top: var(--s-6);">
         <p class="panel-sub" style="margin-top: 0;">
-          Optional. Sign in to access signed sending and advanced options when they’re enabled on the web bridge.
+          Optional. Sign in to use Signed sending and advanced options.
         </p>
+
         <div class="actions">
-          <a class="btn btn-lg btn-primary" href="./send.html#signin" aria-label="Continue with Google">
-            <span aria-hidden="true" style="
-              display:inline-flex;
-              align-items:center;
-              justify-content:center;
-              width: 22px;
-              height: 22px;
-              border-radius: 999px;
-              background: rgba(255,255,255,0.18);
-              border: 1px solid rgba(255,255,255,0.16);
-              font-weight: 600;
-              line-height: 1;
-            ">G</span>
-            <span class="sr-only">Continue with Google</span>
-          </a>
+          <!-- ✅ Real Google sign-in (popup) -->
+          <button class="btn btn-lg btn-primary" id="btn-google" type="button" aria-label="Continue with Google">
+            <span aria-hidden="true" class="sf-google-icon">
+              <!-- Simple Google “G” mark (inline SVG) -->
+              <svg viewBox="0 0 48 48" width="18" height="18" role="img" aria-hidden="true">
+                <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.1-.1-2.2-.4-3.5z"/>
+                <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
+                <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.2C29.4 35.1 26.8 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.6 5.1C9.3 39.7 16.1 44 24 44z"/>
+                <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.1 3-3.3 5.3-6 6.8l.1.1 6.3 5.2C39.4 36.9 44 31.9 44 24c0-1.1-.1-2.2-.4-3.5z"/>
+              </svg>
+            </span>
+            <span>Continue with Google</span>
+          </button>
+
+          <!-- Email link: takes you to send.html#signin where the email link UI lives -->
           <a class="btn btn-lg btn-secondary" href="./send.html#signin">Continue with email</a>
+
+          <!-- Sign out appears when authed -->
+          <button class="btn btn-lg btn-quiet hidden" id="btn-signout" type="button">Sign out</button>
         </div>
-        <small class="help">You can also send using Rolling without signing in.</small>
+
+        <div class="sf-auth-row">
+          <span class="sf-auth-pill hidden" id="sf-auth-pill">
+            <span aria-hidden="true">✓</span>
+            <span id="sf-auth-label">Signed in</span>
+          </span>
+        </div>
+
+        <small class="help">Rolling is always available without signing in.</small>
       </div>
 
       <h2>About this site</h2>
@@ -138,21 +226,67 @@
 
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
-  </script>
 
-  <!-- Screen-reader-only utility -->
-  <style>
-    .sr-only{
-      position:absolute !important;
-      width:1px !important;
-      height:1px !important;
-      padding:0 !important;
-      margin:-1px !important;
-      overflow:hidden !important;
-      clip:rect(0,0,0,0) !important;
-      white-space:nowrap !important;
-      border:0 !important;
+    // -------------------------
+    // ✅ Auth wiring (Google popup)
+    // -------------------------
+    const AUTH_KEY = "sf_signed_authed";
+    const auth = firebase.auth();
+
+    // Deterministic: keep a simple boolean for UI visibility across pages.
+    function setSignedAuthedFlag(isAuthed) {
+      try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
+      document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
     }
-  </style>
+
+    const btnGoogle = document.getElementById("btn-google");
+    const btnSignout = document.getElementById("btn-signout");
+    const pill = document.getElementById("sf-auth-pill");
+    const pillLabel = document.getElementById("sf-auth-label");
+
+    function renderAuthed(user) {
+      const isAuthed = !!user;
+      setSignedAuthedFlag(isAuthed);
+
+      btnGoogle.classList.toggle("hidden", isAuthed);
+      btnSignout.classList.toggle("hidden", !isAuthed);
+
+      if (pill && pillLabel) {
+        pill.classList.toggle("hidden", !isAuthed);
+        if (isAuthed) {
+          const email = user.email || "Signed in";
+          pillLabel.textContent = email;
+        }
+      }
+    }
+
+    auth.onAuthStateChanged((user) => {
+      renderAuthed(user);
+    });
+
+    btnGoogle.addEventListener("click", async () => {
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: "select_account" });
+
+        await auth.signInWithPopup(provider);
+        // Success => onAuthStateChanged updates UI + flag
+        window.location.href = "./send.html#signin";
+      } catch (e) {
+        console.error(e);
+        alert("Couldn’t sign in with Google. Check your browser pop-up settings and try again.");
+      }
+    });
+
+    btnSignout.addEventListener("click", async () => {
+      try {
+        await auth.signOut();
+        // UI updates via onAuthStateChanged
+      } catch (e) {
+        console.error(e);
+        alert("Couldn’t sign out. Try again.");
+      }
+    });
+  </script>
 </body>
 </html>
