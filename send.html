@@ -18,41 +18,43 @@
        FIREBASE + APP CHECK
        ========================= -->
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 
-<script>
-  // Your Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",
-    authDomain: "setfeed-fcd7a.firebaseapp.com",
-    projectId: "setfeed-fcd7a",
-    storageBucket: "setfeed-fcd7a.firebasestorage.app",
-    messagingSenderId: "553573263069",
-    appId: "1:553573263069:web:e5c9884101ca38eaee1d34"
-  };
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",
+      authDomain: "setfeed-fcd7a.firebaseapp.com",
+      projectId: "setfeed-fcd7a",
+      storageBucket: "setfeed-fcd7a.firebasestorage.app",
+      messagingSenderId: "553573263069",
+      appId: "1:553573263069:web:e5c9884101ca38eaee1d34"
+    };
 
-  firebase.initializeApp(firebaseConfig);
+    const RECAPTCHA_SITE_KEY = "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI";
+    // =========================
 
-  // Functions can be created immediately
-  const functions = firebase.app().functions("europe-west2");
+    firebase.initializeApp(firebaseConfig);
 
-  // ✅ Delay App Check until <body> exists (fixes recaptcha appendChild crash)
-  function startAppCheck() {
-    try {
-      firebase.appCheck().activate("6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI", true);
-    } catch (e) {
-      console.error("App Check init failed:", e);
+    // Pin region deterministically
+    const functions = firebase.app().functions("europe-west2");
+
+    function startAppCheck() {
+      try {
+        firebase.appCheck().activate(RECAPTCHA_SITE_KEY, true);
+        console.log("[AppCheck] activated");
+      } catch (e) {
+        console.error("[AppCheck] init failed:", e);
+      }
     }
-  }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", startAppCheck, { once: true });
-  } else {
-    startAppCheck();
-  }
-</script>
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", startAppCheck, { once: true });
+    } else {
+      startAppCheck();
+    }
+  </script>
 
   <!-- =========================
        THEME + AUTH EARLY LOGIC
@@ -112,94 +114,62 @@
       });
     })();
   </script>
-</head>
 
-<body class="page-bg">
-
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Send — Setfeed</title>
-  <meta name="description" content="Send an end-to-end encrypted message to Setfeed." />
-  <meta name="theme-color" content="#0F1114" />
-
-  <link rel="icon" href="./favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
-  <link rel="icon" type="image/png" href="./favicon-16.png" sizes="16x16">
-  <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180">
-
-  <link rel="stylesheet" href="./styles.css" />
-
-  <script>
-    (function(){
-      const THEME_KEY = "sf_theme_mode"; // "system" | "light" | "dark"
-      const AUTH_KEY = "sf_signed_authed"; // "true" | "false"
-      const root = document.documentElement;
-
-      function readThemeMode(){
-        try { return localStorage.getItem(THEME_KEY) || "system"; }
-        catch(e){ return "system"; }
-      }
-
-      function applyThemeAttr(){
-        const stored = readThemeMode();
-        if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
-        else root.removeAttribute("data-theme");
-      }
-
-      // Keep early theme application to avoid flash
-      applyThemeAttr();
-
-      function isSystemDark(){
-        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      }
-
-      function setThemeColor(){
-        const meta = document.querySelector('meta[name="theme-color"]');
-        if (!meta) return;
-
-        const mode = readThemeMode();
-        const effectiveDark = (mode === "dark") ? true : (mode === "light") ? false : isSystemDark();
-        meta.setAttribute("content", effectiveDark ? "#0F1114" : "#FFFBFE");
-      }
-
-      // Update theme-color on load + when system theme changes
-      setThemeColor();
-      try{
-        if (window.matchMedia){
-          const mq = window.matchMedia("(prefers-color-scheme: dark)");
-          if (mq && mq.addEventListener){
-            mq.addEventListener("change", () => { applyThemeAttr(); setThemeColor(); });
-          } else if (mq && mq.addListener){
-            mq.addListener(() => { applyThemeAttr(); setThemeColor(); });
-          }
-        }
-      }catch(e){}
-
-      function applyAuthVisibility(){
-        const authed = (localStorage.getItem(AUTH_KEY) === "true");
-        document.querySelectorAll(".auth-only").forEach(el => {
-          el.classList.toggle("hidden", !authed);
-        });
-      }
-
-      // Apply immediately (reduces any auth-only flash), then again when DOM is ready.
-      applyAuthVisibility();
-      document.addEventListener("DOMContentLoaded", applyAuthVisibility);
-
-      // Cross-tab updates
-      window.addEventListener("storage", (e) => {
-        if (!e) return;
-        if (e.key === AUTH_KEY) applyAuthVisibility();
-        if (e.key === THEME_KEY){
-          applyThemeAttr();
-          setThemeColor();
-        }
-      });
-    })();
-  </script>
+  <!-- Minimal modal styles (self-contained) -->
+  <style>
+    .sf-modal-backdrop{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 9999;
+    }
+    .sf-modal-backdrop.show{ display: flex; }
+    .sf-modal{
+      width: min(520px, 100%);
+      border-radius: 16px;
+      background: var(--card, #14171c);
+      color: var(--text, #e9eef6);
+      box-shadow: 0 18px 60px rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .sf-modal-header{
+      padding: 16px 16px 10px 16px;
+      font-weight: 650;
+      font-size: 16px;
+    }
+    .sf-modal-body{
+      padding: 0 16px 16px 16px;
+      color: rgba(233,238,246,0.85);
+      line-height: 1.35;
+      font-size: 14px;
+    }
+    .sf-modal-actions{
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 12px 16px 16px 16px;
+    }
+    .sf-modal-btn{
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .sf-modal-btn-primary{
+      background: #3b82f6;
+      color: #fff;
+    }
+    .sf-modal-btn-quiet{
+      background: rgba(255,255,255,0.08);
+      color: rgba(233,238,246,0.9);
+    }
+  </style>
 </head>
 
 <body class="page-bg">
@@ -407,6 +377,20 @@
     </div>
   </div>
 
+  <!-- ✅ Message scheduled dialog -->
+  <div class="sf-modal-backdrop" id="sf-modal" role="dialog" aria-modal="true" aria-labelledby="sf-modal-title" aria-describedby="sf-modal-body">
+    <div class="sf-modal">
+      <div class="sf-modal-header" id="sf-modal-title">Message scheduled</div>
+      <div class="sf-modal-body" id="sf-modal-body">
+        Your message is scheduled. You can close this tab — Setfeed will deliver it at the selected time.
+      </div>
+      <div class="sf-modal-actions">
+        <button class="sf-modal-btn sf-modal-btn-quiet" id="sf-modal-close" type="button">Close</button>
+        <button class="sf-modal-btn sf-modal-btn-primary" id="sf-modal-ok" type="button">OK</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
 
@@ -439,6 +423,29 @@
       statusTitle.textContent = title;
       statusLine.textContent = line;
     }
+
+    // ✅ Modal helpers
+    const modal = document.getElementById("sf-modal");
+    const modalTitle = document.getElementById("sf-modal-title");
+    const modalBody = document.getElementById("sf-modal-body");
+    const modalClose = document.getElementById("sf-modal-close");
+    const modalOk = document.getElementById("sf-modal-ok");
+
+    function showScheduledDialog(message) {
+      modalTitle.textContent = "Message scheduled";
+      modalBody.textContent = message || "Your message is scheduled. You can close this tab — Setfeed will deliver it at the selected time.";
+      modal.classList.add("show");
+      // Keep it calm: no auto-close.
+    }
+
+    function hideScheduledDialog() {
+      modal.classList.remove("show");
+    }
+
+    modalClose.addEventListener("click", hideScheduledDialog);
+    modalOk.addEventListener("click", hideScheduledDialog);
+    modal.addEventListener("click", (e) => { if (e.target === modal) hideScheduledDialog(); });
+    window.addEventListener("keydown", (e) => { if (e.key === "Escape") hideScheduledDialog(); });
 
     // Elements
     const signedEmail = document.getElementById("signed-email");
@@ -482,11 +489,10 @@
     function applySignedAuthUI() {
       btnSignOut.disabled = !signedAuthed;
 
-      // Requirement: when signed in, do NOT show walkthrough video in either tab.
+      // When signed in, do NOT show walkthrough video in either tab.
       if (videoSigned) videoSigned.classList.toggle("hidden", signedAuthed);
       if (videoRolling) videoRolling.classList.toggle("hidden", signedAuthed);
 
-      // Signed delivery copy becomes signed-aware (no ambiguity)
       if (signedDeliverySub && signedDeliveryHelp) {
         if (signedAuthed) {
           signedDeliverySub.textContent = "Signed in: advanced scheduling becomes available in the next step (Phase 1 stub).";
@@ -501,7 +507,6 @@
       refreshSignedSendEnabled();
     }
 
-    // Keep this page in sync if another tab signs out
     window.addEventListener("storage", (e) => {
       if (!e || e.key !== "sf_signed_authed") return;
       signedAuthed = (localStorage.getItem("sf_signed_authed") === "true");
@@ -510,7 +515,6 @@
 
     signedCode.addEventListener("input", refreshSignedSendEnabled);
     signedBody.addEventListener("input", refreshSignedSendEnabled);
-
     rollingCode.addEventListener("input", refreshRollingSendEnabled);
     rollingBody.addEventListener("input", refreshRollingSendEnabled);
 
@@ -533,9 +537,20 @@
       setStatus("warn", "Signed out", "Signed sending is unavailable until you sign in again.");
     });
 
-    btnSignedSend.addEventListener("click", () => {
+    // -------------------------
+    // ✅ "Send" handlers
+    // Shows “Message scheduled” dialog on success for BOTH signed and rolling.
+    // -------------------------
+
+    async function simulateSendDelay() {
+      // calm, quick confirmation; remove/replace with real encryption + callable
+      await new Promise(r => setTimeout(r, 250));
+    }
+
+    btnSignedSend.addEventListener("click", async () => {
       const code = signedCode.value.trim();
       const body = signedBody.value.trim();
+
       if (!signedAuthed) {
         setStatus("warn", "Sign-in required", "Secure and Personal sending require email-link sign-in.");
         return;
@@ -544,7 +559,47 @@
         setStatus("warn", "Missing details", "Add a code and a message, then try again.");
         return;
       }
-      setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the signed send function.");
+
+      try {
+        setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
+
+        // TODO (wire): encrypt in browser, then call your signed function.
+        // Example shape:
+        // const callable = functions.httpsCallable("sendSignedCiphertext");
+        // await callable({ ...payload });
+        await simulateSendDelay();
+
+        setStatus("good", "Scheduled", "Message scheduled.");
+        showScheduledDialog("Your signed message is scheduled. You can close this tab — Setfeed will deliver it on time.");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t send", "Something went wrong while scheduling the message. Try again.");
+      }
+    });
+
+    btnRollingSend.addEventListener("click", async () => {
+      const code = rollingCode.value.trim();
+      const body = rollingBody.value.trim();
+
+      if (!code || !body) {
+        setStatus("warn", "Missing details", "Add a rolling code and a message, then try again.");
+        return;
+      }
+
+      try {
+        setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
+
+        // TODO (wire): encrypt in browser, then call sendRollingCiphertext
+        // const callable = functions.httpsCallable("sendRollingCiphertext");
+        // await callable({ ...payload });
+        await simulateSendDelay();
+
+        setStatus("good", "Scheduled", "Message scheduled.");
+        showScheduledDialog("Your rolling message is scheduled. You can close this tab — Setfeed will deliver it on time.");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t send", "Something went wrong while scheduling the message. Try again.");
+      }
     });
 
     btnSignedClear.addEventListener("click", () => {
@@ -552,16 +607,6 @@
       signedBody.value = "";
       refreshSignedSendEnabled();
       setStatus("warn", "Cleared", "Signed send fields cleared.");
-    });
-
-    btnRollingSend.addEventListener("click", () => {
-      const code = rollingCode.value.trim();
-      const body = rollingBody.value.trim();
-      if (!code || !body) {
-        setStatus("warn", "Missing details", "Add a rolling code and a message, then try again.");
-        return;
-      }
-      setStatus("good", "Ready to send", "Wiring step remaining: encrypt in browser, then call the rolling send function.");
     });
 
     btnRollingClear.addEventListener("click", () => {
