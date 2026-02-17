@@ -547,16 +547,20 @@
     // EXACTLY match Android ReceiveCodeService.normalizeCode():
     // trim, UPPERCASE, remove spaces and hyphens
     function normalizeCodeAndroid(raw) {
-      return raw.trim()
+      return raw
+        .trim()
         .toUpperCase()
-        .replace(/ /g, "")
-        .replace(/-/g, "");
+        .replace(/[\s-]/g, "");
     }
 
+
     function bytesToB64(bytes) {
-      let bin = "";
-      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-      return btoa(bin);
+      let binary = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      return btoa(binary);
     }
 
     function abToB64(ab) {
