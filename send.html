@@ -1,4 +1,3 @@
-<!-- send.html (FULL FILE REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -94,7 +93,6 @@
     })();
   </script>
 
-  <!-- Minimal modal styles (self-contained) -->
   <style>
     .hidden{ display:none !important; }
 
@@ -166,6 +164,7 @@
       padding: 8px 12px;
       font-weight: 600;
       cursor: pointer;
+      white-space: nowrap;
     }
     .sf-adv-btn[aria-pressed="true"]{
       border-color: rgba(59,130,246,0.55);
@@ -192,6 +191,13 @@
       color: rgba(233,238,246,0.92);
       font-weight: 600;
       font-size: 13px;
+    }
+
+    .sf-delven-note{
+      margin-top: 10px;
+      font-size: 12px;
+      opacity: 0.85;
+      line-height: 1.35;
     }
   </style>
 </head>
@@ -336,6 +342,14 @@
                 <button class="sf-adv-btn" type="button" aria-pressed="true" data-mode="preset">Tomorrow preset</button>
                 <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="10m">In 10 minutes</button>
                 <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="1h">In 1 hour</button>
+
+                <!-- ✅ Delven: web-to-web short delay -->
+                <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="delven2">Delven · 2 min</button>
+                <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="delven3">Delven · 3 min</button>
+              </div>
+
+              <div class="sf-delven-note hidden" id="delven-note">
+                Delven is Setfeed’s delayed event: a calm web-to-web delivery delay. (Recipient device must honor short requested times.)
               </div>
 
               <small class="help" id="signed-delivery-help" style="margin-top: 10px;">
@@ -523,6 +537,7 @@
     const signedDeliverySub = document.getElementById("signed-delivery-sub");
     const signedDeliveryHelp = document.getElementById("signed-delivery-help");
     const signedAdvancedRow = document.getElementById("signed-advanced-row");
+    const delvenNote = document.getElementById("delven-note");
     const authBanner = document.getElementById("sf-auth-banner");
     const authLabel = document.getElementById("sf-auth-label");
 
@@ -570,6 +585,9 @@
       // advanced scheduling visible only when authed
       if (signedAdvancedRow) signedAdvancedRow.classList.toggle("hidden", !isAuthed);
 
+      // show delven hint only when authed (since delven is web-to-web signed)
+      if (delvenNote) delvenNote.classList.toggle("hidden", !isAuthed);
+
       // show small banner with email
       if (authBanner && authLabel) {
         authBanner.classList.toggle("hidden", !isAuthed);
@@ -578,7 +596,7 @@
 
       if (signedDeliverySub && signedDeliveryHelp) {
         if (isAuthed) {
-          signedDeliverySub.textContent = "Signed in: you can schedule sooner (e.g., 10 minutes / 1 hour) or use tomorrow presets.";
+          signedDeliverySub.textContent = "Signed in: choose tomorrow presets, schedule sooner, or use Delven (2–3 minutes).";
           signedDeliveryHelp.textContent = "Recipient device will store silently in Upcoming and reveal at the scheduled time.";
         } else {
           signedDeliverySub.textContent = "Sign in (Email link or Google) to send Signed (Secure / Personal).";
@@ -678,24 +696,54 @@
     // -------------------------
     // Scheduling UI state
     // -------------------------
+    const DELVEN_KEY = "sf_delven_delay_mode"; // "delven2" | "delven3" | (or others)
     let signedPresetTime = "13:00";
-    let signedMode = "preset"; // "preset" | "10m" | "1h"
+
+    // default mode: preset
+    let signedMode = "preset"; // "preset" | "10m" | "1h" | "delven2" | "delven3"
+
+    // restore last delven selection if user used it previously
+    try {
+      const remembered = localStorage.getItem(DELVEN_KEY);
+      if (remembered === "delven2" || remembered === "delven3") {
+        signedMode = remembered;
+      }
+    } catch (_) {}
+
+    function updateAdvButtonsPressed() {
+      document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]').forEach(b => {
+        b.setAttribute("aria-pressed", (b.getAttribute("data-mode") === signedMode) ? "true" : "false");
+      });
+    }
 
     document.querySelectorAll('#panel-signed .chip[data-time]').forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll('#panel-signed .chip[data-time]').forEach(b => b.setAttribute("aria-pressed", "false"));
         btn.setAttribute("aria-pressed", "true");
         signedPresetTime = btn.getAttribute("data-time") || "13:00";
+
+        // If user taps presets while in a relative mode, switch back to preset mode.
+        if (signedMode !== "preset") {
+          signedMode = "preset";
+          updateAdvButtonsPressed();
+        }
       });
     });
 
     document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]').forEach(btn => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]').forEach(b => b.setAttribute("aria-pressed", "false"));
-        btn.setAttribute("aria-pressed", "true");
         signedMode = btn.getAttribute("data-mode") || "preset";
+        updateAdvButtonsPressed();
+
+        // remember delven choice only
+        try {
+          if (signedMode === "delven2" || signedMode === "delven3") localStorage.setItem(DELVEN_KEY, signedMode);
+        } catch (_) {}
       });
     });
+
+    // apply pressed state on load (covers remembered delven)
+    updateAdvButtonsPressed();
 
     let rollingPresetTime = "13:00";
     document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(btn => {
@@ -708,10 +756,6 @@
 
     // -------------------------
     // Crypto helpers (WebCrypto)
-    // Must match Android:
-    // - normalize: trim, UPPERCASE, remove spaces and hyphens
-    // - PBKDF2 SHA-256, iter=100_000, keylen=256
-    // - AES-GCM, iv=12 bytes
     // -------------------------
     function normalizeCodeAndroid(raw) {
       return raw.trim().toUpperCase().replace(/[\s-]/g, "");
@@ -835,9 +879,13 @@
         const codeHash = await sha256Hex(enc.normalizedPassphrase);
 
         let deliverAtLocalIso;
-        if (signedMode === "10m") deliverAtLocalIso = deliverAtLocalIsoInMinutes(10);
-        else if (signedMode === "1h") deliverAtLocalIso = deliverAtLocalIsoInMinutes(60);
-        else deliverAtLocalIso = deliverAtLocalIsoTomorrow(signedPresetTime);
+        let deliveryLabel = "Tomorrow preset";
+
+        if (signedMode === "10m") { deliverAtLocalIso = deliverAtLocalIsoInMinutes(10); deliveryLabel = "In 10 minutes"; }
+        else if (signedMode === "1h") { deliverAtLocalIso = deliverAtLocalIsoInMinutes(60); deliveryLabel = "In 1 hour"; }
+        else if (signedMode === "delven2") { deliverAtLocalIso = deliverAtLocalIsoInMinutes(2); deliveryLabel = "Delven · 2 minutes"; }
+        else if (signedMode === "delven3") { deliverAtLocalIso = deliverAtLocalIsoInMinutes(3); deliveryLabel = "Delven · 3 minutes"; }
+        else { deliverAtLocalIso = deliverAtLocalIsoTomorrow(signedPresetTime); deliveryLabel = "Tomorrow preset"; }
 
         const userTimezone = getUserTimezone();
         const clientRequestId = randomClientRequestId("signed");
@@ -850,11 +898,14 @@
           salt: enc.saltB64,
           deliverAtLocalIso,
           userTimezone,
-          clientRequestId
+          clientRequestId,
+
+          // ✅ Optional hint (safe to ignore server-side)
+          delvenMode: (signedMode === "delven2" || signedMode === "delven3") ? signedMode : null
         });
 
-        setStatus("good", "Scheduled", "Message scheduled.");
-        showScheduledDialog("Your signed message is scheduled. You can close this tab — Setfeed will deliver it on time.");
+        setStatus("good", "Scheduled", `Message scheduled (${deliveryLabel}).`);
+        showScheduledDialog(`Your signed message is scheduled (${deliveryLabel}). You can close this tab — Setfeed will deliver it on time.`);
       } catch (e) {
         console.error(e);
         const msg = (e && e.message) ? e.message : "Something went wrong while scheduling the message. Try again.";
