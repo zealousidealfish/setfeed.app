@@ -15,17 +15,12 @@
 
   <link rel="stylesheet" href="./styles.css" />
 
-  <!-- =========================
-       FIREBASE (AUTH + FUNCTIONS)
-       ========================= -->
+  <!-- FIREBASE (AUTH + FUNCTIONS) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 
   <script>
-    // =========================
-    // ✅ Firebase config (yours)
-    // =========================
     const firebaseConfig = {
       apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",
       authDomain: "setfeed-fcd7a.firebaseapp.com",
@@ -35,24 +30,21 @@
       appId: "1:553573263069:web:e5c9884101ca38eaee1d34"
     };
 
-    firebase.initializeApp(firebaseConfig);
+    // Avoid duplicate init if you ever embed this file somewhere.
+    if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
-    // Pin region deterministically (match send.html)
     const functions = firebase.app().functions("europe-west2");
     const auth = firebase.auth();
   </script>
 
-  <!-- =========================
-       THEME (deterministic)
-       ========================= -->
+  <!-- THEME -->
   <script>
     (function(){
-      const themeKey = "sf_theme_mode"; // "system" | "light" | "dark"
+      const themeKey = "sf_theme_mode";
       const root = document.documentElement;
 
       function applyTheme(){
         const stored = localStorage.getItem(themeKey) || "system";
-
         if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
         else root.removeAttribute("data-theme");
 
@@ -65,40 +57,18 @@
       }
 
       applyTheme();
-
-      window.addEventListener("storage", (e) => {
-        if (!e) return;
-        if (e.key === themeKey) applyTheme();
-      });
+      window.addEventListener("storage", (e) => { if (e && e.key === themeKey) applyTheme(); });
     })();
   </script>
 
   <style>
     .hidden{ display:none !important; }
 
-    .code-grid{
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-      margin-top: 12px;
-    }
-    @media (min-width: 840px){
-      .code-grid{ grid-template-columns: 1fr 1fr 1fr; }
-    }
-    .code-card{
-      border-radius: 16px;
-      padding: 12px;
-      border: 1px solid rgba(0,0,0,0.08);
-      background: rgba(0,0,0,0.02);
-    }
-    [data-theme="dark"] .code-card{
-      border-color: rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.06);
-    }
-    .code-label{
-      font-weight: 700;
-      margin: 0 0 8px 0;
-    }
+    .code-grid{ display:grid; grid-template-columns:1fr; gap:12px; margin-top:12px; }
+    @media (min-width: 840px){ .code-grid{ grid-template-columns:1fr 1fr 1fr; } }
+    .code-card{ border-radius:16px; padding:12px; border:1px solid rgba(0,0,0,0.08); background:rgba(0,0,0,0.02); }
+    [data-theme="dark"] .code-card{ border-color:rgba(255,255,255,0.10); background:rgba(255,255,255,0.06); }
+    .code-label{ font-weight: 600; margin:0 0 8px 0; color: var(--text); }
     .code-box{
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       border-radius: 12px;
@@ -107,37 +77,13 @@
       background: rgba(255,255,255,0.75);
       word-break: break-all;
       text-align: center;
+      color: var(--text);
     }
-    [data-theme="dark"] .code-box{
-      border-color: rgba(255,255,255,0.12);
-      background: rgba(15,17,20,0.55);
-    }
-    .mini{
-      font-size: 12px;
-      opacity: 0.8;
-      margin-top: 8px;
-      line-height: 1.35;
-    }
-    .row-actions{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .row-actions .left,
-    .row-actions .right{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .statusline{
-      margin-top: 10px;
-      font-size: 13px;
-      opacity: 0.9;
-    }
+    [data-theme="dark"] .code-box{ border-color: rgba(255,255,255,0.12); background: rgba(15,17,20,0.55); }
+    .mini{ font-size:12px; opacity:0.85; margin-top:8px; line-height:1.35; color: var(--muted); }
+    .row-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center; justify-content:space-between; }
+    .row-actions .left, .row-actions .right{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .statusline{ margin-top:10px; font-size:13px; opacity:0.9; color: var(--muted); }
   </style>
 </head>
 
@@ -147,9 +93,7 @@
       <a class="brand-mark" href="./" aria-label="Setfeed home">
         <img class="logo" src="./logo.png" alt="" aria-hidden="true" />
       </a>
-
       <a class="brand-title" href="./">Setfeed</a>
-
       <nav class="nav" aria-label="Primary">
         <a href="./">Home</a>
         <a href="./send.html">Send</a>
@@ -171,11 +115,11 @@
             A receive code is the address. If someone has your code, they can send you an encrypted message through setfeed.app.
           </p>
 
-          <!-- ✅ Signed-in web codes panel -->
+          <!-- Signed-in web codes panel -->
           <section class="panel auth-only hidden" aria-label="Web receive codes">
             <p class="panel-title">Your codes (web)</p>
             <p class="panel-sub" style="margin-bottom: var(--s-3);">
-              You’re signed in. You can view and share your receive codes here.
+              You’re signed in. Load and share your receive codes.
             </p>
 
             <div class="row-actions">
@@ -210,13 +154,6 @@
                 <div class="code-box" id="code-rolling">—</div>
                 <div class="mini" id="code-rolling-meta">Temporary. Expiry / limits may apply.</div>
               </div>
-            </div>
-
-            <div class="note" style="margin-top: 12px;">
-              <p style="margin:0;">
-                This surface requires Firebase Functions that return your codes. If your backend doesn’t expose them yet,
-                wire the callable names in this page (see script at bottom).
-              </p>
             </div>
           </section>
 
@@ -285,22 +222,14 @@
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
 
-    // -------------------------
-    // Auth-only nav visibility
-    // -------------------------
     function applyAuthVisibility(isAuthed){
       document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
       document.querySelectorAll(".auth-off").forEach(el => el.classList.toggle("hidden", isAuthed));
       try { localStorage.setItem("sf_signed_authed", isAuthed ? "true" : "false"); } catch (_) {}
     }
 
-    auth.onAuthStateChanged((user) => {
-      applyAuthVisibility(!!user);
-    });
+    auth.onAuthStateChanged((user) => applyAuthVisibility(!!user));
 
-    // -------------------------
-    // Codes UI (requires backend)
-    // -------------------------
     const btnLoad = document.getElementById("btn-load-codes");
     const btnRefreshRolling = document.getElementById("btn-refresh-rolling");
 
@@ -332,15 +261,13 @@
         await navigator.clipboard.writeText(t);
         setCodesStatus("Copied.");
       } catch (_) {
-        // fallback
         const ta = document.createElement("textarea");
         ta.value = t;
         ta.style.position = "fixed";
         ta.style.left = "-9999px";
         document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        try { document.execCommand("copy"); setCodesStatus("Copied."); } catch (e) { setCodesStatus("Couldn’t copy."); }
+        ta.focus(); ta.select();
+        try { document.execCommand("copy"); setCodesStatus("Copied."); } catch (_) { setCodesStatus("Couldn’t copy."); }
         document.body.removeChild(ta);
       }
     }
@@ -352,8 +279,6 @@
     function renderCodes(c){
       lastCodes = c;
 
-      // Expecting something like:
-      // { personal: { code }, secure: { code }, rolling: { code, expiresAtMillis? } }
       boxPersonal.textContent = (c && c.personal && c.personal.code) ? c.personal.code : "—";
       boxSecure.textContent = (c && c.secure && c.secure.code) ? c.secure.code : "—";
       boxRolling.textContent = (c && c.rolling && c.rolling.code) ? c.rolling.code : "—";
@@ -366,57 +291,41 @@
         rollingMeta.textContent = "Temporary. Expiry / limits may apply.";
       }
 
-      const ok = (boxPersonal.textContent !== "—" || boxSecure.textContent !== "—" || boxRolling.textContent !== "—");
+      const ok =
+        (boxPersonal.textContent !== "—") ||
+        (boxSecure.textContent !== "—") ||
+        (boxRolling.textContent !== "—");
+
       setCopyEnabled(ok);
     }
 
     async function loadCodes(){
       const user = auth.currentUser;
-      if (!user) {
-        setCodesStatus("Sign in first.");
-        return;
-      }
-
-      // ✅ IMPORTANT:
-      // You must wire this callable to your backend.
-      // Choose one:
-      // - "getReceiveCodes"
-      // - "ensureAllReceiveCodes"
-      // - etc.
-      //
-      // If you tell me your actual function name / payload shape, I’ll align this precisely.
-      const callableName = "getReceiveCodes";
+      if (!user) { setCodesStatus("Sign in first."); return; }
 
       try {
         setCodesStatus("Loading codes…");
-        const callable = functions.httpsCallable(callableName);
+        const callable = functions.httpsCallable("getReceiveCodes");
         const res = await callable({});
         renderCodes(res && res.data ? res.data : null);
         setCodesStatus("Codes loaded.");
       } catch (e) {
-        console.error(e);
+        console.error("[getReceiveCodes] failed:", e);
         setCopyEnabled(false);
-        setCodesStatus("Couldn’t load codes. Backend callable not wired yet.");
+        setCodesStatus("Couldn’t load codes. Deploy functions/src/codes.ts and try again.");
       }
     }
 
     async function refreshRolling(){
       const user = auth.currentUser;
-      if (!user) {
-        setCodesStatus("Sign in first.");
-        return;
-      }
-
-      // ✅ IMPORTANT:
-      // Wire this callable name too.
-      const callableName = "refreshRollingReceiveCode";
+      if (!user) { setCodesStatus("Sign in first."); return; }
 
       try {
         setCodesStatus("Refreshing rolling…");
-        const callable = functions.httpsCallable(callableName);
+        const callable = functions.httpsCallable("refreshRollingReceiveCode");
         const res = await callable({});
-        // If backend returns full codes, render directly. If it returns only rolling, patch.
         const data = res && res.data ? res.data : null;
+
         if (data && data.personal && data.secure && data.rolling) {
           renderCodes(data);
         } else if (data && data.code) {
@@ -426,17 +335,17 @@
           if (data.expiresAtMillis) patched.rolling.expiresAtMillis = data.expiresAtMillis;
           renderCodes(patched);
         }
+
         setCodesStatus("Rolling refreshed.");
       } catch (e) {
-        console.error(e);
-        setCodesStatus("Couldn’t refresh rolling. Backend callable not wired yet.");
+        console.error("[refreshRollingReceiveCode] failed:", e);
+        setCodesStatus("Couldn’t refresh rolling. Deploy functions/src/codes.ts and try again.");
       }
     }
 
     btnLoad.addEventListener("click", loadCodes);
     btnRefreshRolling.addEventListener("click", refreshRolling);
 
-    // Default state
     setCopyEnabled(false);
   </script>
 </body>
