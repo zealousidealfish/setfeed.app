@@ -81,14 +81,12 @@
     --muted: rgba(203,208,216,0.86);
     --soft: rgba(203,208,216,0.68);
 
-    /* Dark-mode primary tuned:
-       - stays clearly blue
-       - slightly less “light source” than a fully saturated electric blue */
+    /* Dark-mode primary tuned */
     --primary: #3F7BFF;
     --on-primary: #FFFFFF;
     --primary-soft: rgba(63,123,255,0.20);
 
-    /* Secondary in dark should read as a surface button, not purple */
+    /* Secondary in dark should read as a surface button */
     --secondary: #2B2F36;
     --on-secondary: rgba(255,255,255,0.92);
     --secondary-soft: rgba(180,190,210,0.12);
@@ -242,7 +240,7 @@ a:hover{ text-decoration: underline; }
   text-decoration: none;
 }
 
-/* Subtle logo elevation only (avoid strong glow wash) */
+/* Subtle logo elevation only */
 .logo{
   width: 36px;
   height: 36px;
@@ -296,7 +294,7 @@ a:hover{ text-decoration: underline; }
   border-color: var(--line);
 }
 
-/* Download app nav button (calm, not too bright) */
+/* Download app nav button */
 .nav a.nav-cta{
   background: color-mix(in srgb, var(--primary) 14%, var(--surface-variant));
   border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--line));
@@ -333,8 +331,6 @@ a:hover{ text-decoration: underline; }
   border: 1px solid var(--line);
   border-radius: var(--radius-3);
   padding: var(--s-6);
-
-  /* Softer shadows overall */
   box-shadow:
     0 1px 0 rgba(255,255,255,0.26) inset,
     0 12px 32px rgba(0,0,0,0.09);
@@ -350,7 +346,6 @@ a:hover{ text-decoration: underline; }
   }
 }
 
-/* Headings slightly softened */
 h1{
   margin: 0 0 var(--s-2) 0;
   font-size: 28.5px;
@@ -391,7 +386,7 @@ p, li, label{
 ul{ margin: 0 0 0 18px; padding: 0; }
 
 /* =========================
-   Hero layout (Receive/Security)
+   Hero layout
    ========================= */
 
 .hero{
@@ -402,7 +397,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 }
 
 .hero .panel-aside{
-  margin-top: var(--s-2); /* nudges the "Next step" panel slightly lower */
+  margin-top: var(--s-2);
 }
 
 @media (max-width: 900px){
@@ -442,14 +437,10 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   width: 8px;
   height: 8px;
   border-radius: 999px;
-
-  /* Neutral should be visible but not loud */
   background: color-mix(in srgb, var(--soft) 72%, transparent);
 }
 .dot.good{ background: var(--good); }
 .dot.ok{ background: var(--good); }
-
-/* Warning should be clear but calmer than pure red */
 .dot.warn{ background: color-mix(in srgb, var(--danger) 78%, #D67A7A); }
 
 /* =========================
@@ -524,19 +515,15 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   align-items: center;
   justify-content: center;
   gap: 8px;
-
   padding: 10px 14px;
   border-radius: 999px;
   border: 1px solid var(--line);
-
   background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
   color: var(--text);
-
   font-size: 14px;
   text-decoration: none;
   cursor: pointer;
   user-select: none;
-
   transition:
     background 120ms ease,
     opacity 120ms ease,
@@ -554,15 +541,13 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   transform: translateY(0.5px);
 }
 
-/* Deterministic disabled: looks disabled, never “maybe active” */
 .btn:disabled{
   cursor: not-allowed;
   transform: none;
-  opacity: 1; /* we control appearance via background/text */
+  opacity: 1;
   box-shadow: none;
 }
 
-/* Large buttons */
 .btn-lg{
   padding: 12px 18px;
   font-size: 14.4px;
@@ -570,7 +555,6 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   line-height: 1.2;
 }
 
-/* Primary (blue scheduling feel) — tuned to be calm in dark mode */
 .btn-primary{
   background: var(--primary);
   color: var(--on-primary);
@@ -579,7 +563,6 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 }
 
 .btn-primary:hover{
-  /* Slight lift, not a glow */
   background: color-mix(in srgb, var(--primary) 92%, white);
 }
 :root[data-theme="dark"] .btn-primary:hover{
@@ -595,14 +578,12 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   box-shadow: 0 6px 14px rgba(0,0,0,0.14);
 }
 
-/* Primary disabled (calm, clearly disabled, still brand-aligned) */
 .btn-primary:disabled{
   background: color-mix(in srgb, var(--primary) 24%, var(--surface-variant));
   border-color: color-mix(in srgb, var(--primary) 22%, var(--line));
   color: color-mix(in srgb, var(--on-primary) 72%, transparent);
 }
 
-/* Secondary */
 .btn-secondary{
   background: color-mix(in srgb, var(--primary) 14%, var(--surface-variant));
   color: var(--text);
@@ -612,7 +593,6 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   background: color-mix(in srgb, var(--primary) 18%, var(--surface-variant));
 }
 
-/* Quiet */
 .btn-quiet{
   background: color-mix(in srgb, var(--surface-variant) 8%, transparent);
 }
@@ -621,7 +601,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 }
 
 /* =========================
-   Chips (time presets)
+   Chips
    ========================= */
 
 .chips{
@@ -687,7 +667,6 @@ textarea{
   resize: vertical;
 }
 
-/* Focus: clear but no bright halo */
 input:focus, textarea:focus, select:focus{
   border-color: color-mix(in srgb, var(--primary) 56%, var(--line));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
@@ -765,10 +744,7 @@ small.help{
   margin-top: var(--s-6);
   border-radius: var(--radius-3);
   border: 1px solid var(--line);
-
-  /* Slightly calmer than before (especially in dark) */
   background: color-mix(in srgb, var(--surface-variant) 9%, transparent);
-
   padding: var(--s-5);
 }
 
@@ -819,3 +795,320 @@ footer a:hover{ color: var(--text); text-decoration: none; }
    ========================= */
 
 .hidden{ display: none !important; }
+
+/* =========================
+   Inbox message list
+   ========================= */
+
+.msg-toolbar{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--s-4);
+}
+
+.msg-toolbar .left,
+.msg-toolbar .right{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.msg-list{
+  margin-top: var(--s-4);
+  display: grid;
+  gap: 10px;
+}
+
+.msg-card{
+  border-radius: var(--radius-2);
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
+  padding: 12px;
+}
+
+.msg-top{
+  display:flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.msg-title{
+  font-weight: var(--fw-medium);
+  color: var(--text);
+  font-size: 13.8px;
+}
+
+.msg-meta{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  color: var(--soft);
+  font-size: 12.8px;
+}
+
+.msg-body{
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 14.2px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.msg-actions{
+  margin-top: 10px;
+  display:flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.kbd{
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-variant) 14%, transparent);
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 12.6px;
+  color: var(--soft);
+}
+
+/* =========================
+   Delven — shared opening animation
+   ========================= */
+
+.delven-backdrop{
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0,0,0,0.55);
+  z-index: 9999;
+}
+.delven-backdrop.show{ display:flex; }
+
+.delven-modal{
+  width: min(560px, 100%);
+  border-radius: var(--radius-3);
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-2) 86%, transparent);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.35);
+  overflow: hidden;
+}
+
+.delven-head{
+  padding: 14px 16px 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.delven-title{
+  font-weight: var(--fw-medium);
+  color: var(--text);
+  letter-spacing: -0.08px;
+  font-size: 14.4px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.delven-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--line));
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface-variant));
+  color: var(--text);
+  font-size: 12.6px;
+  font-weight: var(--fw-medium);
+}
+
+.delven-body{
+  padding: 16px;
+}
+.delven-stage{
+  position: relative;
+  border-radius: var(--radius-2);
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(700px 360px at 18% -20%,
+      color-mix(in srgb, var(--primary) 10%, transparent) 0%,
+      transparent 60%),
+    color-mix(in srgb, var(--surface-variant) 12%, transparent);
+  min-height: 260px;
+  overflow: hidden;
+}
+
+.delven-bolt{
+  position: absolute;
+  left: -40px;
+  top: 18px;
+  width: 140px;
+  height: 140px;
+  transform: rotate(-18deg);
+  opacity: 0;
+  filter: drop-shadow(0 12px 22px rgba(0,0,0,0.22));
+}
+.delven-bolt svg{
+  width: 100%;
+  height: 100%;
+  display:block;
+}
+.delven-bolt .bolt-fill{
+  fill: color-mix(in srgb, var(--primary) 92%, white);
+}
+:root[data-theme="dark"] .delven-bolt .bolt-fill{
+  fill: color-mix(in srgb, var(--primary) 92%, black);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .delven-bolt .bolt-fill{
+    fill: color-mix(in srgb, var(--primary) 92%, black);
+  }
+}
+
+.delven-envelope{
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  transform: translate(-50%, -50%);
+  width: 220px;
+  height: 150px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-1) 86%, transparent);
+  box-shadow: 0 18px 32px rgba(0,0,0,0.12);
+  overflow: hidden;
+}
+.delven-envelope::before{
+  content:"";
+  position:absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--primary) 16%, transparent) 0%,
+      transparent 46%),
+    linear-gradient(180deg,
+      rgba(255,255,255,0.18) 0%,
+      rgba(255,255,255,0.00) 46%);
+  opacity: 0.8;
+}
+
+.delven-flap{
+  position:absolute;
+  left:0;
+  top:0;
+  width:100%;
+  height:100%;
+  transform-origin: 50% 12%;
+  clip-path: polygon(0 0, 100% 0, 50% 58%);
+  background: color-mix(in srgb, var(--surface-variant) 24%, transparent);
+  border-bottom: 1px solid var(--line);
+}
+
+.delven-confetti{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:0;
+}
+.delven-confetti i{
+  position:absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 40%, var(--surface-variant));
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--line));
+  opacity: 0.85;
+}
+
+.delven-reveal{
+  position:absolute;
+  inset: 18px;
+  border-radius: var(--radius-2);
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  padding: 14px;
+  opacity: 0;
+  transform: translateY(10px);
+}
+.delven-reveal h3{
+  margin: 0 0 8px 0;
+}
+.delven-reveal p{
+  margin: 0;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.delven-actions{
+  display:flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 16px 16px 16px;
+  border-top: 1px solid var(--line);
+}
+
+@keyframes delvenBoltIn {
+  0%   { transform: translateX(-160px) translateY(20px) rotate(-28deg); opacity: 0; }
+  40%  { opacity: 0.92; }
+  70%  { transform: translateX(220px) translateY(-10px) rotate(-18deg); opacity: 0.98; }
+  100% { transform: translateX(260px) translateY(-16px) rotate(-14deg); opacity: 0; }
+}
+
+@keyframes delvenFlapOpen {
+  0%   { transform: rotateX(0deg); }
+  55%  { transform: rotateX(0deg); }
+  100% { transform: rotateX(160deg); }
+}
+
+@keyframes delvenEnvelopeWiggle {
+  0%   { transform: translate(-50%,-50%) rotate(0deg); }
+  35%  { transform: translate(-50%,-50%) rotate(-0.9deg); }
+  70%  { transform: translate(-50%,-50%) rotate(0.8deg); }
+  100% { transform: translate(-50%,-50%) rotate(0deg); }
+}
+
+@keyframes delvenConfettiPop {
+  0%   { opacity: 0; transform: translateY(0); }
+  45%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(18px); }
+}
+
+@keyframes delvenRevealIn {
+  0%   { opacity: 0; transform: translateY(10px) scale(0.995); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.delven-stage.is-playing .delven-bolt{
+  animation: delvenBoltIn 900ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+.delven-stage.is-playing .delven-envelope{
+  animation: delvenEnvelopeWiggle 900ms ease-in-out forwards;
+}
+.delven-stage.is-playing .delven-flap{
+  animation: delvenFlapOpen 900ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+.delven-stage.is-playing .delven-confetti{
+  opacity: 1;
+}
+.delven-stage.is-playing .delven-confetti i{
+  animation: delvenConfettiPop 900ms ease-out forwards;
+}
+
+.delven-stage.is-revealed .delven-reveal{
+  opacity: 1;
+  animation: delvenRevealIn 220ms ease-out forwards;
+}
+.delven-stage.is-revealed .delven-envelope{
+  opacity: 0.20;
+}
