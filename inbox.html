@@ -1,4 +1,3 @@
-<!-- inbox.html (FULL FILE REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -16,14 +15,18 @@
 
   <link rel="stylesheet" href="./styles.css" />
 
-  <!-- Firebase -->
+  <!-- =========================
+       FIREBASE (AUTH + FUNCTIONS + APP CHECK)
+       ========================= -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 
   <script>
-    // Firebase config (same as send.html)
+    // =========================
+    // ✅ Firebase config (yours)
+    // =========================
     const firebaseConfig = {
       apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",
       authDomain: "setfeed-fcd7a.firebaseapp.com",
@@ -37,12 +40,14 @@
     const RECAPTCHA_SITE_KEY = "PLACEHOLDER";
 
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
+
+    // Pin region deterministically
     const functions = firebase.app().functions("europe-west2");
 
     function startAppCheck() {
       try {
         firebase.appCheck().activate(RECAPTCHA_SITE_KEY, true);
+        console.log("[AppCheck] activated");
       } catch (e) {
         console.warn("[AppCheck] init failed:", e);
       }
@@ -54,101 +59,37 @@
     }
   </script>
 
+  <!-- =========================
+       THEME (deterministic)
+       ========================= -->
   <script>
     (function(){
-      const themeKey = "sf_theme_mode"; // "system" | "light" | "dark"
-      const stored = localStorage.getItem(themeKey) || "system";
+      const THEME_KEY = "sf_theme_mode"; // "system" | "light" | "dark"
       const root = document.documentElement;
 
-      if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
-      else root.removeAttribute("data-theme");
+      function applyTheme(){
+        let stored = "system";
+        try { stored = localStorage.getItem(THEME_KEY) || "system"; } catch (_) {}
 
-      const effective =
-        root.getAttribute("data-theme") ||
-        (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
+        else root.removeAttribute("data-theme");
 
-      const meta = document.getElementById("meta-theme-color");
-      if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
+        const effective =
+          root.getAttribute("data-theme") ||
+          (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+
+        const meta = document.getElementById("meta-theme-color");
+        if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
+      }
+
+      applyTheme();
+
+      window.addEventListener("storage", (e) => {
+        if (!e) return;
+        if (e.key === THEME_KEY) applyTheme();
+      });
     })();
   </script>
-
-  <style>
-    .hidden{ display:none !important; }
-
-    .inbox-actions{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: flex-end;
-      margin-top: var(--s-3);
-      margin-bottom: var(--s-4);
-    }
-
-    .sf-kv{
-      display:flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: var(--s-3);
-    }
-    .sf-kv small{
-      color: rgba(233,238,246,0.7);
-    }
-
-    .msg-list{
-      display:flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: var(--s-4);
-    }
-    .msg-card{
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.06);
-      padding: 12px 12px;
-      overflow: hidden;
-    }
-    .msg-top{
-      display:flex;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: baseline;
-      margin-bottom: 8px;
-    }
-    .msg-title{
-      font-weight: 700;
-    }
-    .msg-meta{
-      font-size: 12px;
-      color: rgba(233,238,246,0.75);
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .msg-body{
-      white-space: pre-wrap;
-      line-height: 1.35;
-    }
-    .msg-actions{
-      display:flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 10px;
-      flex-wrap: wrap;
-    }
-
-    .pill-quiet{
-      display:inline-block;
-      border-radius: 999px;
-      padding: 6px 10px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06);
-      font-weight: 650;
-      font-size: 12px;
-      color: rgba(233,238,246,0.85);
-    }
-  </style>
 </head>
 
 <body class="page-bg">
@@ -176,74 +117,77 @@
     <div class="card">
       <h1>Inbox</h1>
       <p class="lead">
-        This is a signed-in web inbox for Signed envelopes. It fetches explicitly when you press Fetch.
+        This web inbox is deliberate: <strong>no auto-fetch</strong>. You choose a code, then press <strong>Fetch</strong>.
+        Decryption happens locally in your browser.
       </p>
 
-      <!-- Gate (signed out) -->
-      <div class="panel" id="inbox-gate">
-        <p class="panel-title">Sign in required</p>
+      <div class="panel">
+        <p class="panel-title">Sign in</p>
         <p class="panel-sub">
-          Inbox is available only after you sign in.
+          Signed envelopes require sign-in. Rolling inbox is intentionally not shown here.
         </p>
 
         <div class="actions">
-          <button class="btn btn-lg btn-primary" id="btn-google" type="button">Sign in with Google</button>
-          <a class="btn btn-lg btn-quiet" href="./send.html#signin">Use email sign-in</a>
+          <button class="btn btn-lg btn-primary" id="btn-google" type="button">Google</button>
+          <button class="btn btn-lg btn-quiet" id="btn-sign-out" type="button" disabled>Sign out</button>
+          <span class="kbd" id="auth-pill">Not signed in</span>
         </div>
 
         <small class="help">
-          After sign-in, paste your Secure or Personal receive code below to fetch and decrypt messages addressed to it.
+          App Check must be enabled for consume operations. Fetching may still work without App Check depending on your callable settings.
         </small>
       </div>
 
-      <!-- Content (signed in) -->
-      <div id="inbox-content" class="hidden">
-        <div class="status" role="status" aria-live="polite">
-          <div class="status-title">
-            <span class="dot good" id="status-dot"></span>
-            <span id="status-title">Signed in</span>
-          </div>
-          <p class="status-line" id="status-line">
-            Paste your Secure/Personal code and press Fetch.
-          </p>
+      <div class="status" role="status" aria-live="polite">
+        <div class="status-title">
+          <span class="dot" id="status-dot"></span>
+          <span id="status-title">Ready</span>
         </div>
+        <p class="status-line" id="status-line">Sign in to fetch signed inbox messages.</p>
+      </div>
 
-        <div class="panel" style="margin-top: var(--s-5);">
-          <p class="panel-title">Receive code (for decrypting)</p>
-          <p class="panel-sub" style="margin-bottom: var(--s-3);">
-            This code never leaves your browser as plaintext. We hash it to fetch, and use it locally to decrypt.
-          </p>
+      <div id="inbox-ui" class="hidden">
+        <h2>Fetch signed envelopes</h2>
 
-          <div class="field">
-            <label for="inbox-code">Secure or Personal code</label>
-            <input id="inbox-code" type="text" inputmode="text" placeholder="Paste a Secure (SFS-…) or Personal (SF-…) code" />
+        <div class="row">
+          <div class="col">
+            <div class="field">
+              <label for="code-input">Secure or Personal code</label>
+              <input id="code-input" type="text" inputmode="text" placeholder="Paste SF-… or SFS-…" />
+            </div>
+
+            <div class="msg-toolbar">
+              <div class="left">
+                <button class="btn btn-primary" id="btn-fetch" type="button">Fetch</button>
+                <button class="btn btn-quiet" id="btn-clear" type="button">Clear</button>
+              </div>
+              <div class="right">
+                <span class="kbd" id="count-pill">0 messages</span>
+              </div>
+            </div>
+
+            <small class="help">
+              Fetch calls <strong>fetchSignedEnvelopes</strong> with your code hash. If the code is wrong, decrypt will fail and nothing will show.
+            </small>
           </div>
 
-          <div class="inbox-actions">
-            <span class="pill-quiet" id="whoami">Signed in</span>
-            <button class="btn btn-lg btn-primary" id="btn-fetch" type="button" disabled>Fetch</button>
-            <button class="btn btn-lg btn-quiet" id="btn-sign-out" type="button">Sign out</button>
+          <div class="col">
+            <div class="panel">
+              <p class="panel-title">Delven</p>
+              <p class="panel-sub">
+                “Open” runs a small ritual animation before revealing plaintext. This is the shared opening spine you can expand later.
+              </p>
+              <ul>
+                <li>No autoplay network.</li>
+                <li>Reveal is local after decrypt.</li>
+                <li>Consume is explicit.</li>
+              </ul>
+            </div>
           </div>
-
-          <small class="help">
-            Delven (2–3 min) messages will only show up precisely if the recipient (or this page) fetches while the envelope is still unconsumed.
-          </small>
         </div>
 
         <h2 style="margin-top: var(--s-6);">Messages</h2>
         <div class="msg-list" id="msg-list"></div>
-
-        <div class="panel" style="margin-top: var(--s-5);">
-          <p class="panel-title">Expected behavior</p>
-          <ul>
-            <li>Explicit fetch only (no surprise network).</li>
-            <li>Stable ordering and clear failures.</li>
-            <li>Consume is explicit per message.</li>
-          </ul>
-          <small class="help">
-            This web inbox reads from <code>signed_envelopes</code> via callable functions.
-          </small>
-        </div>
       </div>
 
       <footer>
@@ -259,25 +203,65 @@
     </div>
   </div>
 
+  <!-- Delven opening modal -->
+  <div class="delven-backdrop" id="delven-modal" role="dialog" aria-modal="true" aria-labelledby="delven-title">
+    <div class="delven-modal">
+      <div class="delven-head">
+        <div class="delven-title" id="delven-title">
+          <span class="delven-badge">Delven</span>
+          <span id="delven-who">Opening…</span>
+        </div>
+        <button class="btn btn-quiet" id="delven-close" type="button">Close</button>
+      </div>
+
+      <div class="delven-body">
+        <div class="delven-stage" id="delven-stage">
+          <div class="delven-bolt" aria-hidden="true">
+            <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
+              <path class="bolt-fill" d="M36 2L10 36h18l-4 26 30-40H36l4-20z"/>
+            </svg>
+          </div>
+
+          <div class="delven-confetti" id="delven-confetti" aria-hidden="true">
+            <i style="left:12%; top:22%"></i>
+            <i style="left:22%; top:58%"></i>
+            <i style="left:35%; top:18%"></i>
+            <i style="left:48%; top:64%"></i>
+            <i style="left:62%; top:26%"></i>
+            <i style="left:74%; top:56%"></i>
+            <i style="left:86%; top:34%"></i>
+          </div>
+
+          <div class="delven-envelope" aria-hidden="true">
+            <div class="delven-flap"></div>
+          </div>
+
+          <div class="delven-reveal" id="delven-reveal">
+            <h3 style="margin-top:0;">Message</h3>
+            <p id="delven-text"></p>
+            <small class="help" style="margin-top:10px;">
+              Shared opening can be its own route later (ritual replay / invite link / ad slot).
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <div class="delven-actions">
+        <button class="btn btn-secondary" id="delven-consume" type="button">Consume</button>
+        <button class="btn btn-primary" id="delven-ok" type="button">Done</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
 
-    const AUTH_KEY = "sf_signed_authed";
-
-    const elGate = document.getElementById("inbox-gate");
-    const elContent = document.getElementById("inbox-content");
-
-    const btnGoogle = document.getElementById("btn-google");
-    const btnSignOut = document.getElementById("btn-sign-out");
-    const btnFetch = document.getElementById("btn-fetch");
-
+    // -------------------------
+    // Status helper
+    // -------------------------
     const statusDot = document.getElementById("status-dot");
     const statusTitle = document.getElementById("status-title");
     const statusLine = document.getElementById("status-line");
-
-    const inboxCode = document.getElementById("inbox-code");
-    const whoami = document.getElementById("whoami");
-    const msgList = document.getElementById("msg-list");
 
     function setStatus(kind, title, line) {
       statusDot.className = "dot";
@@ -287,6 +271,70 @@
       statusLine.textContent = line;
     }
 
+    // -------------------------
+    // Auth
+    // -------------------------
+    const AUTH_KEY = "sf_signed_authed";
+    const auth = firebase.auth();
+
+    const btnGoogle = document.getElementById("btn-google");
+    const btnSignOut = document.getElementById("btn-sign-out");
+    const authPill = document.getElementById("auth-pill");
+    const inboxUi = document.getElementById("inbox-ui");
+
+    function setSignedAuthedFlag(isAuthed) {
+      try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
+      document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
+    }
+
+    function renderAuthUI(user){
+      const isAuthed = !!user;
+      setSignedAuthedFlag(isAuthed);
+
+      btnSignOut.disabled = !isAuthed;
+      inboxUi.classList.toggle("hidden", !isAuthed);
+
+      authPill.textContent = isAuthed ? (user.email || "Signed in") : "Not signed in";
+
+      if (isAuthed) {
+        setStatus("good", "Signed in", "Paste a Secure/Personal code and press Fetch.");
+      } else {
+        setStatus("warn", "Not signed in", "Sign in to fetch signed inbox messages.");
+      }
+    }
+
+    auth.onAuthStateChanged((user) => renderAuthUI(user));
+
+    btnGoogle.addEventListener("click", async () => {
+      try {
+        setStatus("good", "Signing in…", "Opening Google sign-in…");
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: "select_account" });
+        await auth.signInWithPopup(provider);
+        setStatus("good", "Signed in", "You can fetch signed envelopes now.");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t sign in", "Google sign-in failed. Check pop-up blocking and try again.");
+      }
+    });
+
+    btnSignOut.addEventListener("click", async () => {
+      try {
+        await auth.signOut();
+        setStatus("warn", "Signed out", "Sign in again to fetch signed inbox messages.");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t sign out", "Try again.");
+      }
+    });
+
+    // -------------------------
+    // Crypto helpers (WebCrypto)
+    // Must match Android:
+    // - normalize: trim, UPPERCASE, remove spaces and hyphens
+    // - PBKDF2 SHA-256, iter=100_000, keylen=256
+    // - AES-GCM, iv=12 bytes
+    // -------------------------
     function normalizeCodeAndroid(raw) {
       return raw.trim().toUpperCase().replace(/[\s-]/g, "");
     }
@@ -299,13 +347,12 @@
       }
       return btoa(binary);
     }
-    function abToB64(ab) { return bytesToB64(new Uint8Array(ab)); }
 
     function b64ToBytes(b64) {
       const bin = atob(b64);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      return bytes;
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
     }
 
     async function sha256Hex(str) {
@@ -326,120 +373,173 @@
       );
     }
 
-    async function decryptBodyForCode(rawCode, ciphertextB64, ivB64, saltB64) {
-      const passphrase = normalizeCodeAndroid(rawCode);
-      const salt = b64ToBytes(saltB64);
-      const iv = b64ToBytes(ivB64);
-      const ct = b64ToBytes(ciphertextB64);
-
-      const key = await deriveAesKeyFromPassphrase(passphrase, salt);
-      const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
-      return new TextDecoder().decode(pt);
-    }
-
-    function setSignedAuthedFlag(isAuthed) {
-      try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
-      document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
-    }
-
-    function renderAuthedUI(user) {
-      const isAuthed = !!user;
-
-      setSignedAuthedFlag(isAuthed);
-
-      if (elGate) elGate.classList.toggle("hidden", isAuthed);
-      if (elContent) elContent.classList.toggle("hidden", !isAuthed);
-
-      if (whoami) {
-        whoami.textContent = isAuthed ? (user.email || "Signed in") : "Signed out";
-      }
-
-      btnFetch.disabled = !isAuthed || inboxCode.value.trim().length === 0;
-
-      if (!isAuthed) {
-        setStatus("warn", "Signed out", "Sign in to view Inbox.");
-        msgList.innerHTML = "";
-      } else {
-        setStatus("good", "Signed in", "Paste your code and press Fetch.");
-      }
-    }
-
-    auth.onAuthStateChanged((user) => {
-      renderAuthedUI(user);
-    });
-
-    btnGoogle.addEventListener("click", async () => {
+    async function decryptEnvelopeForCode(rawCode, ciphertextB64, ivB64, saltB64) {
       try {
-        setStatus("good", "Signing in…", "Opening Google sign-in…");
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: "select_account" });
-        await auth.signInWithPopup(provider);
-        setStatus("good", "Signed in", "Paste your code and press Fetch.");
-      } catch (e) {
-        console.error(e);
-        setStatus("warn", "Couldn’t sign in", "Google sign-in failed. Check pop-up blocking and try again.");
-      }
-    });
+        const passphrase = normalizeCodeAndroid(rawCode);
+        const salt = b64ToBytes(saltB64);
+        const iv = b64ToBytes(ivB64);
+        const ct = b64ToBytes(ciphertextB64);
 
-    btnSignOut.addEventListener("click", async () => {
-      try {
-        await auth.signOut();
-      } catch (e) {
-        console.error(e);
+        const key = await deriveAesKeyFromPassphrase(passphrase, salt);
+        const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
+        return new TextDecoder().decode(pt);
+      } catch (_) {
+        return null;
       }
-    });
-
-    inboxCode.addEventListener("input", () => {
-      btnFetch.disabled = !auth.currentUser || inboxCode.value.trim().length === 0;
-    });
+    }
 
     function safeText(s) {
-      return (s || "").toString();
+      const v = (s == null) ? "" : String(s);
+      return v.replace(/[&<>"']/g, (c) => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[c]));
     }
 
-    function fmtWhen(isoOrUtc) {
-      if (!isoOrUtc) return "—";
+    function formatWhen(deliverAtUtc, deliverAtLocalIso) {
+      const src = deliverAtLocalIso || deliverAtUtc;
+      if (!src) return "—";
       try {
-        const d = new Date(isoOrUtc);
-        if (Number.isNaN(d.getTime())) return isoOrUtc;
-        return d.toLocaleString(undefined, { year:"numeric", month:"short", day:"numeric", hour:"numeric", minute:"2-digit" });
-      } catch {
-        return isoOrUtc;
+        const d = new Date(src);
+        if (Number.isNaN(d.getTime())) return "—";
+        return d.toLocaleString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit"
+        });
+      } catch (_) {
+        return "—";
       }
     }
 
-    function renderEmpty() {
+    // -------------------------
+    // UI elements
+    // -------------------------
+    const codeInput = document.getElementById("code-input");
+    const btnFetch = document.getElementById("btn-fetch");
+    const btnClear = document.getElementById("btn-clear");
+    const msgList = document.getElementById("msg-list");
+    const countPill = document.getElementById("count-pill");
+
+    function renderEmpty(){
       msgList.innerHTML = `
         <div class="panel">
           <p class="panel-title">No messages</p>
-          <p class="panel-sub">Nothing unconsumed was found for this code hash.</p>
-          <small class="help">Try again after a Delven send, or confirm the code is correct.</small>
+          <p class="panel-sub">Fetch will show messages only if the code matches and there are unconsumed signed envelopes.</p>
+          <small class="help">Tip: make sure you pasted the exact Secure/Personal code used to send.</small>
         </div>
       `;
+      countPill.textContent = "0 messages";
     }
 
-    function renderError(title, detail) {
-      msgList.innerHTML = `
-        <div class="panel">
-          <p class="panel-title">${safeText(title)}</p>
-          <p class="panel-sub">${safeText(detail)}</p>
-        </div>
-      `;
+    renderEmpty();
+
+    // -------------------------
+    // Delven modal wiring
+    // -------------------------
+    const delvenModal = document.getElementById("delven-modal");
+    const delvenClose = document.getElementById("delven-close");
+    const delvenOk = document.getElementById("delven-ok");
+    const delvenStage = document.getElementById("delven-stage");
+    const delvenText = document.getElementById("delven-text");
+    const delvenWho = document.getElementById("delven-who");
+    const delvenConsume = document.getElementById("delven-consume");
+
+    let delvenActiveEnvelopeId = null;
+    let delvenActiveCardEl = null;
+
+    function delvenHide(){
+      delvenModal.classList.remove("show");
+      delvenStage.classList.remove("is-playing");
+      delvenStage.classList.remove("is-revealed");
+      delvenText.textContent = "";
+      delvenWho.textContent = "Opening…";
+      delvenConsume.disabled = false;
+      delvenConsume.textContent = "Consume";
+      delvenActiveEnvelopeId = null;
+      delvenActiveCardEl = null;
     }
 
-    function renderMessages(items) {
+    function delvenShow({ envelopeId, body, senderUid }){
+      delvenActiveEnvelopeId = envelopeId;
+      delvenWho.textContent = senderUid ? `From ${senderUid}` : "A surprise drop";
+      delvenText.textContent = "";
+
+      delvenModal.classList.add("show");
+
+      delvenStage.classList.remove("is-playing");
+      delvenStage.classList.remove("is-revealed");
+
+      requestAnimationFrame(() => {
+        delvenStage.classList.add("is-playing");
+        setTimeout(() => {
+          delvenText.textContent = body || "";
+          delvenStage.classList.add("is-revealed");
+        }, 920);
+      });
+    }
+
+    delvenClose.addEventListener("click", delvenHide);
+    delvenOk.addEventListener("click", delvenHide);
+    delvenModal.addEventListener("click", (e) => { if (e.target === delvenModal) delvenHide(); });
+    window.addEventListener("keydown", (e) => { if (e.key === "Escape") delvenHide(); });
+
+    delvenConsume.addEventListener("click", async () => {
+      if (!delvenActiveEnvelopeId) return;
+
+      delvenConsume.disabled = true;
+      delvenConsume.textContent = "Consuming…";
+
+      try {
+        const callable = functions.httpsCallable("markSignedEnvelopeConsumed");
+        await callable({ signedEnvelopeId: delvenActiveEnvelopeId });
+
+        delvenConsume.textContent = "Consumed";
+
+        if (delvenActiveCardEl) delvenActiveCardEl.remove();
+        const remaining = msgList.querySelectorAll(".msg-card").length;
+        countPill.textContent = `${remaining} message${remaining === 1 ? "" : "s"}`;
+        if (remaining === 0) renderEmpty();
+      } catch (e) {
+        console.error(e);
+        delvenConsume.disabled = false;
+        delvenConsume.textContent = "Consume";
+        setStatus("warn", "Couldn’t consume", "Try again. App Check may be required or session may have expired.");
+      }
+    });
+
+    // -------------------------
+    // Fetch + render
+    // -------------------------
+    async function fetchSignedEnvelopesForCode(rawCode) {
+      const normalized = normalizeCodeAndroid(rawCode);
+      const codeHash = await sha256Hex(normalized);
+
+      const callable = functions.httpsCallable("fetchSignedEnvelopes");
+      const res = await callable({ codeHash });
+
+      const payload = (res && res.data) ? res.data : {};
+      const envelopes = Array.isArray(payload.envelopes) ? payload.envelopes : [];
+      return envelopes;
+    }
+
+    function renderMessages(items){
+      msgList.innerHTML = "";
+
       if (!items || items.length === 0) {
         renderEmpty();
         return;
       }
 
-      msgList.innerHTML = "";
+      countPill.textContent = `${items.length} message${items.length === 1 ? "" : "s"}`;
+
       for (const it of items) {
+        const when = formatWhen(it.deliverAtUtc, it.deliverAtLocalIso);
+        const sender = it.senderUid ? `Sender: ${it.senderUid}` : "Sender: —";
+
         const card = document.createElement("div");
         card.className = "msg-card";
-
-        const when = fmtWhen(it.deliverAtUtc || it.deliverAtLocalIso);
-        const sender = it.senderUid ? `Sender: ${it.senderUid}` : "Sender: —";
 
         card.innerHTML = `
           <div class="msg-top">
@@ -449,15 +549,36 @@
               <span>${safeText(sender)}</span>
             </div>
           </div>
+
           <div class="msg-body">${safeText(it.body)}</div>
+
           <div class="msg-actions">
-            <button class="btn btn-secondary" type="button" data-consume="${safeText(it.signedEnvelopeId)}">Consume</button>
+            <button class="btn btn-secondary" type="button" data-open="${safeText(it.signedEnvelopeId)}">Open</button>
+            <button class="btn btn-quiet" type="button" data-consume="${safeText(it.signedEnvelopeId)}">Consume</button>
           </div>
         `;
 
         msgList.appendChild(card);
       }
 
+      // Open → Delven ritual reveal
+      msgList.querySelectorAll("button[data-open]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-open");
+          if (!id) return;
+          const found = items.find(x => x.signedEnvelopeId === id);
+          if (!found) return;
+
+          delvenActiveCardEl = btn.closest(".msg-card") || null;
+          delvenShow({
+            envelopeId: found.signedEnvelopeId,
+            body: found.body,
+            senderUid: found.senderUid
+          });
+        });
+      });
+
+      // Consume (direct button on card)
       msgList.querySelectorAll("button[data-consume]").forEach(btn => {
         btn.addEventListener("click", async () => {
           const id = btn.getAttribute("data-consume");
@@ -470,12 +591,12 @@
             const callable = functions.httpsCallable("markSignedEnvelopeConsumed");
             await callable({ signedEnvelopeId: id });
 
-            btn.textContent = "Consumed";
-            // remove the card (calm)
-            const parent = btn.closest(".msg-card");
-            if (parent) parent.remove();
+            const card = btn.closest(".msg-card");
+            if (card) card.remove();
 
-            if (!msgList.querySelector(".msg-card")) renderEmpty();
+            const remaining = msgList.querySelectorAll(".msg-card").length;
+            countPill.textContent = `${remaining} message${remaining === 1 ? "" : "s"}`;
+            if (remaining === 0) renderEmpty();
           } catch (e) {
             console.error(e);
             btn.disabled = false;
@@ -489,77 +610,70 @@
     btnFetch.addEventListener("click", async () => {
       const user = auth.currentUser;
       if (!user) {
-        setStatus("warn", "Sign-in required", "Sign in to fetch inbox messages.");
+        setStatus("warn", "Sign-in required", "Sign in to fetch signed inbox messages.");
         return;
       }
 
-      const rawCode = inboxCode.value.trim();
+      const rawCode = codeInput.value.trim();
       if (!rawCode) {
-        setStatus("warn", "Code needed", "Paste your Secure or Personal code.");
+        setStatus("warn", "Code needed", "Paste a Secure/Personal code first.");
         return;
       }
+
+      btnFetch.disabled = true;
+      btnFetch.textContent = "Fetching…";
 
       try {
-        setStatus("good", "Fetching…", "Looking for unconsumed signed envelopes…");
-        msgList.innerHTML = "";
+        setStatus("good", "Fetching…", "Calling fetchSignedEnvelopes…");
 
-        const normalized = normalizeCodeAndroid(rawCode);
-        const codeHash = await sha256Hex(normalized);
+        const envelopes = await fetchSignedEnvelopesForCode(rawCode);
 
-        const callable = functions.httpsCallable("fetchSignedEnvelopes");
-        const res = await callable({ codeHash });
-
-        const payload = res && res.data ? res.data : {};
-        const envelopes = (payload.envelopes && Array.isArray(payload.envelopes)) ? payload.envelopes : [];
-
-        if (envelopes.length === 0) {
-          setStatus("good", "Fetched", "No unconsumed messages found.");
-          renderEmpty();
-          return;
-        }
-
-        // Decrypt locally
-        const decrypted = [];
+        // Decrypt each envelope locally
+        const out = [];
         for (const env of envelopes) {
           const ciphertext = env.ciphertext || env.ciphertextB64;
           const iv = env.iv || env.ivB64;
           const salt = env.salt || env.saltB64;
-          const signedEnvelopeId = env.signedEnvelopeId;
 
-          if (!ciphertext || !iv || !salt || !signedEnvelopeId) continue;
+          if (!ciphertext || !iv || !salt) continue;
 
-          try {
-            const body = await decryptBodyForCode(rawCode, ciphertext, iv, salt);
-            decrypted.push({
-              signedEnvelopeId,
-              body,
-              deliverAtUtc: env.deliverAtUtc || null,
-              deliverAtLocalIso: env.deliverAtLocalIso || null,
-              senderUid: env.senderUid || null
-            });
-          } catch (e) {
-            console.warn("decrypt failed:", e);
-          }
+          const pt = await decryptEnvelopeForCode(rawCode, ciphertext, iv, salt);
+          if (pt == null) continue;
+
+          out.push({
+            signedEnvelopeId: env.signedEnvelopeId,
+            senderUid: env.senderUid || null,
+            deliverAtUtc: env.deliverAtUtc || null,
+            deliverAtLocalIso: env.deliverAtLocalIso || null,
+            body: pt
+          });
         }
 
-        if (decrypted.length === 0) {
-          setStatus("warn", "Fetched", "Envelopes found, but none could be decrypted with this code.");
-          renderError("Couldn’t decrypt", "Verify you pasted the correct code (including prefix).");
-          return;
+        if (out.length === 0) {
+          setStatus("warn", "No messages", "Either there are no unconsumed envelopes, or the code doesn’t match.");
+        } else {
+          setStatus("good", "Fetched", "Messages decrypted locally. Open to reveal with Delven.");
         }
 
-        setStatus("good", "Fetched", `Decrypted ${decrypted.length} message(s).`);
-        renderMessages(decrypted);
+        renderMessages(out);
       } catch (e) {
         console.error(e);
         const msg = (e && e.message) ? e.message : "Fetch failed. Try again.";
-        setStatus("warn", "Couldn’t fetch", msg);
-        renderError("Fetch failed", msg);
+        setStatus("warn", "Fetch failed", msg);
+      } finally {
+        btnFetch.disabled = false;
+        btnFetch.textContent = "Fetch";
       }
     });
 
-    // Initial state
-    setStatus("good", "Ready", "Sign in to use Inbox.");
+    btnClear.addEventListener("click", () => {
+      codeInput.value = "";
+      renderEmpty();
+      setStatus("warn", "Cleared", "Inbox cleared. Paste a code and press Fetch.");
+    });
+
+    // initial
+    setStatus("good", "Ready", "Sign in to fetch signed inbox messages.");
   </script>
 </body>
 </html>
