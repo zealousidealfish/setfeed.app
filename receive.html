@@ -15,37 +15,130 @@
 
   <link rel="stylesheet" href="./styles.css" />
 
+  <!-- =========================
+       FIREBASE (AUTH + FUNCTIONS)
+       ========================= -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+
+  <script>
+    // =========================
+    // ✅ Firebase config (yours)
+    // =========================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",
+      authDomain: "setfeed-fcd7a.firebaseapp.com",
+      projectId: "setfeed-fcd7a",
+      storageBucket: "setfeed-fcd7a.firebasestorage.app",
+      messagingSenderId: "553573263069",
+      appId: "1:553573263069:web:e5c9884101ca38eaee1d34"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    // Pin region deterministically (match send.html)
+    const functions = firebase.app().functions("europe-west2");
+    const auth = firebase.auth();
+  </script>
+
+  <!-- =========================
+       THEME (deterministic)
+       ========================= -->
   <script>
     (function(){
-      // Theme mode (consistent with index/send)
       const themeKey = "sf_theme_mode"; // "system" | "light" | "dark"
-      const stored = localStorage.getItem(themeKey) || "system";
       const root = document.documentElement;
 
-      if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
-      else root.removeAttribute("data-theme");
+      function applyTheme(){
+        const stored = localStorage.getItem(themeKey) || "system";
 
-      const effective =
-        root.getAttribute("data-theme") ||
-        (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
+        else root.removeAttribute("data-theme");
 
-      const meta = document.getElementById("meta-theme-color");
-      if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
+        const effective =
+          root.getAttribute("data-theme") ||
+          (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 
-      function applyAuthVisibility(){
-        const authed = localStorage.getItem("sf_signed_authed") === "true";
-        document.querySelectorAll(".auth-only").forEach(el => {
-          el.classList.toggle("hidden", !authed);
-        });
+        const meta = document.getElementById("meta-theme-color");
+        if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
       }
 
-      document.addEventListener("DOMContentLoaded", applyAuthVisibility);
+      applyTheme();
 
       window.addEventListener("storage", (e) => {
-        if (e && e.key === "sf_signed_authed") applyAuthVisibility();
+        if (!e) return;
+        if (e.key === themeKey) applyTheme();
       });
     })();
   </script>
+
+  <style>
+    .hidden{ display:none !important; }
+
+    .code-grid{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    @media (min-width: 840px){
+      .code-grid{ grid-template-columns: 1fr 1fr 1fr; }
+    }
+    .code-card{
+      border-radius: 16px;
+      padding: 12px;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: rgba(0,0,0,0.02);
+    }
+    [data-theme="dark"] .code-card{
+      border-color: rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.06);
+    }
+    .code-label{
+      font-weight: 700;
+      margin: 0 0 8px 0;
+    }
+    .code-box{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      border-radius: 12px;
+      padding: 10px 12px;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: rgba(255,255,255,0.75);
+      word-break: break-all;
+      text-align: center;
+    }
+    [data-theme="dark"] .code-box{
+      border-color: rgba(255,255,255,0.12);
+      background: rgba(15,17,20,0.55);
+    }
+    .mini{
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 8px;
+      line-height: 1.35;
+    }
+    .row-actions{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .row-actions .left,
+    .row-actions .right{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .statusline{
+      margin-top: 10px;
+      font-size: 13px;
+      opacity: 0.9;
+    }
+  </style>
 </head>
 
 <body class="page-bg">
@@ -78,7 +171,68 @@
             A receive code is the address. If someone has your code, they can send you an encrypted message through setfeed.app.
           </p>
 
-          <h2>Where to find codes</h2>
+          <!-- ✅ Signed-in web codes panel -->
+          <section class="panel auth-only hidden" aria-label="Web receive codes">
+            <p class="panel-title">Your codes (web)</p>
+            <p class="panel-sub" style="margin-bottom: var(--s-3);">
+              You’re signed in. You can view and share your receive codes here.
+            </p>
+
+            <div class="row-actions">
+              <div class="left">
+                <button class="btn btn-primary" id="btn-load-codes" type="button">Load codes</button>
+                <button class="btn btn-quiet" id="btn-refresh-rolling" type="button" disabled>Refresh rolling</button>
+              </div>
+              <div class="right">
+                <button class="btn btn-secondary" id="btn-copy-personal" type="button" disabled>Copy Personal</button>
+                <button class="btn btn-secondary" id="btn-copy-secure" type="button" disabled>Copy Secure</button>
+                <button class="btn btn-secondary" id="btn-copy-rolling" type="button" disabled>Copy Rolling</button>
+              </div>
+            </div>
+
+            <div class="statusline" id="codes-status">Ready.</div>
+
+            <div class="code-grid" id="codes-grid" aria-live="polite">
+              <div class="code-card">
+                <p class="code-label">Personal</p>
+                <div class="code-box" id="code-personal">—</div>
+                <div class="mini">Friendly format. Signed send. Best for trusted sharing.</div>
+              </div>
+
+              <div class="code-card">
+                <p class="code-label">Secure</p>
+                <div class="code-box" id="code-secure">—</div>
+                <div class="mini">High-entropy. Signed send. Best default.</div>
+              </div>
+
+              <div class="code-card">
+                <p class="code-label">Rolling</p>
+                <div class="code-box" id="code-rolling">—</div>
+                <div class="mini" id="code-rolling-meta">Temporary. Expiry / limits may apply.</div>
+              </div>
+            </div>
+
+            <div class="note" style="margin-top: 12px;">
+              <p style="margin:0;">
+                This surface requires Firebase Functions that return your codes. If your backend doesn’t expose them yet,
+                wire the callable names in this page (see script at bottom).
+              </p>
+            </div>
+          </section>
+
+          <!-- Not signed in helper -->
+          <section class="panel auth-off" aria-label="Sign in for web codes">
+            <p class="panel-title">Want codes on web?</p>
+            <p class="panel-sub">
+              Sign in on the Send page to enable web receive codes and inbox access.
+            </p>
+            <div class="actions">
+              <a class="btn btn-lg btn-primary" href="./send.html#signin">Sign in</a>
+              <a class="btn btn-lg btn-quiet" href="./send.html">Go to Send</a>
+            </div>
+          </section>
+
+          <h2 style="margin-top: var(--s-7);">Where to find codes (app)</h2>
           <p>
             In the Setfeed app: <strong>Settings → Receive codes</strong>.
             You’ll see three types. Each has a different safety model.
@@ -130,6 +284,160 @@
 
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
+
+    // -------------------------
+    // Auth-only nav visibility
+    // -------------------------
+    function applyAuthVisibility(isAuthed){
+      document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
+      document.querySelectorAll(".auth-off").forEach(el => el.classList.toggle("hidden", isAuthed));
+      try { localStorage.setItem("sf_signed_authed", isAuthed ? "true" : "false"); } catch (_) {}
+    }
+
+    auth.onAuthStateChanged((user) => {
+      applyAuthVisibility(!!user);
+    });
+
+    // -------------------------
+    // Codes UI (requires backend)
+    // -------------------------
+    const btnLoad = document.getElementById("btn-load-codes");
+    const btnRefreshRolling = document.getElementById("btn-refresh-rolling");
+
+    const boxPersonal = document.getElementById("code-personal");
+    const boxSecure = document.getElementById("code-secure");
+    const boxRolling = document.getElementById("code-rolling");
+    const rollingMeta = document.getElementById("code-rolling-meta");
+    const codesStatus = document.getElementById("codes-status");
+
+    const btnCopyPersonal = document.getElementById("btn-copy-personal");
+    const btnCopySecure = document.getElementById("btn-copy-secure");
+    const btnCopyRolling = document.getElementById("btn-copy-rolling");
+
+    let lastCodes = null;
+
+    function setCodesStatus(text){ if (codesStatus) codesStatus.textContent = text || "Ready."; }
+
+    function setCopyEnabled(enabled){
+      btnCopyPersonal.disabled = !enabled;
+      btnCopySecure.disabled = !enabled;
+      btnCopyRolling.disabled = !enabled;
+      btnRefreshRolling.disabled = !enabled;
+    }
+
+    async function copyText(text){
+      const t = (text || "").trim();
+      if (!t || t === "—") return;
+      try {
+        await navigator.clipboard.writeText(t);
+        setCodesStatus("Copied.");
+      } catch (_) {
+        // fallback
+        const ta = document.createElement("textarea");
+        ta.value = t;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try { document.execCommand("copy"); setCodesStatus("Copied."); } catch (e) { setCodesStatus("Couldn’t copy."); }
+        document.body.removeChild(ta);
+      }
+    }
+
+    btnCopyPersonal.addEventListener("click", () => copyText(boxPersonal.textContent));
+    btnCopySecure.addEventListener("click", () => copyText(boxSecure.textContent));
+    btnCopyRolling.addEventListener("click", () => copyText(boxRolling.textContent));
+
+    function renderCodes(c){
+      lastCodes = c;
+
+      // Expecting something like:
+      // { personal: { code }, secure: { code }, rolling: { code, expiresAtMillis? } }
+      boxPersonal.textContent = (c && c.personal && c.personal.code) ? c.personal.code : "—";
+      boxSecure.textContent = (c && c.secure && c.secure.code) ? c.secure.code : "—";
+      boxRolling.textContent = (c && c.rolling && c.rolling.code) ? c.rolling.code : "—";
+
+      const exp = (c && c.rolling) ? c.rolling.expiresAtMillis : null;
+      if (exp) {
+        const d = new Date(exp);
+        rollingMeta.textContent = `Expires: ${d.toLocaleString()}`;
+      } else {
+        rollingMeta.textContent = "Temporary. Expiry / limits may apply.";
+      }
+
+      const ok = (boxPersonal.textContent !== "—" || boxSecure.textContent !== "—" || boxRolling.textContent !== "—");
+      setCopyEnabled(ok);
+    }
+
+    async function loadCodes(){
+      const user = auth.currentUser;
+      if (!user) {
+        setCodesStatus("Sign in first.");
+        return;
+      }
+
+      // ✅ IMPORTANT:
+      // You must wire this callable to your backend.
+      // Choose one:
+      // - "getReceiveCodes"
+      // - "ensureAllReceiveCodes"
+      // - etc.
+      //
+      // If you tell me your actual function name / payload shape, I’ll align this precisely.
+      const callableName = "getReceiveCodes";
+
+      try {
+        setCodesStatus("Loading codes…");
+        const callable = functions.httpsCallable(callableName);
+        const res = await callable({});
+        renderCodes(res && res.data ? res.data : null);
+        setCodesStatus("Codes loaded.");
+      } catch (e) {
+        console.error(e);
+        setCopyEnabled(false);
+        setCodesStatus("Couldn’t load codes. Backend callable not wired yet.");
+      }
+    }
+
+    async function refreshRolling(){
+      const user = auth.currentUser;
+      if (!user) {
+        setCodesStatus("Sign in first.");
+        return;
+      }
+
+      // ✅ IMPORTANT:
+      // Wire this callable name too.
+      const callableName = "refreshRollingReceiveCode";
+
+      try {
+        setCodesStatus("Refreshing rolling…");
+        const callable = functions.httpsCallable(callableName);
+        const res = await callable({});
+        // If backend returns full codes, render directly. If it returns only rolling, patch.
+        const data = res && res.data ? res.data : null;
+        if (data && data.personal && data.secure && data.rolling) {
+          renderCodes(data);
+        } else if (data && data.code) {
+          const patched = lastCodes ? JSON.parse(JSON.stringify(lastCodes)) : {};
+          patched.rolling = patched.rolling || {};
+          patched.rolling.code = data.code;
+          if (data.expiresAtMillis) patched.rolling.expiresAtMillis = data.expiresAtMillis;
+          renderCodes(patched);
+        }
+        setCodesStatus("Rolling refreshed.");
+      } catch (e) {
+        console.error(e);
+        setCodesStatus("Couldn’t refresh rolling. Backend callable not wired yet.");
+      }
+    }
+
+    btnLoad.addEventListener("click", loadCodes);
+    btnRefreshRolling.addEventListener("click", refreshRolling);
+
+    // Default state
+    setCopyEnabled(false);
   </script>
 </body>
 </html>
