@@ -1,4 +1,3 @@
-<!-- inbox.html (FULL FILE REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -238,20 +237,25 @@
       justify-content: space-between;
       margin-top: 10px;
     }
+
+    /* ✅ toggles are buttons now (more reliable than div click targets) */
     .sf-toggle{
-      display:inline-flex;
-      gap:10px;
-      align-items:center;
-      padding: 8px 10px;
-      border-radius: 14px;
+      appearance: none;
       border: 1px solid rgba(255,255,255,0.10);
       background: rgba(255,255,255,0.05);
       color: rgba(233,238,246,0.90);
+      border-radius: 14px;
+      padding: 8px 10px;
       font-weight: 650;
       font-size: 13px;
       cursor:pointer;
       user-select:none;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
     }
+    .sf-toggle:hover{ background: rgba(255,255,255,0.07); }
+    .sf-toggle:active{ transform: translateY(0.5px); }
   </style>
 </head>
 
@@ -269,7 +273,7 @@
         <a href="./send.html">Send</a>
         <a href="./receive.html">Receive</a>
         <a class="auth-only hidden" href="./inbox.html" aria-current="page">Inbox</a>
-        <!-- Always visible when authed -->
+        <!-- ✅ Hidden tab is shown whenever authed (not dependent on hidden-count) -->
         <a class="auth-only hidden" id="nav-hidden" href="./inbox.html#hidden">Hidden</a>
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
@@ -310,12 +314,12 @@
             </div>
 
             <div class="sf-mini-row">
-              <div class="sf-toggle" id="btn-auto">
+              <button class="sf-toggle" id="btn-auto" type="button">
                 <span id="auto-label">Auto polling: Off</span>
-              </div>
-              <div class="sf-toggle" id="btn-show-blocked">
+              </button>
+              <button class="sf-toggle" id="btn-show-blocked" type="button">
                 <span id="blocked-label">Hidden senders: Hidden</span>
-              </div>
+              </button>
             </div>
 
             <!-- PINNED -->
@@ -511,10 +515,6 @@
     const hiddenUi = document.getElementById("hidden-ui");
     const inboxUi = document.getElementById("inbox-ui");
 
-    function currentRoute(){
-      return (window.location.hash || "").toLowerCase().includes("hidden") ? "hidden" : "inbox";
-    }
-
     function showRoute(which){
       const isHidden = which === "hidden";
       routeInbox.classList.toggle("show", !isHidden);
@@ -523,6 +523,10 @@
       // Only show contents when authed
       hiddenUi.classList.toggle("hidden", !(auth.currentUser));
       inboxUi.classList.toggle("hidden", !(auth.currentUser) || isHidden);
+    }
+
+    function currentRoute(){
+      return (window.location.hash || "").toLowerCase().includes("hidden") ? "hidden" : "inbox";
     }
 
     window.addEventListener("hashchange", () => showRoute(currentRoute()));
@@ -536,6 +540,7 @@
     const btnSignOut = document.getElementById("btn-sign-out");
     const authPill = document.getElementById("auth-pill");
     const inboxNav = document.querySelectorAll(".auth-only");
+    const navHidden = document.getElementById("nav-hidden");
 
     function setSignedAuthedFlag(isAuthed) {
       try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
@@ -546,21 +551,18 @@
       const isAuthed = !!user;
       setSignedAuthedFlag(isAuthed);
 
-      // Hide Google button when signed in
       btnGoogle.classList.toggle("hidden", isAuthed);
-
       btnSignOut.disabled = !isAuthed;
+
+      inboxUi.classList.toggle("hidden", !isAuthed);
       authPill.textContent = isAuthed ? (user.email || "Signed in") : "Not signed in";
 
-      // ✅ Default to Hidden tab when signing in (only if no hash already)
-      if (isAuthed) {
-        const hasHash = !!(window.location.hash || "");
-        if (!hasHash) window.location.hash = "#hidden";
-      }
+      // ✅ Hidden nav is visible whenever authed (no more count gating)
+      if (navHidden) navHidden.classList.toggle("hidden", !isAuthed);
 
       showRoute(currentRoute());
 
-      if (isAuthed) setStatus("good", "Signed in", "Hidden tab is available. Use Inbox to fetch signed messages.");
+      if (isAuthed) setStatus("good", "Signed in", "Paste a Secure/Personal code and press Fetch.");
       else setStatus("warn", "Not signed in", "Sign in to fetch signed inbox messages.");
     }
 
@@ -615,19 +617,6 @@
       try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
     }
 
-    function readBool(key, fallback=false){
-      try {
-        const v = localStorage.getItem(key);
-        if (v == null) return fallback;
-        return v === "true";
-      } catch (_) {
-        return fallback;
-      }
-    }
-    function writeBool(key, value){
-      try { localStorage.setItem(key, value ? "true" : "false"); } catch (_) {}
-    }
-
     function uniq(arr){
       const out = [];
       const seen = new Set();
@@ -655,16 +644,17 @@
     function getBlockedSenders(){ return uniq(readJson(LS.blockedSenders, [])); }
     function setBlockedSenders(v){ writeJson(LS.blockedSenders, uniq(v)); }
 
-    function getShowBlocked(){ return readBool(LS.showBlocked, false); }
-    function setShowBlocked(v){ writeBool(LS.showBlocked, !!v); }
+    function getShowBlocked(){ return (localStorage.getItem(LS.showBlocked) === "true"); }
+    function setShowBlocked(v){ try { localStorage.setItem(LS.showBlocked, v ? "true" : "false"); } catch (_) {} }
 
-    function getAutoPolling(){ return readBool(LS.autoPolling, false); }
-    function setAutoPolling(v){ writeBool(LS.autoPolling, !!v); }
+    function getAutoPolling(){ return (localStorage.getItem(LS.autoPolling) === "true"); }
+    function setAutoPolling(v){ try { localStorage.setItem(LS.autoPolling, v ? "true" : "false"); } catch (_) {} }
 
     function refreshHiddenNav(){
       const hiddenCount = getHiddenReleasedIds().length;
       const pillHidden = document.getElementById("pill-hidden");
       if (pillHidden) pillHidden.textContent = `${hiddenCount} hidden`;
+      // navHidden visibility is handled by auth state now
     }
 
     // -------------------------
@@ -965,7 +955,6 @@
         if (pt == null) continue;
 
         decryptedById.set(id, pt);
-
         out.push({ id, senderUid, when, deliverMillis, ciphertext, iv, salt });
       }
 
@@ -1008,9 +997,8 @@
 
         const entry = { ...it, body: "" };
 
-        if (awaitingIds.has(it.id)) {
-          awaiting.push(entry);
-        } else {
+        if (awaitingIds.has(it.id)) awaiting.push(entry);
+        else {
           if (hiddenUpcomingIds.has(it.id)) continue;
           upcoming.push(entry);
         }
@@ -1094,7 +1082,6 @@
         }
 
         if (Math.abs(dx) > 8) clearLongPress();
-
         if (opts.onSwipeLeft || opts.onSwipeRight) setDrag(dx);
       }
 
@@ -1135,7 +1122,6 @@
     }
 
     function messageCardHTML(item, mode){
-      const isUpcoming = mode === "upcoming";
       const isAwaiting = mode === "awaiting";
       const isReleased = (mode === "released" || mode === "pinned");
       const isHidden = mode === "hidden";
@@ -1149,8 +1135,8 @@
         isHidden ? "Hidden" :
         "Upcoming";
 
-      const leftLabel = isUpcoming ? "Hide" : "";
-      const rightLabel = isUpcoming ? "Awaiting" : "";
+      const leftLabel = mode === "upcoming" ? "Hide" : "";
+      const rightLabel = mode === "upcoming" ? "Awaiting" : "";
 
       const btns = [];
       if (isReleased) {
@@ -1283,8 +1269,8 @@
       if (released.length === 0) renderEmpty(listReleased, "No released messages", "When delivery time arrives, messages appear here.");
       else listReleased.innerHTML = released.map(it => messageCardHTML(it, "released")).join("");
 
-      wireUpcoming(listUpcoming);
-      wireAwaiting(listAwaiting);
+      wireUpcoming(listUpcoming, upcoming);
+      wireAwaiting(listAwaiting, awaiting);
       wireReleased(listPinned, pinned);
       wireReleased(listReleased, released);
 
@@ -1295,7 +1281,7 @@
       return (latestItems || []).find(x => x.id === id) || null;
     }
 
-    function wireUpcoming(container){
+    function wireUpcoming(container, items){
       container.querySelectorAll(".sf-msg-card").forEach(card => {
         const id = card.getAttribute("data-id");
         if (!id) return;
@@ -1346,7 +1332,7 @@
       });
     }
 
-    function wireAwaiting(container){
+    function wireAwaiting(container, items){
       container.querySelectorAll(".sf-msg-card").forEach(card => {
         const id = card.getAttribute("data-id");
         if (!id) return;
@@ -1455,8 +1441,7 @@
     });
 
     btnShowBlocked.addEventListener("click", () => {
-      const next = !getShowBlocked();
-      setShowBlocked(next);
+      setShowBlocked(!getShowBlocked());
       applyToggleUI();
       renderAll();
     });
@@ -1498,7 +1483,7 @@
           const wasReleasedBefore = (prevT == null) ? !!prevIt : (prevT <= now);
 
           if (!wasReleasedBefore) {
-            notifyReleased("Delvee — message released", it.senderUid ? `From ${it.senderUid}` : "A message is ready.");
+            notifyReleased("Setfeed — message released", it.senderUid ? `From ${it.senderUid}` : "A message is ready.");
           }
         }
 
