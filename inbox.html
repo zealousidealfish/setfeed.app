@@ -144,7 +144,7 @@
 
           <div class="col">
             <div class="panel">
-              <p class="panel-title">Delven</p>
+              <p class="panel-title">Delvex</p>
               <p class="panel-sub">
                 “Open” runs a small ritual animation before revealing plaintext.
               </p>
@@ -174,26 +174,26 @@
     </div>
   </div>
 
-  <!-- Delven opening modal (unchanged) -->
-  <div class="delven-backdrop" id="delven-modal" role="dialog" aria-modal="true" aria-labelledby="delven-title">
-    <div class="delven-modal">
-      <div class="delven-head">
-        <div class="delven-title" id="delven-title">
-          <span class="delven-badge">Delven</span>
-          <span id="delven-who">Opening…</span>
+  <!-- Delvex opening modal -->
+  <div class="delvex-backdrop" id="delvex-modal" role="dialog" aria-modal="true" aria-labelledby="delvex-title">
+    <div class="delvex-modal">
+      <div class="delvex-head">
+        <div class="delvex-title" id="delvex-title">
+          <span class="delvex-badge">Delvex</span>
+          <span id="delvex-who">Opening…</span>
         </div>
-        <button class="btn btn-quiet" id="delven-close" type="button">Close</button>
+        <button class="btn btn-quiet" id="delvex-close" type="button">Close</button>
       </div>
 
-      <div class="delven-body">
-        <div class="delven-stage" id="delven-stage">
-          <div class="delven-bolt" aria-hidden="true">
+      <div class="delvex-body">
+        <div class="delvex-stage" id="delvex-stage">
+          <div class="delvex-bolt" aria-hidden="true">
             <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
               <path class="bolt-fill" d="M36 2L10 36h18l-4 26 30-40H36l4-20z"/>
             </svg>
           </div>
 
-          <div class="delven-confetti" id="delven-confetti" aria-hidden="true">
+          <div class="delvex-confetti" id="delvex-confetti" aria-hidden="true">
             <i style="left:12%; top:22%"></i>
             <i style="left:22%; top:58%"></i>
             <i style="left:35%; top:18%"></i>
@@ -203,13 +203,13 @@
             <i style="left:86%; top:34%"></i>
           </div>
 
-          <div class="delven-envelope" aria-hidden="true">
-            <div class="delven-flap"></div>
+          <div class="delvex-envelope" aria-hidden="true">
+            <div class="delvex-flap"></div>
           </div>
 
-          <div class="delven-reveal" id="delven-reveal">
+          <div class="delvex-reveal" id="delvex-reveal">
             <h3 style="margin-top:0;">Message</h3>
-            <p id="delven-text"></p>
+            <p id="delvex-text"></p>
             <small class="help" style="margin-top:10px;">
               Shared opening can be its own route later (ritual replay / invite link / ad slot).
             </small>
@@ -217,9 +217,9 @@
         </div>
       </div>
 
-      <div class="delven-actions">
-        <button class="btn btn-secondary" id="delven-consume" type="button">Consume</button>
-        <button class="btn btn-primary" id="delven-ok" type="button">Done</button>
+      <div class="delvex-actions">
+        <button class="btn btn-secondary" id="delvex-consume" type="button">Consume</button>
+        <button class="btn btn-primary" id="delvex-ok" type="button">Done</button>
       </div>
     </div>
   </div>
@@ -363,72 +363,73 @@
     }
     renderEmpty();
 
-    const delvenModal = document.getElementById("delven-modal");
-    const delvenClose = document.getElementById("delven-close");
-    const delvenOk = document.getElementById("delven-ok");
-    const delvenStage = document.getElementById("delven-stage");
-    const delvenText = document.getElementById("delven-text");
-    const delvenWho = document.getElementById("delven-who");
-    const delvenConsume = document.getElementById("delven-consume");
+    // Delvex modal hooks
+    const delvexModal = document.getElementById("delvex-modal");
+    const delvexClose = document.getElementById("delvex-close");
+    const delvexOk = document.getElementById("delvex-ok");
+    const delvexStage = document.getElementById("delvex-stage");
+    const delvexText = document.getElementById("delvex-text");
+    const delvexWho = document.getElementById("delvex-who");
+    const delvexConsume = document.getElementById("delvex-consume");
 
-    let delvenActiveEnvelopeId = null;
-    let delvenActiveCardEl = null;
+    let delvexActiveEnvelopeId = null;
+    let delvexActiveCardEl = null;
 
-    function delvenHide(){
-      delvenModal.classList.remove("show");
-      delvenStage.classList.remove("is-playing");
-      delvenStage.classList.remove("is-revealed");
-      delvenText.textContent = "";
-      delvenWho.textContent = "Opening…";
-      delvenConsume.disabled = false;
-      delvenConsume.textContent = "Consume";
-      delvenActiveEnvelopeId = null;
-      delvenActiveCardEl = null;
+    function delvexHide(){
+      delvexModal.classList.remove("show");
+      delvexStage.classList.remove("is-playing");
+      delvexStage.classList.remove("is-revealed");
+      delvexText.textContent = "";
+      delvexWho.textContent = "Opening…";
+      delvexConsume.disabled = false;
+      delvexConsume.textContent = "Consume";
+      delvexActiveEnvelopeId = null;
+      delvexActiveCardEl = null;
     }
 
-    function delvenShow({ envelopeId, body, senderUid }){
-      delvenActiveEnvelopeId = envelopeId;
-      delvenWho.textContent = senderUid ? `From ${senderUid}` : "A surprise drop";
-      delvenText.textContent = "";
+    function delvexShow({ envelopeId, body, senderUid }){
+      delvexActiveEnvelopeId = envelopeId;
+      delvexWho.textContent = senderUid ? `From ${senderUid}` : "A surprise drop";
+      delvexText.textContent = "";
 
-      delvenModal.classList.add("show");
-      delvenStage.classList.remove("is-playing");
-      delvenStage.classList.remove("is-revealed");
+      delvexModal.classList.add("show");
+      delvexStage.classList.remove("is-playing");
+      delvexStage.classList.remove("is-revealed");
 
       requestAnimationFrame(() => {
-        delvenStage.classList.add("is-playing");
+        delvexStage.classList.add("is-playing");
         setTimeout(() => {
-          delvenText.textContent = body || "";
-          delvenStage.classList.add("is-revealed");
+          delvexText.textContent = body || "";
+          delvexStage.classList.add("is-revealed");
         }, 920);
       });
     }
 
-    delvenClose.addEventListener("click", delvenHide);
-    delvenOk.addEventListener("click", delvenHide);
-    delvenModal.addEventListener("click", (e) => { if (e.target === delvenModal) delvenHide(); });
-    window.addEventListener("keydown", (e) => { if (e.key === "Escape") delvenHide(); });
+    delvexClose.addEventListener("click", delvexHide);
+    delvexOk.addEventListener("click", delvexHide);
+    delvexModal.addEventListener("click", (e) => { if (e.target === delvexModal) delvexHide(); });
+    window.addEventListener("keydown", (e) => { if (e.key === "Escape") delvexHide(); });
 
-    delvenConsume.addEventListener("click", async () => {
-      if (!delvenActiveEnvelopeId) return;
+    delvexConsume.addEventListener("click", async () => {
+      if (!delvexActiveEnvelopeId) return;
 
-      delvenConsume.disabled = true;
-      delvenConsume.textContent = "Consuming…";
+      delvexConsume.disabled = true;
+      delvexConsume.textContent = "Consuming…";
 
       try {
         const callable = functions.httpsCallable("markSignedEnvelopeConsumed");
-        await callable({ signedEnvelopeId: delvenActiveEnvelopeId });
+        await callable({ signedEnvelopeId: delvexActiveEnvelopeId });
 
-        delvenConsume.textContent = "Consumed";
+        delvexConsume.textContent = "Consumed";
 
-        if (delvenActiveCardEl) delvenActiveCardEl.remove();
+        if (delvexActiveCardEl) delvexActiveCardEl.remove();
         const remaining = msgList.querySelectorAll(".msg-card").length;
         countPill.textContent = `${remaining} message${remaining === 1 ? "" : "s"}`;
         if (remaining === 0) renderEmpty();
       } catch (e) {
         console.error(e);
-        delvenConsume.disabled = false;
-        delvenConsume.textContent = "Consume";
+        delvexConsume.disabled = false;
+        delvexConsume.textContent = "Consume";
         setStatus("warn", "Couldn’t consume", "Try again. Session may have expired.");
       }
     });
@@ -485,8 +486,8 @@
           const found = items.find(x => x.signedEnvelopeId === id);
           if (!found) return;
 
-          delvenActiveCardEl = btn.closest(".msg-card") || null;
-          delvenShow({ envelopeId: found.signedEnvelopeId, body: found.body, senderUid: found.senderUid });
+          delvexActiveCardEl = btn.closest(".msg-card") || null;
+          delvexShow({ envelopeId: found.signedEnvelopeId, body: found.body, senderUid: found.senderUid });
         });
       });
 
@@ -551,7 +552,7 @@
         }
 
         if (out.length === 0) setStatus("warn", "No messages", "Either there are no unconsumed envelopes, or the code doesn’t match.");
-        else setStatus("good", "Fetched", "Messages decrypted locally. Open to reveal with Delven.");
+        else setStatus("good", "Fetched", "Messages decrypted locally. Open to reveal with Delvex.");
 
         renderMessages(out);
       } catch (e) {
