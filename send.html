@@ -14,9 +14,7 @@
 
   <link rel="stylesheet" href="./styles.css" />
 
-  <!-- =========================
-       FIREBASE (AUTH + FUNCTIONS + APP CHECK)
-       ========================= -->
+  <!-- FIREBASE -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
@@ -32,15 +30,10 @@
       appId: "1:553573263069:web:e5c9884101ca38eaee1d34"
     };
 
-    // TODO: replace with your real App Check reCAPTCHA v3 site key
     const RECAPTCHA_SITE_KEY = "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI";
-
-    // Your public site URL (GitHub Pages custom domain)
-    // Keep Setfeed here (Delvee is a separate site later).
     const SITE_ORIGIN = "https://setfeed.app";
 
     if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
-
     const functions = firebase.app().functions("europe-west2");
 
     function startAppCheck() {
@@ -58,9 +51,7 @@
     }
   </script>
 
-  <!-- =========================
-       THEME (deterministic)
-       ========================= -->
+  <!-- THEME -->
   <script>
     (function(){
       const THEME_KEY = "sf_theme_mode";
@@ -88,11 +79,19 @@
 
   <style>
     .hidden{ display:none !important; }
-
-    /* status placement slots */
     .sf-status-slot{ margin-top: 10px; }
 
-    /* Advanced row layout; visuals come from existing .chip styles in styles.css */
+    /* Keep all chips equal height everywhere on this page */
+    .chip, .sf-adv-btn{
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
     .sf-adv-row{
       display:flex;
       flex-wrap:wrap;
@@ -100,15 +99,134 @@
       margin-top: var(--s-3, 12px);
     }
     .sf-adv-row .sf-adv-btn{
-      font: inherit;           /* no bold / consistent type */
-      letter-spacing: inherit; /* consistent with preset chips */
+      font: inherit;
+      letter-spacing: inherit;
     }
-
-    /* Prevent odd grey "active" flash on some browsers while keeping accessibility */
     .sf-adv-row .sf-adv-btn:active{
       transform: none;
       filter: none;
       opacity: 1;
+    }
+
+    /* Requested textarea inversion */
+    html[data-theme="dark"] #signed-body,
+    html[data-theme="dark"] #rolling-body,
+    html[data-theme="dark"] #delvee-pulse-text{
+      background: #ffffff !important;
+      color: #0b0c0f !important;
+      border-color: rgba(0,0,0,0.18) !important;
+    }
+    html[data-theme="light"] #signed-body,
+    html[data-theme="light"] #rolling-body,
+    html[data-theme="light"] #delvee-pulse-text{
+      background: #0b0c0f !important;
+      color: #ffffff !important;
+      border-color: rgba(255,255,255,0.18) !important;
+    }
+
+    /* Delvee lobby block - calm but clearly separate */
+    .delvee-card{
+      margin-top: var(--s-6, 22px);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 16px;
+      padding: var(--s-4, 16px);
+    }
+    html[data-theme="light"] .delvee-card{
+      border-color: rgba(0,0,0,0.12);
+    }
+
+    .delvee-grid{
+      display:grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: var(--s-4, 16px);
+    }
+    @media (max-width: 900px){
+      .delvee-grid{ grid-template-columns: 1fr; }
+    }
+
+    .delvee-feed{
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 12px;
+      height: 300px;
+      overflow: auto;
+    }
+    html[data-theme="light"] .delvee-feed{
+      border-color: rgba(0,0,0,0.12);
+    }
+
+    .delvee-item{
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+    html[data-theme="light"] .delvee-item{
+      background: rgba(0,0,0,0.04);
+      border-color: rgba(0,0,0,0.08);
+    }
+
+    .delvee-item .meta{
+      font-size: 12px;
+      opacity: 0.75;
+      margin-bottom: 6px;
+    }
+
+    .delvee-thumb{
+      max-width: 100%;
+      border-radius: 10px;
+      display:block;
+      margin-top: 8px;
+    }
+
+    .delvee-row{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .delvee-kv{
+      display:grid;
+      grid-template-columns: 120px 1fr;
+      gap: 8px 12px;
+      font-size: 14px;
+      opacity: 0.92;
+    }
+    .delvee-kv code{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .delvee-chat{
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 12px;
+      height: 220px;
+      overflow:auto;
+    }
+    html[data-theme="light"] .delvee-chat{
+      border-color: rgba(0,0,0,0.12);
+    }
+
+    .delvee-chat-msg{
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      margin-bottom: 8px;
+    }
+    html[data-theme="light"] .delvee-chat-msg{
+      background: rgba(0,0,0,0.04);
+      border-color: rgba(0,0,0,0.08);
+    }
+
+    .delvee-chat-meta{
+      font-size: 12px;
+      opacity: 0.75;
+      margin-bottom: 4px;
     }
   </style>
 </head>
@@ -119,7 +237,6 @@
       <a class="brand-mark" href="./" aria-label="Setfeed home">
         <img class="logo" src="./logo.png" alt="" aria-hidden="true" />
       </a>
-
       <a class="brand-title" href="./">Setfeed</a>
 
       <nav class="nav" aria-label="Primary">
@@ -188,7 +305,7 @@
               </p>
             </div>
 
-            <!-- Top slot for Status when signed in (replaces video area) -->
+            <!-- Top slot for Status when signed in -->
             <div id="status-slot-top" class="sf-status-slot hidden"></div>
 
             <div class="video-card" id="video-signed" aria-label="Walkthrough">
@@ -233,18 +350,15 @@
             <h2>Delivery</h2>
             <div class="panel">
               <p class="panel-sub" id="signed-delivery-sub" style="margin-bottom: var(--s-3);">
-                Signed sends can schedule sooner (e.g., Delvee in 2–3 minutes, 10 minutes / 1 hour) or use tomorrow presets.
+                Sign in (Email link or Google) to send Signed (Secure / Personal).
               </p>
 
-              <!-- Preset time chips (tomorrow) -->
               <div class="chips" aria-label="Tomorrow preset times (signed)" id="signed-preset-chips">
                 <button class="chip" type="button" aria-pressed="false" data-time="08:00">8am</button>
                 <button class="chip" type="button" aria-pressed="true"  data-time="13:00">1pm</button>
                 <button class="chip" type="button" aria-pressed="false" data-time="18:00">6pm</button>
               </div>
 
-              <!-- Advanced options (only when signed in) -->
-              <!-- IMPORTANT: these reuse .chip styling to match presets exactly -->
               <div class="sf-adv-row hidden" id="signed-advanced-row" aria-label="Signed advanced delivery">
                 <button class="chip sf-adv-btn" type="button" aria-pressed="true"  data-mode="preset">Tomorrow preset</button>
                 <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="2m">Delvee in 2</button>
@@ -254,9 +368,88 @@
               </div>
 
               <small class="help" id="signed-delivery-help" style="margin-top: 10px;">
-                Delvee is a short-delay surprise drop. Recipient should keep Inbox open for precise timing.
+                Rolling is always available without signing in.
               </small>
             </div>
+
+            <!-- Delvee Lobby (beta) -->
+            <div class="delvee-card hidden" id="delvee-card" aria-label="Delvee lobby">
+              <h2 style="margin-top:0;">Delvee Lobby (beta)</h2>
+              <p class="panel-sub" style="margin-top:6px;">
+                Live preview during the event. Anonymous feed. Chat during cooldown. Summary unlocks after ~5 minutes.
+              </p>
+
+              <div class="delvee-grid">
+                <!-- Left: controls -->
+                <div>
+                  <div class="field">
+                    <label for="delvee-alias">Alias (2–18)</label>
+                    <input id="delvee-alias" type="text" inputmode="text" placeholder="e.g., Sunflower" />
+                  </div>
+
+                  <div class="delvee-row" style="margin-top: 8px;">
+                    <button class="btn btn-lg" id="btn-delvee-create" type="button">Create lobby (Host)</button>
+
+                    <button class="btn btn-lg" id="btn-delvee-join" type="button">Join with code</button>
+
+                    <input id="delvee-join-code" type="text" inputmode="text" placeholder="DV-XXXXXX" style="flex: 1; min-width: 160px;" />
+                  </div>
+
+                  <div class="note" style="margin-top: 12px;">
+                    <div class="delvee-kv">
+                      <div>Session</div><div><code id="delvee-session-id">—</code></div>
+                      <div>Join code</div><div><code id="delvee-join-code-out">—</code></div>
+                      <div>State</div><div><code id="delvee-state">—</code></div>
+                    </div>
+                  </div>
+
+                  <div class="delvee-row" style="margin-top: 12px;">
+                    <button class="btn btn-secondary" id="btn-delvee-confirm-alias" type="button" disabled>Confirm alias</button>
+                    <button class="btn btn-secondary" id="btn-delvee-ready" type="button" disabled>Ready</button>
+                    <button class="btn btn-primary" id="btn-delvee-start" type="button" disabled>Start (Host)</button>
+                  </div>
+
+                  <hr style="margin: 16px 0; opacity: 0.25;" />
+
+                  <div class="field">
+                    <label for="delvee-pulse-text">Pulse (≤100 chars)</label>
+                    <textarea id="delvee-pulse-text" maxlength="100" placeholder="Short. vivid."></textarea>
+                  </div>
+
+                  <div class="delvee-row">
+                    <button class="btn btn-primary" id="btn-delvee-pulse-text" type="button" disabled>Pulse text</button>
+
+                    <input id="delvee-image-file" type="file" accept="image/*" />
+                    <button class="btn btn-primary" id="btn-delvee-pulse-image" type="button" disabled>Pulse image</button>
+                  </div>
+
+                  <small class="help" id="delvee-timer" style="margin-top: 10px;">—</small>
+
+                  <hr style="margin: 16px 0; opacity: 0.25;" />
+
+                  <h3 style="margin: 0 0 10px 0;">Cooldown chat</h3>
+                  <div class="delvee-chat" id="delvee-chat"></div>
+
+                  <div class="delvee-row" style="margin-top: 10px;">
+                    <input id="delvee-chat-input" type="text" inputmode="text" placeholder="Ask who sent what…" style="flex: 1; min-width: 180px;" />
+                    <button class="btn btn-secondary" id="btn-delvee-chat-send" type="button" disabled>Send</button>
+                  </div>
+
+                  <small class="help" id="delvee-summary-hint" style="margin-top: 10px;">—</small>
+                </div>
+
+                <!-- Right: live preview -->
+                <div>
+                  <h3 style="margin-top:0;">Live preview</h3>
+                  <div class="delvee-feed" id="delvee-feed"></div>
+
+                  <small class="help" style="margin-top: 10px;">
+                    Feed is anonymous by design. Use chat during cooldown for “who sent what”.
+                  </small>
+                </div>
+              </div>
+            </div>
+            <!-- /Delvee -->
           </div>
         </div>
       </div>
@@ -332,7 +525,7 @@
         </div>
       </div>
 
-      <!-- Status container (this box moves between slots) -->
+      <!-- Status container -->
       <div id="status-slot-bottom">
         <h2>Status</h2>
         <div class="status" id="status-box" role="status" aria-live="polite">
@@ -360,14 +553,11 @@
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
 
-    // -------------------------
     // Tabs
-    // -------------------------
     const tabSigned = document.getElementById("tab-signed");
     const tabRolling = document.getElementById("tab-rolling");
     const panelSigned = document.getElementById("panel-signed");
     const panelRolling = document.getElementById("panel-rolling");
-
     function setTab(which) {
       const signed = which === "signed";
       tabSigned.setAttribute("aria-selected", signed ? "true" : "false");
@@ -378,13 +568,10 @@
     tabSigned.addEventListener("click", () => setTab("signed"));
     tabRolling.addEventListener("click", () => setTab("rolling"));
 
-    // -------------------------
     // Status helper
-    // -------------------------
     const statusDot = document.getElementById("status-dot");
     const statusTitle = document.getElementById("status-title");
     const statusLine = document.getElementById("status-line");
-
     function setStatus(kind, title, line) {
       statusDot.className = "dot";
       if (kind === "good") statusDot.classList.add("good");
@@ -393,9 +580,7 @@
       statusLine.textContent = line;
     }
 
-    // -------------------------
     // Elements
-    // -------------------------
     const signedEmail = document.getElementById("signed-email");
     const signedCode = document.getElementById("signed-code");
     const signedBody = document.getElementById("signed-body");
@@ -423,9 +608,7 @@
     const statusSlotTop = document.getElementById("status-slot-top");
     const statusSlotBottom = document.getElementById("status-slot-bottom");
 
-    // -------------------------
-    // Auth (real)
-    // -------------------------
+    // Auth
     const AUTH_KEY = "sf_signed_authed";
     const EMAIL_FOR_SIGNIN_KEY = "sf_email_for_signin";
     const auth = firebase.auth();
@@ -434,23 +617,16 @@
       try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
       document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
     }
-
     function refreshSignedSendEnabled(isAuthed) {
-      const canSend = isAuthed
-        && signedCode.value.trim().length > 0
-        && signedBody.value.trim().length > 0;
+      const canSend = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
       btnSignedSend.disabled = !canSend;
     }
-
     function refreshRollingSendEnabled() {
-      const canSend = rollingCodeInput.value.trim().length > 0
-        && rollingBodyInput.value.trim().length > 0;
+      const canSend = rollingCodeInput.value.trim().length > 0 && rollingBodyInput.value.trim().length > 0;
       btnRollingSend.disabled = !canSend;
     }
-
     function moveStatusToTop(isAuthed) {
       if (!statusBox || !statusSlotTop || !statusSlotBottom) return;
-
       if (isAuthed) {
         statusSlotTop.classList.remove("hidden");
         statusSlotBottom.classList.add("hidden");
@@ -458,10 +634,55 @@
       } else {
         statusSlotTop.classList.add("hidden");
         statusSlotBottom.classList.remove("hidden");
-        statusSlotBottom.querySelector(".status-title") || statusSlotBottom.appendChild(statusBox);
+        statusSlotBottom.appendChild(statusBox);
       }
     }
 
+    // -------------------------
+    // Delvee elements
+    // -------------------------
+    const delveeCard = document.getElementById("delvee-card");
+    const delveeAlias = document.getElementById("delvee-alias");
+    const btnDelveeCreate = document.getElementById("btn-delvee-create");
+    const btnDelveeJoin = document.getElementById("btn-delvee-join");
+    const delveeJoinCodeInput = document.getElementById("delvee-join-code");
+    const btnDelveeConfirmAlias = document.getElementById("btn-delvee-confirm-alias");
+    const btnDelveeReady = document.getElementById("btn-delvee-ready");
+    const btnDelveeStart = document.getElementById("btn-delvee-start");
+    const delveeSessionIdEl = document.getElementById("delvee-session-id");
+    const delveeJoinCodeOutEl = document.getElementById("delvee-join-code-out");
+    const delveeStateEl = document.getElementById("delvee-state");
+
+    const delveePulseText = document.getElementById("delvee-pulse-text");
+    const btnDelveePulseText = document.getElementById("btn-delvee-pulse-text");
+    const delveeImageFile = document.getElementById("delvee-image-file");
+    const btnDelveePulseImage = document.getElementById("btn-delvee-pulse-image");
+    const delveeFeed = document.getElementById("delvee-feed");
+    const delveeTimer = document.getElementById("delvee-timer");
+
+    const delveeChat = document.getElementById("delvee-chat");
+    const delveeChatInput = document.getElementById("delvee-chat-input");
+    const btnDelveeChatSend = document.getElementById("btn-delvee-chat-send");
+    const delveeSummaryHint = document.getElementById("delvee-summary-hint");
+
+    let delvee = {
+      sessionId: "",
+      joinCode: "",
+      sessionSaltB64: "",
+      state: "",
+      endAtUtc: "",
+      cooldownEndsAtMillis: null,
+      isHost: false,
+      aliasConfirmed: false,
+      ready: false,
+      sinceSequence: 0,
+      lastChatCreatedAtUtc: null,
+      pollTimer: null
+    };
+
+    // -------------------------
+    // Auth UI render
+    // -------------------------
     function renderAuthUI(user) {
       const isAuthed = !!user;
 
@@ -492,20 +713,23 @@
 
       if (signedDeliverySub && signedDeliveryHelp) {
         if (isAuthed) {
-          signedDeliverySub.textContent = "Signed in: Delvee in 2–3, 10 minutes / 1 hour, or tomorrow presets.";
-          signedDeliveryHelp.textContent = "Delvee is a short-delay surprise drop. Recipient should keep Inbox open for precise timing.";
+          // ✅ requested copy
+          signedDeliverySub.textContent = "Signed in: Delvee 2-3 minute delay available.";
+          signedDeliveryHelp.textContent = "Delvee delays are for short surprise drops. Inbox open = tighter timing.";
         } else {
           signedDeliverySub.textContent = "Sign in (Email link or Google) to send Signed (Secure / Personal).";
           signedDeliveryHelp.textContent = "Rolling is always available without signing in.";
         }
       }
 
+      // Show Delvee lobby only when authed
+      if (delveeCard) delveeCard.classList.toggle("hidden", !isAuthed);
+
       refreshSignedSendEnabled(isAuthed);
-      // Apply guardrails after auth render (so the send button state is correct)
       setBodyCodeErrorIfNeeded(true);
       setBodyCodeErrorIfNeeded(false);
+      refreshDelveeButtons();
     }
-
     auth.onAuthStateChanged((user) => renderAuthUI(user));
 
     // Google popup
@@ -522,21 +746,16 @@
       }
     });
 
-    // Email link (passwordless)
+    // Email link sign-in
     btnSendLink.addEventListener("click", async () => {
       const email = signedEmail.value.trim();
       if (!email) {
         setStatus("warn", "Email needed", "Enter your email to request a sign-in link.");
         return;
       }
-
       try {
         setStatus("good", "Sending link…", "Check your inbox for the sign-in link.");
-        const actionCodeSettings = {
-          url: `${SITE_ORIGIN}/send.html#finishSignIn`,
-          handleCodeInApp: true
-        };
-
+        const actionCodeSettings = { url: `${SITE_ORIGIN}/send.html#finishSignIn`, handleCodeInApp: true };
         await auth.sendSignInLinkToEmail(email, actionCodeSettings);
         try { localStorage.setItem(EMAIL_FOR_SIGNIN_KEY, email); } catch (_) {}
         setStatus("good", "Link sent", "Open the link from your email on this device to finish signing in.");
@@ -546,7 +765,6 @@
       }
     });
 
-    // Complete email-link sign-in if present
     (async function finishEmailLinkIfPresent(){
       try {
         const href = window.location.href;
@@ -561,10 +779,8 @@
             return;
           }
         }
-
         setStatus("good", "Signing in…", "Finishing email-link sign-in…");
         await auth.signInWithEmailLink(email, href);
-
         try { localStorage.removeItem(EMAIL_FOR_SIGNIN_KEY); } catch (_) {}
         setStatus("good", "Signed in", "You can send Signed messages now.");
         history.replaceState(null, "", "./send.html#signin");
@@ -584,16 +800,13 @@
       }
     });
 
-    btnGoInbox.addEventListener("click", () => {
-      window.location.href = "./inbox.html";
-    });
+    btnGoInbox.addEventListener("click", () => { window.location.href = "./inbox.html"; });
 
     // -------------------------
-    // Scheduling UI state
+    // Scheduling UI
     // -------------------------
     let signedPresetTime = "13:00";
-    let signedMode = "preset"; // "preset" | "2m" | "3m" | "10m" | "1h"
-
+    let signedMode = "preset";
     const signedPresetChips = Array.from(document.querySelectorAll('#signed-preset-chips .chip[data-time]'));
     const signedAdvBtns = Array.from(document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]'));
 
@@ -607,34 +820,22 @@
         b.setAttribute("aria-pressed", (t === signedPresetTime) ? "true" : "false");
       });
     }
-
     function setSignedMode(nextMode) {
       signedMode = nextMode || "preset";
-
-      // highlight the chosen advanced button
       signedAdvBtns.forEach(b => b.setAttribute("aria-pressed", "false"));
       const btn = signedAdvBtns.find(b => (b.getAttribute("data-mode") || "") === signedMode);
       if (btn) btn.setAttribute("aria-pressed", "true");
-
-      // If not preset, remove highlight from preset chips to avoid confusion
       if (signedMode !== "preset") setSignedPresetHighlightVisible(false);
       else setSignedPresetHighlightVisible(true);
     }
-
-    signedPresetChips.forEach(btn => {
-      btn.addEventListener("click", () => {
-        signedPresetTime = btn.getAttribute("data-time") || "13:00";
-        setSignedMode("preset");
-      });
-    });
-
-    signedAdvBtns.forEach(btn => {
-      btn.addEventListener("click", () => {
-        const mode = btn.getAttribute("data-mode") || "preset";
-        // CRITICAL: ensure 10m/1h actually set signedMode, otherwise it would fall back to preset (1pm).
-        setSignedMode(mode);
-      });
-    });
+    signedPresetChips.forEach(btn => btn.addEventListener("click", () => {
+      signedPresetTime = btn.getAttribute("data-time") || "13:00";
+      setSignedMode("preset");
+    }));
+    signedAdvBtns.forEach(btn => btn.addEventListener("click", () => {
+      const mode = btn.getAttribute("data-mode") || "preset";
+      setSignedMode(mode);
+    }));
 
     let rollingPresetTime = "13:00";
     document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(btn => {
@@ -645,27 +846,14 @@
       });
     });
 
-    // -------------------------
-    // Guardrail: prevent app receive codes inside message body
-    // (Setfeed = text. Delvee = images.)
-    // From your Android ReceiveCodeService:
-    // - Personal: SF-XXXX-XXXX
-    // - Secure:   SFS-<HIGH ENTROPY>
-    // - Rolling:  SFR-<HIGH ENTROPY>
-    // -------------------------
+    // Guardrail: prevent receive codes in message body
     function messageContainsSetfeedReceiveCode(text) {
       const s = String(text || "");
-
-      // Match the known prefixes anywhere in the body.
-      // Also tolerate whitespace/newlines around hyphens.
       const hasPrefixed =
         /\bSF\s*-\s*[A-Z0-9]{4}\s*-\s*[A-Z0-9]{4}\b/i.test(s) ||
         /\bSFS\s*-\s*[A-Z0-9]{10,}\b/i.test(s) ||
         /\bSFR\s*-\s*[A-Z0-9]{10,}\b/i.test(s);
-
       if (hasPrefixed) return true;
-
-      // Conservative fallback: code-ish tokens like ABCDEF-ABCDEF(-ABCDEF) that are long enough.
       const tokens = s.match(/[A-Za-z0-9]{4,}(?:\s*-\s*[A-Za-z0-9]{4,}){1,}/g) || [];
       return tokens.some(t => {
         const tok = t.replace(/\s+/g, "");
@@ -675,11 +863,9 @@
 
     function applyBodyGuardrails() {
       const isAuthed = !!auth.currentUser;
-
       const signedHas = messageContainsSetfeedReceiveCode(signedBody.value);
       const rollingHas = messageContainsSetfeedReceiveCode(rollingBodyInput.value);
 
-      // If either is present, show the rule clearly (Status is global).
       if (signedHas || rollingHas) {
         setStatus(
           "warn",
@@ -688,7 +874,6 @@
         );
       }
 
-      // Recompute enablement with the guardrail applied.
       const signedBase = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
       btnSignedSend.disabled = !(signedBase && !signedHas);
 
@@ -697,21 +882,13 @@
 
       return { signedOk: !signedHas, rollingOk: !rollingHas };
     }
-
-    // keep this for renderAuthUI compatibility
     function setBodyCodeErrorIfNeeded(isSigned) {
-      // Delegate to a single source of truth so button state can't drift.
       const res = applyBodyGuardrails();
       return isSigned ? res.signedOk : res.rollingOk;
     }
 
-    // -------------------------
     // Crypto helpers (WebCrypto)
-    // -------------------------
-    function normalizeCodeAndroid(raw) {
-      return raw.trim().toUpperCase().replace(/[\s-]/g, "");
-    }
-
+    function normalizeCodeAndroid(raw) { return raw.trim().toUpperCase().replace(/[\s-]/g, ""); }
     function bytesToB64(bytes) {
       let binary = "";
       const chunk = 0x8000;
@@ -720,15 +897,12 @@
       }
       return btoa(binary);
     }
-
     function abToB64(ab) { return bytesToB64(new Uint8Array(ab)); }
-
     async function sha256Hex(str) {
       const data = new TextEncoder().encode(str);
       const hash = await crypto.subtle.digest("SHA-256", data);
       return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
     }
-
     async function deriveAesKeyFromPassphrase(passphrase, saltBytes) {
       const passBytes = new TextEncoder().encode(passphrase);
       const baseKey = await crypto.subtle.importKey("raw", passBytes, { name: "PBKDF2" }, false, ["deriveKey"]);
@@ -740,16 +914,13 @@
         ["encrypt", "decrypt"]
       );
     }
-
     async function encryptBodyForCode(rawCode, plaintext) {
       const passphrase = normalizeCodeAndroid(rawCode);
       const salt = crypto.getRandomValues(new Uint8Array(16));
       const iv = crypto.getRandomValues(new Uint8Array(12));
-
       const key = await deriveAesKeyFromPassphrase(passphrase, salt);
       const ptBytes = new TextEncoder().encode(plaintext);
       const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, ptBytes);
-
       return {
         ciphertextB64: abToB64(ct),
         ivB64: bytesToB64(iv),
@@ -758,31 +929,47 @@
       };
     }
 
-    function getUserTimezone() {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    // Delvee session key (shared among participants): joinCodeNormalized + sessionSalt
+    async function deriveDelveeSessionKey(joinCode, sessionSaltB64) {
+      const passphrase = joinCode.trim().toUpperCase().replace(/[\s-]/g, "");
+      const salt = Uint8Array.from(atob(sessionSaltB64), c => c.charCodeAt(0));
+      return await deriveAesKeyFromPassphrase(passphrase, salt);
+    }
+    async function encryptWithSessionKey(key, plaintext) {
+      const salt = crypto.getRandomValues(new Uint8Array(16)); // still used to match envelope format (fine)
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ptBytes = new TextEncoder().encode(plaintext);
+      const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, ptBytes);
+      return { ciphertextB64: abToB64(ct), ivB64: bytesToB64(iv), saltB64: bytesToB64(salt) };
+    }
+    async function decryptWithSessionKey(key, ciphertextB64, ivB64) {
+      try {
+        const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
+        const ct = Uint8Array.from(atob(ciphertextB64), c => c.charCodeAt(0));
+        const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
+        return new TextDecoder().decode(pt);
+      } catch (_) {
+        return null;
+      }
     }
 
+    function getUserTimezone() { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; }
     function pad2(n) { return String(n).padStart(2, "0"); }
-
     function toLocalIsoWithOffset(date) {
       const d = new Date(date.getTime());
       d.setSeconds(0, 0);
-
       const offMin = -d.getTimezoneOffset();
       const sign = offMin >= 0 ? "+" : "-";
       const abs = Math.abs(offMin);
       const offH = pad2(Math.floor(abs / 60));
       const offM = pad2(abs % 60);
-
       const yyyy = d.getFullYear();
       const mon = pad2(d.getMonth() + 1);
       const day = pad2(d.getDate());
       const hour = pad2(d.getHours());
       const minute = pad2(d.getMinutes());
-
       return `${yyyy}-${mon}-${day}T${hour}:${minute}:00${sign}${offH}:${offM}`;
     }
-
     function deliverAtLocalIsoTomorrow(presetHHMM) {
       const now = new Date();
       const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12, 0, 0, 0);
@@ -790,52 +977,27 @@
       tomorrow.setHours(hh, mm, 0, 0);
       return toLocalIsoWithOffset(tomorrow);
     }
-
     function deliverAtLocalIsoInMinutes(minutes) {
       const d = new Date(Date.now() + minutes * 60 * 1000);
       d.setSeconds(0, 0);
       return toLocalIsoWithOffset(d);
     }
+    function randomClientRequestId(prefix) { return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 
-    function randomClientRequestId(prefix) {
-      return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    }
-
-    // -------------------------
-    // Send handlers
-    // -------------------------
-    signedCode.addEventListener("input", () => {
-      refreshSignedSendEnabled(!!auth.currentUser);
-      applyBodyGuardrails();
-    });
-    signedBody.addEventListener("input", () => {
-      refreshSignedSendEnabled(!!auth.currentUser);
-      applyBodyGuardrails();
-    });
-    rollingCodeInput.addEventListener("input", () => {
-      refreshRollingSendEnabled();
-      applyBodyGuardrails();
-    });
-    rollingBodyInput.addEventListener("input", () => {
-      refreshRollingSendEnabled();
-      applyBodyGuardrails();
-    });
+    // Send handlers (Setfeed)
+    signedCode.addEventListener("input", () => { refreshSignedSendEnabled(!!auth.currentUser); applyBodyGuardrails(); });
+    signedBody.addEventListener("input", () => { refreshSignedSendEnabled(!!auth.currentUser); applyBodyGuardrails(); });
+    rollingCodeInput.addEventListener("input", () => { refreshRollingSendEnabled(); applyBodyGuardrails(); });
+    rollingBodyInput.addEventListener("input", () => { refreshRollingSendEnabled(); applyBodyGuardrails(); });
 
     btnSignedSend.addEventListener("click", async () => {
       const user = auth.currentUser;
       const code = signedCode.value.trim();
       const body = signedBody.value.trim();
-
       if (!setBodyCodeErrorIfNeeded(true)) return;
 
-      if (!user) {
-        setStatus("warn", "Sign-in required", "Sign in (Email link or Google) to send Signed messages.");
-        return;
-      }
-      if (!code || !body) {
-        setStatus("warn", "Missing details", "Add a code and a message, then try again.");
-        return;
-      }
+      if (!user) { setStatus("warn", "Sign-in required", "Sign in (Email link or Google) to send Signed messages."); return; }
+      if (!code || !body) { setStatus("warn", "Missing details", "Add a code and a message, then try again."); return; }
 
       try {
         setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
@@ -866,7 +1028,6 @@
 
         setStatus("good", "Scheduled", "Redirecting to Inbox…");
         window.location.href = "./inbox.html";
-        return;
       } catch (e) {
         console.error(e);
         const msg = (e && e.message) ? e.message : "Something went wrong while scheduling the message. Try again.";
@@ -877,13 +1038,9 @@
     btnRollingSend.addEventListener("click", async () => {
       const code = rollingCodeInput.value.trim();
       const body = rollingBodyInput.value.trim();
-
       if (!setBodyCodeErrorIfNeeded(false)) return;
 
-      if (!code || !body) {
-        setStatus("warn", "Missing details", "Add a rolling code and a message, then try again.");
-        return;
-      }
+      if (!code || !body) { setStatus("warn", "Missing details", "Add a rolling code and a message, then try again."); return; }
 
       try {
         setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
@@ -898,9 +1055,7 @@
         try {
           const provision = functions.httpsCallable("provisionRollingEnvelope");
           await provision({ codeHash });
-        } catch (e) {
-          console.warn("[Rolling] provision failed (continuing):", e);
-        }
+        } catch (e) { console.warn("[Rolling] provision failed (continuing):", e); }
 
         const callable = functions.httpsCallable("sendRollingCiphertext");
         await callable({
@@ -915,7 +1070,6 @@
 
         setStatus("good", "Scheduled", "Redirecting to Inbox…");
         window.location.href = "./inbox.html";
-        return;
       } catch (e) {
         console.error(e);
         const code = e && e.code ? e.code : "";
@@ -925,25 +1079,494 @@
     });
 
     btnSignedClear.addEventListener("click", () => {
-      signedCode.value = "";
-      signedBody.value = "";
-      refreshSignedSendEnabled(!!auth.currentUser);
-      applyBodyGuardrails();
+      signedCode.value = ""; signedBody.value = "";
+      refreshSignedSendEnabled(!!auth.currentUser); applyBodyGuardrails();
       setStatus("warn", "Cleared", "Signed send fields cleared.");
     });
-
     btnRollingClear.addEventListener("click", () => {
-      rollingCodeInput.value = "";
-      rollingBodyInput.value = "";
-      refreshRollingSendEnabled();
-      applyBodyGuardrails();
+      rollingCodeInput.value = ""; rollingBodyInput.value = "";
+      refreshRollingSendEnabled(); applyBodyGuardrails();
       setStatus("warn", "Cleared", "Rolling send fields cleared.");
+    });
+
+    // -------------------------
+    // Delvee UI logic (polling via callables)
+    // -------------------------
+    function refreshDelveeButtons() {
+      const authed = !!auth.currentUser;
+      const inSession = !!delvee.sessionId;
+      const inLobby = delvee.state === "LOBBY";
+      const running = delvee.state === "RUNNING";
+      const cooldown = delvee.state === "COOLDOWN";
+      const ended = delvee.state === "ENDED";
+
+      btnDelveeConfirmAlias.disabled = !(authed && inSession && inLobby);
+      btnDelveeReady.disabled = !(authed && inSession && inLobby && delvee.aliasConfirmed);
+      btnDelveeStart.disabled = !(authed && inSession && inLobby && delvee.isHost);
+
+      btnDelveePulseText.disabled = !(authed && inSession && running && (delveePulseText.value.trim().length > 0));
+      btnDelveePulseImage.disabled = !(authed && inSession && running && (delveeImageFile.files && delveeImageFile.files.length > 0));
+
+      btnDelveeChatSend.disabled = !(authed && inSession && cooldown && (delveeChatInput.value.trim().length > 0));
+      delveeChatInput.disabled = !(authed && inSession && cooldown);
+    }
+
+    function setDelveeState(next) {
+      delvee.state = next || "";
+      delveeStateEl.textContent = delvee.state || "—";
+      refreshDelveeButtons();
+    }
+
+    function setDelveeSessionFields() {
+      delveeSessionIdEl.textContent = delvee.sessionId || "—";
+      delveeJoinCodeOutEl.textContent = delvee.joinCode || "—";
+      setDelveeState(delvee.state);
+    }
+
+    function stopDelveePolling() {
+      if (delvee.pollTimer) clearInterval(delvee.pollTimer);
+      delvee.pollTimer = null;
+    }
+
+    function startDelveePolling() {
+      stopDelveePolling();
+      if (!delvee.sessionId) return;
+
+      const pollEveryMs = () => {
+        if (delvee.state === "RUNNING") return 2000;
+        if (delvee.state === "COOLDOWN") return 2500;
+        return 5000;
+      };
+
+      let currentInterval = pollEveryMs();
+      delvee.pollTimer = setInterval(async () => {
+        const next = pollEveryMs();
+        if (next !== currentInterval) {
+          currentInterval = next;
+          stopDelveePolling();
+          startDelveePolling();
+          return;
+        }
+        await Promise.allSettled([pollDelveeFeed(), pollDelveeParticipants(), pollDelveeChat()]);
+        updateDelveeTimerUI();
+      }, currentInterval);
+    }
+
+    async function pollDelveeParticipants() {
+      if (!delvee.sessionId) return;
+      const callable = functions.httpsCallable("delveeListParticipants");
+      const res = await callable({ sessionId: delvee.sessionId });
+      const d = res.data || {};
+      setDelveeState(d.state || delvee.state);
+
+      const hostUid = d.hostUid || "";
+      const uid = auth.currentUser ? auth.currentUser.uid : "";
+      delvee.isHost = !!uid && uid === hostUid;
+
+      // (We don’t render participant list in this page to keep it calm — but you can extend.)
+      refreshDelveeButtons();
+    }
+
+    async function pollDelveeFeed() {
+      if (!delvee.sessionId) return;
+
+      const callable = functions.httpsCallable("delveeListLiveFeed");
+      const res = await callable({ sessionId: delvee.sessionId, sinceSequence: delvee.sinceSequence });
+      const d = res.data || {};
+      setDelveeState(d.state || delvee.state);
+
+      delvee.endAtUtc = d.endAtUtc || delvee.endAtUtc;
+      delvee.cooldownEndsAtMillis = d.cooldownEndsAtMillis ?? delvee.cooldownEndsAtMillis;
+
+      const items = Array.isArray(d.items) ? d.items : [];
+      if (items.length === 0) return;
+
+      // Update cursor
+      const maxSeq = items.reduce((m, it) => Math.max(m, Number(it.sequence || 0)), delvee.sinceSequence);
+      delvee.sinceSequence = maxSeq;
+
+      // Decrypt + render
+      const sessionKey = await deriveDelveeSessionKey(delvee.joinCode, delvee.sessionSaltB64);
+
+      for (const it of items) {
+        const type = it.type || "TEXT";
+        const seq = Number(it.sequence || 0);
+
+        if (type === "TEXT") {
+          const text = await decryptWithSessionKey(sessionKey, it.ciphertext, it.ivB64);
+          appendDelveeItem({
+            seq,
+            kind: "Text",
+            text: text || "(couldn’t decrypt)"
+          });
+        } else {
+          // show placeholder; thumbnail fetched lazily
+          const itemId = it.itemId;
+          appendDelveeItem({
+            seq,
+            kind: "Image",
+            text: "Image pulse"
+          });
+
+          // Fetch encrypted bytes via signed URL then decrypt client-side and show thumbnail.
+          // Keep it optional & resilient — if it fails, preview still works.
+          if (itemId && it.storagePath && it.ivB64) {
+            fetchAndRenderDelveeImage(sessionKey, itemId, it.ivB64, it.saltB64).catch(() => {});
+          }
+        }
+      }
+
+      // Auto-scroll to bottom
+      delveeFeed.scrollTop = delveeFeed.scrollHeight;
+    }
+
+    function appendDelveeItem({ seq, kind, text }) {
+      const el = document.createElement("div");
+      el.className = "delvee-item";
+      el.setAttribute("data-seq", String(seq));
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = `#${seq} · ${kind}`;
+      el.appendChild(meta);
+
+      const body = document.createElement("div");
+      body.textContent = text;
+      el.appendChild(body);
+
+      delveeFeed.appendChild(el);
+    }
+
+    async function fetchAndRenderDelveeImage(sessionKey, itemId, ivB64, saltB64) {
+      // Avoid duplicating thumbnails
+      if (delveeFeed.querySelector(`[data-thumb="${itemId}"]`)) return;
+
+      const callable = functions.httpsCallable("delveeCreateItemDownloadUrl");
+      const res = await callable({ sessionId: delvee.sessionId, itemId });
+      const d = res.data || {};
+      const url = d.downloadUrl;
+      if (!url) return;
+
+      const r = await fetch(url);
+      if (!r.ok) return;
+      const buf = await r.arrayBuffer();
+
+      // Decrypt using sessionKey (AES-GCM) with iv from item
+      // NOTE: We ignore saltB64 at decrypt time because our sessionKey derivation is already salted by sessionSalt.
+      // The salt field is kept for compatibility / future evolution.
+      const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
+      let plain;
+      try {
+        plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, sessionKey, buf);
+      } catch (_) {
+        return;
+      }
+
+      const blob = new Blob([plain]);
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Attach thumb to last matching image item (best-effort)
+      const container = Array.from(delveeFeed.querySelectorAll(".delvee-item")).reverse().find(x => x.textContent.includes("Image pulse"));
+      if (!container) return;
+
+      const img = document.createElement("img");
+      img.className = "delvee-thumb";
+      img.src = blobUrl;
+      img.alt = "Delvee image";
+      img.setAttribute("data-thumb", itemId);
+
+      container.appendChild(img);
+    }
+
+    function updateDelveeTimerUI() {
+      const st = delvee.state;
+      if (st === "RUNNING" && delvee.endAtUtc) {
+        const left = Math.max(0, Date.parse(delvee.endAtUtc) - Date.now());
+        const s = Math.floor(left / 1000);
+        const mm = Math.floor(s / 60);
+        const ss = String(s % 60).padStart(2, "0");
+        delveeTimer.textContent = `Event running · ${mm}:${ss} remaining`;
+        delveeSummaryHint.textContent = "—";
+      } else if (st === "COOLDOWN" && typeof delvee.cooldownEndsAtMillis === "number") {
+        const left = Math.max(0, delvee.cooldownEndsAtMillis - Date.now());
+        const s = Math.floor(left / 1000);
+        const mm = Math.floor(s / 60);
+        const ss = String(s % 60).padStart(2, "0");
+        delveeTimer.textContent = `Cooldown · ${mm}:${ss} until summary`;
+        delveeSummaryHint.textContent = "Summary will unlock automatically after cooldown.";
+      } else if (st === "ENDED") {
+        delveeTimer.textContent = "Ended";
+        delveeSummaryHint.textContent = "Summary ready (call delveeGetSessionSummary from a dedicated page next).";
+      } else {
+        delveeTimer.textContent = st ? `State: ${st}` : "—";
+        delveeSummaryHint.textContent = "—";
+      }
+    }
+
+    // Chat polling
+    async function pollDelveeChat() {
+      if (!delvee.sessionId) return;
+      if (delvee.state !== "COOLDOWN") return;
+
+      const callable = functions.httpsCallable("delveeListChat");
+      const res = await callable({ sessionId: delvee.sessionId, sinceCreatedAtUtc: delvee.lastChatCreatedAtUtc });
+      const d = res.data || {};
+      const messages = Array.isArray(d.messages) ? d.messages : [];
+      if (messages.length === 0) return;
+
+      for (const m of messages) {
+        const el = document.createElement("div");
+        el.className = "delvee-chat-msg";
+
+        const meta = document.createElement("div");
+        meta.className = "delvee-chat-meta";
+        meta.textContent = m.alias || "Anon";
+        el.appendChild(meta);
+
+        const body = document.createElement("div");
+        body.textContent = m.message || "";
+        el.appendChild(body);
+
+        delveeChat.appendChild(el);
+        delvee.lastChatCreatedAtUtc = m.createdAtUtc || delvee.lastChatCreatedAtUtc;
+      }
+
+      delveeChat.scrollTop = delveeChat.scrollHeight;
+    }
+
+    // Delvee actions
+    btnDelveeCreate.addEventListener("click", async () => {
+      if (!auth.currentUser) { setStatus("warn", "Sign-in required", "Sign in to use Delvee lobby."); return; }
+      const alias = delveeAlias.value.trim();
+      if (!alias) { setStatus("warn", "Alias needed", "Enter an alias (2–18) before creating."); return; }
+
+      try {
+        setStatus("good", "Creating…", "Creating Delvee lobby…");
+        const callable = functions.httpsCallable("delveeCreateSession");
+        const res = await callable({ tier: "DELVE4", durationSeconds: 240 });
+        const d = res.data || {};
+
+        delvee.sessionId = d.sessionId || "";
+        delvee.joinCode = d.joinCode || "";
+        delvee.sessionSaltB64 = d.sessionSaltB64 || "";
+        delvee.state = "LOBBY";
+        delvee.isHost = true;
+        delvee.aliasConfirmed = false;
+        delvee.ready = false;
+        delvee.sinceSequence = 0;
+        delvee.lastChatCreatedAtUtc = null;
+
+        setDelveeSessionFields();
+        startDelveePolling();
+
+        // Immediately join as host with chosen alias
+        const join = functions.httpsCallable("delveeJoinSession");
+        await join({ joinCode: delvee.joinCode, alias });
+
+        setStatus("good", "Lobby created", "Share the join code. Confirm alias and ready when everyone is in.");
+        refreshDelveeButtons();
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t create lobby", (e && e.message) ? e.message : "Try again.");
+      }
+    });
+
+    btnDelveeJoin.addEventListener("click", async () => {
+      if (!auth.currentUser) { setStatus("warn", "Sign-in required", "Sign in to join a Delvee lobby."); return; }
+      const alias = delveeAlias.value.trim();
+      const joinCode = delveeJoinCodeInput.value.trim();
+      if (!alias) { setStatus("warn", "Alias needed", "Enter an alias (2–18) before joining."); return; }
+      if (!joinCode) { setStatus("warn", "Join code needed", "Enter a DV-XXXXXX join code."); return; }
+
+      try {
+        setStatus("good", "Joining…", "Joining Delvee lobby…");
+        const callable = functions.httpsCallable("delveeJoinSession");
+        const res = await callable({ joinCode, alias });
+        const d = res.data || {};
+
+        delvee.sessionId = d.sessionId || "";
+        delvee.joinCode = joinCode;
+        delvee.sessionSaltB64 = d.sessionSaltB64 || "";
+        delvee.state = d.state || "LOBBY";
+        delvee.isHost = false;
+        delvee.aliasConfirmed = false;
+        delvee.ready = false;
+        delvee.sinceSequence = 0;
+        delvee.lastChatCreatedAtUtc = null;
+
+        setDelveeSessionFields();
+        startDelveePolling();
+        setStatus("good", "Joined", "Confirm your alias, then ready up.");
+        refreshDelveeButtons();
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t join", (e && e.message) ? e.message : "Try again.");
+      }
+    });
+
+    btnDelveeConfirmAlias.addEventListener("click", async () => {
+      if (!delvee.sessionId) return;
+      try {
+        const callable = functions.httpsCallable("delveeConfirmAlias");
+        await callable({ sessionId: delvee.sessionId });
+        delvee.aliasConfirmed = true;
+        setStatus("good", "Alias confirmed", "You can set Ready now.");
+        refreshDelveeButtons();
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t confirm alias", (e && e.message) ? e.message : "Try again.");
+      }
+    });
+
+    btnDelveeReady.addEventListener("click", async () => {
+      if (!delvee.sessionId) return;
+      try {
+        const next = !delvee.ready;
+        const callable = functions.httpsCallable("delveeSetReady");
+        await callable({ sessionId: delvee.sessionId, ready: next });
+        delvee.ready = next;
+        btnDelveeReady.textContent = next ? "Ready ✓" : "Ready";
+        setStatus("good", "Updated", next ? "You’re ready." : "You’re not ready.");
+        refreshDelveeButtons();
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t update ready", (e && e.message) ? e.message : "Try again.");
+      }
+    });
+
+    btnDelveeStart.addEventListener("click", async () => {
+      if (!delvee.sessionId) return;
+      try {
+        setStatus("good", "Starting…", "Starting event…");
+        const callable = functions.httpsCallable("delveeStartSession");
+        await callable({ sessionId: delvee.sessionId });
+        // Poll will update state
+        setStatus("good", "Started", "Event is running.");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t start", (e && e.message) ? e.message : "Try again.");
+      }
+    });
+
+    delveePulseText.addEventListener("input", refreshDelveeButtons);
+    delveeImageFile.addEventListener("change", refreshDelveeButtons);
+    delveeChatInput.addEventListener("input", refreshDelveeButtons);
+
+    btnDelveePulseText.addEventListener("click", async () => {
+      if (!delvee.sessionId) return;
+      const raw = delveePulseText.value.trim();
+      if (!raw) return;
+
+      try {
+        const sessionKey = await deriveDelveeSessionKey(delvee.joinCode, delvee.sessionSaltB64);
+        const enc = await encryptWithSessionKey(sessionKey, raw);
+
+        const callable = functions.httpsCallable("delveeSubmitSessionTextItem");
+        const clientPulseId = crypto.randomUUID();
+
+        await callable({
+          sessionId: delvee.sessionId,
+          clientPulseId,
+          ciphertext: enc.ciphertextB64,
+          ivB64: enc.ivB64,
+          saltB64: enc.saltB64
+        });
+
+        delveePulseText.value = "";
+        refreshDelveeButtons();
+        setStatus("good", "Pulsed", "Sent to live preview.");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Pulse failed", (e && e.message) ? e.message : "Try again.");
+      }
+    });
+
+    // Image pulse: encrypt locally, upload encrypted bytes, commit
+    async function encryptImageBytes(sessionKey, file) {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, sessionKey, bytes);
+      return {
+        encryptedBytes: new Uint8Array(ct),
+        ivB64: bytesToB64(iv),
+        saltB64: bytesToB64(salt)
+      };
+    }
+
+    btnDelveePulseImage.addEventListener("click", async () => {
+      if (!delvee.sessionId) return;
+      const file = (delveeImageFile.files && delveeImageFile.files[0]) ? delveeImageFile.files[0] : null;
+      if (!file) return;
+
+      try {
+        setStatus("good", "Uploading…", "Encrypting image and uploading…");
+        const sessionKey = await deriveDelveeSessionKey(delvee.joinCode, delvee.sessionSaltB64);
+
+        const enc = await encryptImageBytes(sessionKey, file);
+
+        const uploadCallable = functions.httpsCallable("delveeCreateSessionImageUploadUrl");
+        const upRes = await uploadCallable({
+          sessionId: delvee.sessionId,
+          contentType: file.type || "image/*",
+          sizeBytes: enc.encryptedBytes.byteLength
+        });
+
+        const up = upRes.data || {};
+        const uploadUrl = up.uploadUrl;
+        const uploadToken = up.uploadToken;
+
+        if (!uploadUrl || !uploadToken) throw new Error("Upload URL missing.");
+
+        const put = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": "application/octet-stream" },
+          body: enc.encryptedBytes
+        });
+        if (!put.ok) throw new Error("Upload failed.");
+
+        const commitCallable = functions.httpsCallable("delveeCommitSessionImageItem");
+        const clientPulseId = crypto.randomUUID();
+
+        await commitCallable({
+          sessionId: delvee.sessionId,
+          uploadToken,
+          clientPulseId,
+          ivB64: enc.ivB64,
+          saltB64: enc.saltB64
+        });
+
+        delveeImageFile.value = "";
+        refreshDelveeButtons();
+        setStatus("good", "Pulsed", "Image sent to live preview.");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Image pulse failed", (e && e.message) ? e.message : "Try again.");
+      }
+    });
+
+    btnDelveeChatSend.addEventListener("click", async () => {
+      if (!delvee.sessionId) return;
+      const msg = delveeChatInput.value.trim();
+      if (!msg) return;
+
+      try {
+        const callable = functions.httpsCallable("delveeSendChatMessage");
+        await callable({ sessionId: delvee.sessionId, message: msg });
+        delveeChatInput.value = "";
+        refreshDelveeButtons();
+        await pollDelveeChat();
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Chat failed", (e && e.message) ? e.message : "Try again.");
+      }
     });
 
     // Init
     refreshRollingSendEnabled();
     setSignedMode("preset");
     applyBodyGuardrails();
+    refreshDelveeButtons();
     setStatus("good", "Ready", "App Check is active. Encryption + sending are wired.");
 
     if (window.location.hash && window.location.hash.toLowerCase().includes("signin")) {
