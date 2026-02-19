@@ -139,6 +139,7 @@
 
             <small class="help">
               Fetch calls <strong>fetchSignedEnvelopes</strong> with your code hash. Decrypt happens locally.
+              <strong>Preview is hidden</strong> until you press <strong>Open</strong>.
             </small>
           </div>
 
@@ -227,6 +228,9 @@
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
 
+    // -------------------------
+    // Status helper
+    // -------------------------
     const statusDot = document.getElementById("status-dot");
     const statusTitle = document.getElementById("status-title");
     const statusLine = document.getElementById("status-line");
@@ -239,6 +243,9 @@
       statusLine.textContent = line;
     }
 
+    // -------------------------
+    // Auth
+    // -------------------------
     const AUTH_KEY = "sf_signed_authed";
 
     const btnGoogle = document.getElementById("btn-google");
@@ -288,7 +295,9 @@
       }
     });
 
-    // Crypto helpers (unchanged from your version)
+    // -------------------------
+    // Crypto helpers (WebCrypto)
+    // -------------------------
     function normalizeCodeAndroid(raw) { return raw.trim().toUpperCase().replace(/[\s-]/g, ""); }
 
     function b64ToBytes(b64) {
@@ -345,6 +354,9 @@
       } catch (_) { return "—"; }
     }
 
+    // -------------------------
+    // UI elements
+    // -------------------------
     const codeInput = document.getElementById("code-input");
     const btnFetch = document.getElementById("btn-fetch");
     const btnClear = document.getElementById("btn-clear");
@@ -363,7 +375,9 @@
     }
     renderEmpty();
 
+    // -------------------------
     // Delvex modal hooks
+    // -------------------------
     const delvexModal = document.getElementById("delvex-modal");
     const delvexClose = document.getElementById("delvex-close");
     const delvexOk = document.getElementById("delvex-ok");
@@ -434,6 +448,9 @@
       }
     });
 
+    // -------------------------
+    // Fetch + render (NO PREVIEW)
+    // -------------------------
     async function fetchSignedEnvelopesForCode(rawCode) {
       const normalized = normalizeCodeAndroid(rawCode);
       const codeHash = await sha256Hex(normalized);
@@ -444,6 +461,10 @@
       const payload = (res && res.data) ? res.data : {};
       return Array.isArray(payload.envelopes) ? payload.envelopes : [];
     }
+
+    // We keep plaintext only in-memory, never rendered in the list.
+    // Keyed by signedEnvelopeId.
+    let decryptedById = new Map();
 
     function renderMessages(items){
       msgList.innerHTML = "";
@@ -468,7 +489,8 @@
             </div>
           </div>
 
-          <div class="msg-body">${safeText(it.body)}</div>
+          <!-- IMPORTANT: no plaintext preview -->
+          <div class="msg-body">${safeText("Hidden — press Open")}</div>
 
           <div class="msg-actions">
             <button class="btn btn-secondary" type="button" data-open="${safeText(it.signedEnvelopeId)}">Open</button>
@@ -479,18 +501,25 @@
         msgList.appendChild(card);
       }
 
+      // Open → show decrypted plaintext in Delvex modal
       msgList.querySelectorAll("button[data-open]").forEach(btn => {
         btn.addEventListener("click", () => {
           const id = btn.getAttribute("data-open");
           if (!id) return;
-          const found = items.find(x => x.signedEnvelopeId === id);
-          if (!found) return;
+
+          const body = decryptedById.get(id) || "";
+          const item = items.find(x => x.signedEnvelopeId === id) || null;
 
           delvexActiveCardEl = btn.closest(".msg-card") || null;
-          delvexShow({ envelopeId: found.signedEnvelopeId, body: found.body, senderUid: found.senderUid });
+          delvexShow({
+            envelopeId: id,
+            body,
+            senderUid: item ? (item.senderUid || null) : null
+          });
         });
       });
 
+      // Consume (direct button on card)
       msgList.querySelectorAll("button[data-consume]").forEach(btn => {
         btn.addEventListener("click", async () => {
           const id = btn.getAttribute("data-consume");
@@ -502,6 +531,8 @@
           try {
             const callable = functions.httpsCallable("markSignedEnvelopeConsumed");
             await callable({ signedEnvelopeId: id });
+
+            decryptedById.delete(id);
 
             const card = btn.closest(".msg-card");
             if (card) card.remove();
@@ -532,29 +563,38 @@
         setStatus("good", "Fetching…", "Calling fetchSignedEnvelopes…");
         const envelopes = await fetchSignedEnvelopesForCode(rawCode);
 
-        const out = [];
+        // Decrypt in memory, but DO NOT render previews.
+        decryptedById = new Map();
+
+        const uiItems = [];
         for (const env of envelopes) {
           const ciphertext = env.ciphertext || env.ciphertextB64;
           const iv = env.iv || env.ivB64;
           const salt = env.salt || env.saltB64;
-          if (!ciphertext || !iv || !salt) continue;
+          const id = env.signedEnvelopeId;
+
+          if (!id || !ciphertext || !iv || !salt) continue;
 
           const pt = await decryptEnvelopeForCode(rawCode, ciphertext, iv, salt);
           if (pt == null) continue;
 
-          out.push({
-            signedEnvelopeId: env.signedEnvelopeId,
+          decryptedById.set(id, pt);
+
+          uiItems.push({
+            signedEnvelopeId: id,
             senderUid: env.senderUid || null,
             deliverAtUtc: env.deliverAtUtc || null,
-            deliverAtLocalIso: env.deliverAtLocalIso || null,
-            body: pt
+            deliverAtLocalIso: env.deliverAtLocalIso || null
           });
         }
 
-        if (out.length === 0) setStatus("warn", "No messages", "Either there are no unconsumed envelopes, or the code doesn’t match.");
-        else setStatus("good", "Fetched", "Messages decrypted locally. Open to reveal with Delvex.");
-
-        renderMessages(out);
+        if (uiItems.length === 0) {
+          setStatus("warn", "No messages", "Either there are no unconsumed envelopes, or the code doesn’t match.");
+          renderMessages([]);
+        } else {
+          setStatus("good", "Fetched", "Messages decrypted locally. Press Open to reveal with Delvex.");
+          renderMessages(uiItems);
+        }
       } catch (e) {
         console.error(e);
         setStatus("warn", "Fetch failed", (e && e.message) ? e.message : "Fetch failed. Try again.");
@@ -566,6 +606,7 @@
 
     btnClear.addEventListener("click", () => {
       codeInput.value = "";
+      decryptedById = new Map();
       renderEmpty();
       setStatus("warn", "Cleared", "Inbox cleared. Paste a code and press Fetch.");
     });
