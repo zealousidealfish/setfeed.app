@@ -91,7 +91,44 @@
     /* status placement slots */
     .sf-status-slot{ margin-top: 10px; }
 
-    /* Keep your existing styles.css look; no colors hardcoded here */
+    /* Advanced schedule buttons: make them match the rounded "chip" theme */
+    .sf-adv-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top: 10px;
+      align-items:center;
+    }
+
+    /* If styles.css already styles .chip well, we just ensure these behave like chips */
+    .sf-adv-btn{
+      appearance:none;
+      -webkit-appearance:none;
+      border:none;
+      background:transparent;
+      color:inherit;
+      font:inherit;
+      cursor:pointer;
+      line-height:1;
+    }
+
+    /* Fallback styling (in case .chip styles are minimal) */
+    .sf-adv-btn.chip{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border, rgba(255,255,255,0.14));
+      background: var(--chip-bg, transparent);
+      user-select:none;
+      white-space:nowrap;
+    }
+    .sf-adv-btn.chip[aria-pressed="true"]{
+      background: var(--chip-on-bg, rgba(255,255,255,0.08));
+      border-color: var(--chip-on-border, rgba(255,255,255,0.22));
+      box-shadow: 0 0 0 3px var(--chip-ring, rgba(255,255,255,0.08));
+    }
   </style>
 </head>
 
@@ -215,7 +252,7 @@
             <h2>Delivery</h2>
             <div class="panel">
               <p class="panel-sub" id="signed-delivery-sub" style="margin-bottom: var(--s-3);">
-                Signed sends can schedule sooner (e.g., Delvex 2–3 minutes, 10 minutes / 1 hour) or use tomorrow presets.
+                Signed sends can schedule sooner (e.g., Delvee in 2–3, 10 minutes / 1 hour) or use tomorrow presets.
               </p>
 
               <!-- Preset time chips (tomorrow) -->
@@ -227,15 +264,15 @@
 
               <!-- Advanced options (only when signed in) -->
               <div class="sf-adv-row hidden" id="signed-advanced-row">
-                <button class="sf-adv-btn" type="button" aria-pressed="true" data-mode="preset">Tomorrow preset</button>
-                <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="2m">Delvex (2 min)</button>
-                <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="3m">Delvex (3 min)</button>
-                <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="10m">In 10 minutes</button>
-                <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="1h">In 1 hour</button>
+                <button class="chip sf-adv-btn" type="button" aria-pressed="true" data-mode="preset">Tomorrow preset</button>
+                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="2m">Delvee in 2</button>
+                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="3m">Delvee in 3</button>
+                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="10m">In 10 minutes</button>
+                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="1h">In 1 hour</button>
               </div>
 
               <small class="help" id="signed-delivery-help" style="margin-top: 10px;">
-                Delvex is a short-delay surprise drop. Recipient should keep Inbox open for precise timing.
+                Delvee is a short-delay surprise drop. Recipient should keep Inbox open for precise timing.
               </small>
             </div>
           </div>
@@ -481,8 +518,8 @@
 
       if (signedDeliverySub && signedDeliveryHelp) {
         if (isAuthed) {
-          signedDeliverySub.textContent = "Signed in: Delvex (2–3 min), 10 minutes / 1 hour, or tomorrow presets.";
-          signedDeliveryHelp.textContent = "Delvex is a short-delay surprise drop. Recipient should keep Inbox open for precise timing.";
+          signedDeliverySub.textContent = "Signed in: Delvee in 2–3, 10 minutes / 1 hour, or tomorrow presets.";
+          signedDeliveryHelp.textContent = "Delvee is a short-delay surprise drop. Recipient should keep Inbox open for precise timing.";
         } else {
           signedDeliverySub.textContent = "Sign in (Email link or Google) to send Signed (Secure / Personal).";
           signedDeliveryHelp.textContent = "Rolling is always available without signing in.";
