@@ -1,4 +1,3 @@
-<!-- send.html (FULL FILE REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -24,9 +23,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 
   <script>
-    // =========================
-    // ✅ Firebase config (yours)
-    // =========================
     const firebaseConfig = {
       apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",
       authDomain: "setfeed-fcd7a.firebaseapp.com",
@@ -42,10 +38,8 @@
     // Your public site URL (GitHub Pages custom domain)
     const SITE_ORIGIN = "https://setfeed.app";
 
-    // Avoid duplicate init if you ever embed this file somewhere.
     if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
-    // Pin region deterministically
     const functions = firebase.app().functions("europe-west2");
 
     function startAppCheck() {
@@ -68,7 +62,7 @@
        ========================= -->
   <script>
     (function(){
-      const THEME_KEY = "sf_theme_mode"; // "system" | "light" | "dark"
+      const THEME_KEY = "sf_theme_mode";
       const root = document.documentElement;
 
       function applyTheme(){
@@ -87,114 +81,17 @@
       }
 
       applyTheme();
-
-      window.addEventListener("storage", (e) => {
-        if (!e) return;
-        if (e.key === THEME_KEY) applyTheme();
-      });
+      window.addEventListener("storage", (e) => { if (e && e.key === THEME_KEY) applyTheme(); });
     })();
   </script>
 
-  <!-- Minimal modal styles (self-contained) -->
   <style>
     .hidden{ display:none !important; }
 
-    .sf-modal-backdrop{
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.55);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      z-index: 9999;
-    }
-    .sf-modal-backdrop.show{ display: flex; }
-    .sf-modal{
-      width: min(520px, 100%);
-      border-radius: 16px;
-      background: var(--card, #14171c);
-      color: var(--text, #e9eef6);
-      box-shadow: 0 18px 60px rgba(0,0,0,0.45);
-      border: 1px solid rgba(255,255,255,0.08);
-      overflow: hidden;
-    }
-    .sf-modal-header{
-      padding: 16px 16px 10px 16px;
-      font-weight: 650;
-      font-size: 16px;
-    }
-    .sf-modal-body{
-      padding: 0 16px 16px 16px;
-      color: rgba(233,238,246,0.85);
-      line-height: 1.35;
-      font-size: 14px;
-      word-break: break-word;
-    }
-    .sf-modal-actions{
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      padding: 12px 16px 16px 16px;
-    }
-    .sf-modal-btn{
-      border: 0;
-      border-radius: 12px;
-      padding: 10px 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .sf-modal-btn-primary{
-      background: #3b82f6;
-      color: #fff;
-    }
-    .sf-modal-btn-quiet{
-      background: rgba(255,255,255,0.08);
-      color: rgba(233,238,246,0.9);
-    }
+    /* status placement slots */
+    .sf-status-slot{ margin-top: 10px; }
 
-    .sf-adv-row{
-      display:flex;
-      gap:10px;
-      flex-wrap: wrap;
-      margin-top: 10px;
-    }
-    .sf-adv-btn{
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06);
-      color: rgba(233,238,246,0.9);
-      border-radius: 999px;
-      padding: 8px 12px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .sf-adv-btn[aria-pressed="true"]{
-      border-color: rgba(59,130,246,0.55);
-      box-shadow: 0 0 0 4px rgba(59,130,246,0.14);
-    }
-
-    .sf-google-icon{
-      width: 18px;
-      height: 18px;
-      display:inline-block;
-    }
-
-    .sf-auth-banner{
-      margin-top: 10px;
-      display:flex;
-      justify-content: space-between;
-      align-items:center;
-      gap: 10px;
-      flex-wrap: wrap;
-      padding: 10px 12px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.06);
-      color: rgba(233,238,246,0.92);
-      font-weight: 600;
-      font-size: 13px;
-    }
+    /* Keep your existing styles.css look; no colors hardcoded here */
   </style>
 </head>
 
@@ -247,7 +144,7 @@
       <div id="panel-signed" role="tabpanel" aria-labelledby="tab-signed">
         <div class="row">
           <div class="col" id="signin">
-            <div class="field" id="signed-email-field">
+            <div class="field">
               <label for="signed-email">Email</label>
               <input id="signed-email" type="email" autocomplete="email" placeholder="you@example.com" />
             </div>
@@ -256,14 +153,6 @@
               <button class="btn btn-lg" id="btn-send-link" type="button">Send sign-in link</button>
 
               <button class="btn btn-lg btn-primary" id="btn-google" type="button" aria-label="Continue with Google">
-                <span aria-hidden="true" class="sf-google-icon">
-                  <svg viewBox="0 0 48 48" width="18" height="18" role="img" aria-hidden="true">
-                    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.1-.1-2.2-.4-3.5z"/>
-                    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
-                    <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.2C29.4 35.1 26.8 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.6 5.1C9.3 39.7 16.1 44 24 44z"/>
-                    <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.1 3-3.3 5.3-6 6.8l.1.1 6.3 5.2C39.4 36.9 44 31.9 44 24c0-1.1-.1-2.2-.4-3.5z"/>
-                  </svg>
-                </span>
                 <span>Google</span>
               </button>
 
@@ -281,8 +170,8 @@
               </p>
             </div>
 
-            <!-- ✅ When signed in, Status moves here (replaces the video slot area for visibility) -->
-            <div id="status-authed-slot" class="hidden" style="margin-top: var(--s-6);"></div>
+            <!-- Top slot for Status when signed in (replaces video area) -->
+            <div id="status-slot-top" class="sf-status-slot hidden"></div>
 
             <div class="video-card" id="video-signed" aria-label="Walkthrough">
               <h2 style="margin-top:0;">Walkthrough</h2>
@@ -330,7 +219,7 @@
               </p>
 
               <!-- Preset time chips (tomorrow) -->
-              <div class="chips" aria-label="Tomorrow preset times (signed)" id="signed-chips">
+              <div class="chips" aria-label="Tomorrow preset times (signed)" id="signed-preset-chips">
                 <button class="chip" type="button" aria-pressed="false" data-time="08:00">8am</button>
                 <button class="chip" type="button" aria-pressed="true"  data-time="13:00">1pm</button>
                 <button class="chip" type="button" aria-pressed="false" data-time="18:00">6pm</button>
@@ -424,17 +313,15 @@
         </div>
       </div>
 
-      <!-- ✅ Status block: normally lives here, but is moved into #status-authed-slot when signed in -->
-      <div id="status-home">
-        <div id="status-block">
-          <h2>Status</h2>
-          <div class="status" role="status" aria-live="polite">
-            <div class="status-title">
-              <span class="dot" id="status-dot"></span>
-              <span id="status-title">Not connected</span>
-            </div>
-            <p class="status-line" id="status-line">Ready.</p>
+      <!-- Status container (this box moves between slots) -->
+      <div id="status-slot-bottom">
+        <h2>Status</h2>
+        <div class="status" id="status-box" role="status" aria-live="polite">
+          <div class="status-title">
+            <span class="dot" id="status-dot"></span>
+            <span id="status-title">Not connected</span>
           </div>
+          <p class="status-line" id="status-line">Ready.</p>
         </div>
       </div>
 
@@ -448,20 +335,6 @@
           <a href="mailto:security@setfeed.app">security@setfeed.app</a>
         </div>
       </footer>
-    </div>
-  </div>
-
-  <!-- ✅ Message scheduled dialog -->
-  <div class="sf-modal-backdrop" id="sf-modal" role="dialog" aria-modal="true" aria-labelledby="sf-modal-title" aria-describedby="sf-modal-body">
-    <div class="sf-modal">
-      <div class="sf-modal-header" id="sf-modal-title">Message scheduled</div>
-      <div class="sf-modal-body" id="sf-modal-body">
-        Your message is scheduled. You can close this tab — Setfeed will deliver it at the selected time.
-      </div>
-      <div class="sf-modal-actions">
-        <button class="sf-modal-btn sf-modal-btn-quiet" id="sf-modal-close" type="button">Close</button>
-        <button class="sf-modal-btn sf-modal-btn-primary" id="sf-modal-ok" type="button">OK</button>
-      </div>
     </div>
   </div>
 
@@ -502,28 +375,9 @@
     }
 
     // -------------------------
-    // Modal helpers
-    // -------------------------
-    const modal = document.getElementById("sf-modal");
-    const modalBody = document.getElementById("sf-modal-body");
-    const modalClose = document.getElementById("sf-modal-close");
-    const modalOk = document.getElementById("sf-modal-ok");
-
-    function showScheduledDialog(message) {
-      modalBody.textContent = message || "Your message is scheduled. You can close this tab — Setfeed will deliver it at the selected time.";
-      modal.classList.add("show");
-    }
-    function hideScheduledDialog() { modal.classList.remove("show"); }
-    modalClose.addEventListener("click", hideScheduledDialog);
-    modalOk.addEventListener("click", hideScheduledDialog);
-    modal.addEventListener("click", (e) => { if (e.target === modal) hideScheduledDialog(); });
-    window.addEventListener("keydown", (e) => { if (e.key === "Escape") hideScheduledDialog(); });
-
-    // -------------------------
     // Elements
     // -------------------------
     const signedEmail = document.getElementById("signed-email");
-    const signedEmailField = document.getElementById("signed-email-field");
     const signedCode = document.getElementById("signed-code");
     const signedBody = document.getElementById("signed-body");
     const btnSendLink = document.getElementById("btn-send-link");
@@ -539,31 +393,16 @@
     const authBanner = document.getElementById("sf-auth-banner");
     const authLabel = document.getElementById("sf-auth-label");
 
-    const signedChips = document.getElementById("signed-chips");
-    const signedChipButtons = Array.from(document.querySelectorAll('#signed-chips .chip[data-time]'));
-
     const rollingCodeInput = document.getElementById("rolling-code");
     const rollingBodyInput = document.getElementById("rolling-body");
     const btnRollingSend = document.getElementById("btn-rolling-send");
     const btnRollingClear = document.getElementById("btn-rolling-clear");
     const videoRolling = document.getElementById("video-rolling");
 
-    // Status positioning anchors
-    const statusBlock = document.getElementById("status-block");
-    const statusHome = document.getElementById("status-home");
-    const statusAuthedSlot = document.getElementById("status-authed-slot");
-
-    function placeStatusBlock(isAuthed) {
-      if (!statusBlock || !statusHome || !statusAuthedSlot) return;
-
-      if (isAuthed) {
-        statusAuthedSlot.classList.remove("hidden");
-        statusAuthedSlot.appendChild(statusBlock);
-      } else {
-        statusAuthedSlot.classList.add("hidden");
-        statusHome.appendChild(statusBlock);
-      }
-    }
+    // Status movement slots
+    const statusBox = document.getElementById("status-box");
+    const statusSlotTop = document.getElementById("status-slot-top");
+    const statusSlotBottom = document.getElementById("status-slot-bottom");
 
     // -------------------------
     // Auth (real)
@@ -590,21 +429,39 @@
       btnRollingSend.disabled = !canSend;
     }
 
+    function moveStatusToTop(isAuthed) {
+      if (!statusBox || !statusSlotTop || !statusSlotBottom) return;
+
+      if (isAuthed) {
+        statusSlotTop.classList.remove("hidden");
+        statusSlotBottom.classList.add("hidden");
+        statusSlotTop.appendChild(statusBox);
+      } else {
+        statusSlotTop.classList.add("hidden");
+        statusSlotBottom.classList.remove("hidden");
+        // statusBox is inside statusSlotBottom already, but we re-append to be safe
+        statusSlotBottom.querySelector(".status-title") || statusSlotBottom.appendChild(statusBox);
+      }
+    }
+
     function renderAuthUI(user) {
       const isAuthed = !!user;
 
-      // Hide email field + email-link button when authed
-      if (signedEmailField) signedEmailField.classList.toggle("hidden", isAuthed);
+      // hide email + send link when authed
+      const emailField = signedEmail ? signedEmail.closest(".field") : null;
+      if (emailField) emailField.classList.toggle("hidden", isAuthed);
       if (btnSendLink) btnSendLink.classList.toggle("hidden", isAuthed);
 
-      // Hide Google button when authed
+      // hide google when authed
       if (btnGoogle) btnGoogle.classList.toggle("hidden", isAuthed);
 
-      setSignedAuthedFlag(isAuthed);
+      // sign out only visible when authed
+      if (btnSignOut) {
+        btnSignOut.disabled = !isAuthed;
+        btnSignOut.classList.toggle("hidden", !isAuthed);
+      }
 
-      // Sign out only visible when authed
-      btnSignOut.disabled = !isAuthed;
-      btnSignOut.classList.toggle("hidden", !isAuthed);
+      setSignedAuthedFlag(isAuthed);
 
       // when authed, hide walkthrough (both tabs)
       if (videoSigned) videoSigned.classList.toggle("hidden", isAuthed);
@@ -613,14 +470,14 @@
       // advanced scheduling visible only when authed
       if (signedAdvancedRow) signedAdvancedRow.classList.toggle("hidden", !isAuthed);
 
-      // move status block up into the old video area when authed
-      placeStatusBlock(isAuthed);
-
-      // show small banner with email
+      // show banner with email
       if (authBanner && authLabel) {
         authBanner.classList.toggle("hidden", !isAuthed);
         if (isAuthed) authLabel.textContent = user.email || "Signed in";
       }
+
+      // move status box into the former video position when authed
+      moveStatusToTop(isAuthed);
 
       if (signedDeliverySub && signedDeliveryHelp) {
         if (isAuthed) {
@@ -635,9 +492,7 @@
       refreshSignedSendEnabled(isAuthed);
     }
 
-    auth.onAuthStateChanged((user) => {
-      renderAuthUI(user);
-    });
+    auth.onAuthStateChanged((user) => renderAuthUI(user));
 
     // Google popup
     btnGoogle.addEventListener("click", async () => {
@@ -677,7 +532,7 @@
       }
     });
 
-    // Complete email-link sign-in if we landed here from the email
+    // Complete email-link sign-in if present
     (async function finishEmailLinkIfPresent(){
       try {
         const href = window.location.href;
@@ -698,8 +553,6 @@
 
         try { localStorage.removeItem(EMAIL_FOR_SIGNIN_KEY); } catch (_) {}
         setStatus("good", "Signed in", "You can send Signed messages now.");
-
-        // Clean URL (remove oobCode, etc.), keep #signin
         history.replaceState(null, "", "./send.html#signin");
       } catch (e) {
         console.error(e);
@@ -727,44 +580,49 @@
     let signedPresetTime = "13:00";
     let signedMode = "preset"; // "preset" | "2m" | "3m" | "10m" | "1h"
 
-    function setSignedChipHighlightEnabled(enabled) {
-      if (!signedChipButtons.length) return;
+    const signedPresetChips = Array.from(document.querySelectorAll('#signed-preset-chips .chip[data-time]'));
+    const signedAdvBtns = Array.from(document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]'));
 
-      if (!enabled) {
-        signedChipButtons.forEach(b => b.setAttribute("aria-pressed", "false"));
+    function setSignedPresetHighlightVisible(visible) {
+      if (!visible) {
+        signedPresetChips.forEach(b => b.setAttribute("aria-pressed", "false"));
         return;
       }
-
-      signedChipButtons.forEach(b => {
+      // restore highlight to current signedPresetTime
+      signedPresetChips.forEach(b => {
         const t = b.getAttribute("data-time") || "";
         b.setAttribute("aria-pressed", (t === signedPresetTime) ? "true" : "false");
       });
     }
 
-    signedChipButtons.forEach(btn => {
-      btn.addEventListener("click", () => {
-        // Only allow changing preset time while in preset mode
-        if (signedMode !== "preset") return;
+    function setSignedMode(nextMode) {
+      signedMode = nextMode || "preset";
 
-        signedChipButtons.forEach(b => b.setAttribute("aria-pressed", "false"));
-        btn.setAttribute("aria-pressed", "true");
+      // highlight the chosen advanced button
+      signedAdvBtns.forEach(b => b.setAttribute("aria-pressed", "false"));
+      const btn = signedAdvBtns.find(b => (b.getAttribute("data-mode") || "") === signedMode);
+      if (btn) btn.setAttribute("aria-pressed", "true");
+
+      // If not preset, remove highlight from preset chips to avoid confusion
+      if (signedMode !== "preset") setSignedPresetHighlightVisible(false);
+      else setSignedPresetHighlightVisible(true);
+    }
+
+    // Clicking a preset chip should imply preset mode
+    signedPresetChips.forEach(btn => {
+      btn.addEventListener("click", () => {
         signedPresetTime = btn.getAttribute("data-time") || "13:00";
+        setSignedMode("preset");
       });
     });
 
-    document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]').forEach(btn => {
+    signedAdvBtns.forEach(btn => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]').forEach(b => b.setAttribute("aria-pressed", "false"));
-        btn.setAttribute("aria-pressed", "true");
-        signedMode = btn.getAttribute("data-mode") || "preset";
-
-        // If mode != "preset", clear highlight on 8am/1pm/6pm.
-        // If mode == "preset", restore highlight on selected time.
-        setSignedChipHighlightEnabled(signedMode === "preset");
+        const mode = btn.getAttribute("data-mode") || "preset";
+        setSignedMode(mode);
       });
     });
 
-    // Rolling chips (unchanged)
     let rollingPresetTime = "13:00";
     document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(btn => {
       btn.addEventListener("click", () => {
@@ -776,26 +634,9 @@
 
     // -------------------------
     // Crypto helpers (WebCrypto)
-    // Must match Android:
-    // - normalize: trim, UPPERCASE, remove spaces and hyphens
-    // - PBKDF2 SHA-256, iter=100_000, keylen=256
-    // - AES-GCM, iv=12 bytes
     // -------------------------
     function normalizeCodeAndroid(raw) {
       return raw.trim().toUpperCase().replace(/[\s-]/g, "");
-    }
-
-    // ✅ Simple client-side code validation for the Send page
-    function isValidSignedCode(raw) {
-      const n = normalizeCodeAndroid(raw || "");
-      // Signed codes: SF-… (Personal) or SFS-… (Secure)
-      return (n.startsWith("SF") || n.startsWith("SFS")) && n.length >= 6;
-    }
-
-    function isValidRollingCode(raw) {
-      const n = normalizeCodeAndroid(raw || "");
-      // Rolling codes: SFR-…
-      return n.startsWith("SFR") && n.length >= 6;
     }
 
     function bytesToB64(bytes) {
@@ -908,10 +749,6 @@
         setStatus("warn", "Missing details", "Add a code and a message, then try again.");
         return;
       }
-      if (!isValidSignedCode(code)) {
-        setStatus("warn", "Invalid code", "Signed codes must start with SF- (Personal) or SFS- (Secure).");
-        return;
-      }
 
       try {
         setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
@@ -940,12 +777,9 @@
           clientRequestId
         });
 
-        setStatus("good", "Scheduled", "Message scheduled.");
-        if (signedMode === "2m" || signedMode === "3m") {
-          showScheduledDialog("Delvex scheduled. Keep Inbox open on the recipient device for precise timing.");
-        } else {
-          showScheduledDialog("Your signed message is scheduled. You can close this tab — Setfeed will deliver it on time.");
-        }
+        setStatus("good", "Scheduled", "Redirecting to Inbox…");
+        window.location.href = "./inbox.html";
+        return;
       } catch (e) {
         console.error(e);
         const msg = (e && e.message) ? e.message : "Something went wrong while scheduling the message. Try again.";
@@ -961,10 +795,6 @@
         setStatus("warn", "Missing details", "Add a rolling code and a message, then try again.");
         return;
       }
-      if (!isValidRollingCode(code)) {
-        setStatus("warn", "Invalid code", "Rolling codes must start with SFR-.");
-        return;
-      }
 
       try {
         setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
@@ -976,7 +806,6 @@
         const userTimezone = getUserTimezone();
         const clientRequestId = randomClientRequestId("rolling");
 
-        // Best-effort provision to avoid CODE_NOT_FOUND
         try {
           const provision = functions.httpsCallable("provisionRollingEnvelope");
           await provision({ codeHash });
@@ -995,8 +824,9 @@
           clientRequestId
         });
 
-        setStatus("good", "Scheduled", "Message scheduled.");
-        showScheduledDialog("Your rolling message is scheduled. You can close this tab — Setfeed will deliver it on time.");
+        setStatus("good", "Scheduled", "Redirecting to Inbox…");
+        window.location.href = "./inbox.html";
+        return;
       } catch (e) {
         console.error(e);
         const code = e && e.code ? e.code : "";
@@ -1021,12 +851,9 @@
 
     // Init
     refreshRollingSendEnabled();
+    setSignedMode("preset");
     setStatus("good", "Ready", "App Check is active. Encryption + sending are wired.");
 
-    // Ensure initial preset highlight behavior is correct
-    setSignedChipHighlightEnabled(signedMode === "preset");
-
-    // If someone lands here with #signin, keep Signed tab selected.
     if (window.location.hash && window.location.hash.toLowerCase().includes("signin")) {
       setTab("signed");
     }
