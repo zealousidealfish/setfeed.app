@@ -563,6 +563,7 @@
 
     function renderAuthUI(user) {
       const isAuthed = !!user;
+      btnGoogle.classList.toggle("hidden", isAuthed);
       setSignedAuthedFlag(isAuthed);
 
       btnSignOut.disabled = !isAuthed;
