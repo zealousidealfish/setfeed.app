@@ -563,8 +563,11 @@
 
     function renderAuthUI(user) {
       const isAuthed = !!user;
-      signedEmail?.classList.toggle("hidden", isAuthed);
-      btnSendLink?.classList.toggle("hidden", isAuthed);
+      const emailField = signedEmail ? signedEmail.closest(".field") : null;
+      if (emailField) emailField.classList.toggle("hidden", isAuthed);
+
+      btnSendLink.classList.toggle("hidden", isAuthed);
+
 
       btnGoogle.classList.toggle("hidden", isAuthed);
       setSignedAuthedFlag(isAuthed);
