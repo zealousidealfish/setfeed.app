@@ -566,6 +566,7 @@
       setSignedAuthedFlag(isAuthed);
 
       btnSignOut.disabled = !isAuthed;
+      btnSignOut.classList.toggle("hidden", !isAuthed);
 
       // when authed, hide walkthrough (both tabs)
       if (videoSigned) videoSigned.classList.toggle("hidden", isAuthed);
