@@ -693,21 +693,58 @@
     let signedPresetTime = "13:00";
     let signedMode = "preset"; // "preset" | "2m" | "3m" | "10m" | "1h"
 
-    document.querySelectorAll('#panel-signed .chip[data-time]').forEach(btn => {
+    const signedPresetChips = Array.from(document.querySelectorAll('#panel-signed .chip[data-time]'));
+    const signedModeButtons = Array.from(document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]'));
+
+    function clearSignedPresetChipHighlight() {
+      signedPresetChips.forEach(b => b.setAttribute("aria-pressed", "false"));
+    }
+
+    function restoreSignedPresetChipHighlight() {
+      // highlight whichever preset time is currently selected
+      const match = signedPresetChips.find(b => (b.getAttribute("data-time") || "") === signedPresetTime);
+      clearSignedPresetChipHighlight();
+      if (match) match.setAttribute("aria-pressed", "true");
+    }
+
+    function setSignedMode(mode) {
+      signedMode = mode;
+
+      // highlight the selected mode button
+      signedModeButtons.forEach(b => b.setAttribute("aria-pressed", "false"));
+      const active = signedModeButtons.find(b => (b.getAttribute("data-mode") || "") === mode);
+      if (active) active.setAttribute("aria-pressed", "true");
+
+      // if NOT preset mode, remove highlight from the preset chips (avoid confusion)
+      if (mode !== "preset") clearSignedPresetChipHighlight();
+      else restoreSignedPresetChipHighlight();
+    }
+
+    function setSignedPresetTime(time) {
+      signedPresetTime = time || "13:00";
+      // only show the chip highlight when we're in "preset"
+      if (signedMode === "preset") restoreSignedPresetChipHighlight();
+    }
+
+    // Clicking a preset chip should also switch back to preset mode (makes the UI feel obvious)
+    signedPresetChips.forEach(btn => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll('#panel-signed .chip[data-time]').forEach(b => b.setAttribute("aria-pressed", "false"));
-        btn.setAttribute("aria-pressed", "true");
-        signedPresetTime = btn.getAttribute("data-time") || "13:00";
+        const t = btn.getAttribute("data-time") || "13:00";
+        setSignedPresetTime(t);
+        setSignedMode("preset");
       });
     });
 
-    document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]').forEach(btn => {
+    signedModeButtons.forEach(btn => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]').forEach(b => b.setAttribute("aria-pressed", "false"));
-        btn.setAttribute("aria-pressed", "true");
-        signedMode = btn.getAttribute("data-mode") || "preset";
+        const mode = btn.getAttribute("data-mode") || "preset";
+        setSignedMode(mode);
       });
     });
+
+    // Ensure initial UI is consistent with defaults
+    setSignedMode(signedMode);
+
 
     let rollingPresetTime = "13:00";
     document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(btn => {
