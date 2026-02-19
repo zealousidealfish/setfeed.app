@@ -877,10 +877,10 @@ footer a:hover{ color: var(--text); text-decoration: none; }
 }
 
 /* =========================
-   Delvex — shared opening animation
+   Delvee — shared opening animation
    ========================= */
 
-.delvex-backdrop{
+.delvee-backdrop{
   position: fixed;
   inset: 0;
   display: none;
@@ -890,9 +890,9 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   background: rgba(0,0,0,0.55);
   z-index: 9999;
 }
-.delvex-backdrop.show{ display:flex; }
+.delvee-backdrop.show{ display:flex; }
 
-.delvex-modal{
+.delvee-modal{
   width: min(560px, 100%);
   border-radius: var(--radius-3);
   border: 1px solid var(--line);
@@ -901,7 +901,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   overflow: hidden;
 }
 
-.delvex-head{
+.delvee-head{
   padding: 14px 16px 10px 16px;
   display: flex;
   justify-content: space-between;
@@ -909,7 +909,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   gap: 10px;
   border-bottom: 1px solid var(--line);
 }
-.delvex-title{
+.delvee-title{
   font-weight: var(--fw-medium);
   color: var(--text);
   letter-spacing: -0.08px;
@@ -918,7 +918,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   align-items:center;
   gap:10px;
 }
-.delvex-badge{
+.delvee-badge{
   display:inline-flex;
   align-items:center;
   gap:8px;
@@ -931,10 +931,10 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   font-weight: var(--fw-medium);
 }
 
-.delvex-body{
+.delvee-body{
   padding: 16px;
 }
-.delvex-stage{
+.delvee-stage{
   position: relative;
   border-radius: var(--radius-2);
   border: 1px solid var(--line);
@@ -947,7 +947,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   overflow: hidden;
 }
 
-.delvex-bolt{
+.delvee-bolt{
   position: absolute;
   left: -40px;
   top: 18px;
@@ -957,24 +957,24 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   opacity: 0;
   filter: drop-shadow(0 12px 22px rgba(0,0,0,0.22));
 }
-.delvex-bolt svg{
+.delvee-bolt svg{
   width: 100%;
   height: 100%;
   display:block;
 }
-.delvex-bolt .bolt-fill{
+.delvee-bolt .bolt-fill{
   fill: color-mix(in srgb, var(--primary) 92%, white);
 }
-:root[data-theme="dark"] .delvex-bolt .bolt-fill{
+:root[data-theme="dark"] .delvee-bolt .bolt-fill{
   fill: color-mix(in srgb, var(--primary) 92%, black);
 }
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]) .delvex-bolt .bolt-fill{
+  :root:not([data-theme="light"]) .delvee-bolt .bolt-fill{
     fill: color-mix(in srgb, var(--primary) 92%, black);
   }
 }
 
-.delvex-envelope{
+.delvee-envelope{
   position: absolute;
   left: 50%;
   top: 54%;
@@ -987,7 +987,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   box-shadow: 0 18px 32px rgba(0,0,0,0.12);
   overflow: hidden;
 }
-.delvex-envelope::before{
+.delvee-envelope::before{
   content:"";
   position:absolute;
   inset: 0;
@@ -1001,7 +1001,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   opacity: 0.8;
 }
 
-.delvex-flap{
+.delvee-flap{
   position:absolute;
   left:0;
   top:0;
@@ -1013,13 +1013,13 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   border-bottom: 1px solid var(--line);
 }
 
-.delvex-confetti{
+.delvee-confetti{
   position:absolute;
   inset:0;
   pointer-events:none;
   opacity:0;
 }
-.delvex-confetti i{
+.delvee-confetti i{
   position:absolute;
   width: 8px;
   height: 8px;
@@ -1029,7 +1029,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   opacity: 0.85;
 }
 
-.delvex-reveal{
+.delvee-reveal{
   position:absolute;
   inset: 18px;
   border-radius: var(--radius-2);
@@ -1039,16 +1039,16 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   opacity: 0;
   transform: translateY(10px);
 }
-.delvex-reveal h3{
+.delvee-reveal h3{
   margin: 0 0 8px 0;
 }
-.delvex-reveal p{
+.delvee-reveal p{
   margin: 0;
   color: var(--muted);
   white-space: pre-wrap;
 }
 
-.delvex-actions{
+.delvee-actions{
   display:flex;
   justify-content: flex-end;
   gap: 10px;
@@ -1056,57 +1056,57 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   border-top: 1px solid var(--line);
 }
 
-@keyframes delvexBoltIn {
+@keyframes delveeBoltIn {
   0%   { transform: translateX(-160px) translateY(20px) rotate(-28deg); opacity: 0; }
   40%  { opacity: 0.92; }
   70%  { transform: translateX(220px) translateY(-10px) rotate(-18deg); opacity: 0.98; }
   100% { transform: translateX(260px) translateY(-16px) rotate(-14deg); opacity: 0; }
 }
 
-@keyframes delvexFlapOpen {
+@keyframes delveeFlapOpen {
   0%   { transform: rotateX(0deg); }
   55%  { transform: rotateX(0deg); }
   100% { transform: rotateX(160deg); }
 }
 
-@keyframes delvexEnvelopeWiggle {
+@keyframes delveeEnvelopeWiggle {
   0%   { transform: translate(-50%,-50%) rotate(0deg); }
   35%  { transform: translate(-50%,-50%) rotate(-0.9deg); }
   70%  { transform: translate(-50%,-50%) rotate(0.8deg); }
   100% { transform: translate(-50%,-50%) rotate(0deg); }
 }
 
-@keyframes delvexConfettiPop {
+@keyframes delveeConfettiPop {
   0%   { opacity: 0; transform: translateY(0); }
   45%  { opacity: 0.9; }
   100% { opacity: 0; transform: translateY(18px); }
 }
 
-@keyframes delvexRevealIn {
+@keyframes delveeRevealIn {
   0%   { opacity: 0; transform: translateY(10px) scale(0.995); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.delvex-stage.is-playing .delvex-bolt{
-  animation: delvexBoltIn 900ms cubic-bezier(.2,.8,.2,1) forwards;
+.delvee-stage.is-playing .delvee-bolt{
+  animation: delveeBoltIn 900ms cubic-bezier(.2,.8,.2,1) forwards;
 }
-.delvex-stage.is-playing .delvex-envelope{
-  animation: delvexEnvelopeWiggle 900ms ease-in-out forwards;
+.delvee-stage.is-playing .delvee-envelope{
+  animation: delveeEnvelopeWiggle 900ms ease-in-out forwards;
 }
-.delvex-stage.is-playing .delvex-flap{
-  animation: delvexFlapOpen 900ms cubic-bezier(.2,.8,.2,1) forwards;
+.delvee-stage.is-playing .delvee-flap{
+  animation: delveeFlapOpen 900ms cubic-bezier(.2,.8,.2,1) forwards;
 }
-.delvex-stage.is-playing .delvex-confetti{
+.delvee-stage.is-playing .delvee-confetti{
   opacity: 1;
 }
-.delvex-stage.is-playing .delvex-confetti i{
-  animation: delvexConfettiPop 900ms ease-out forwards;
+.delvee-stage.is-playing .delvee-confetti i{
+  animation: delveeConfettiPop 900ms ease-out forwards;
 }
 
-.delvex-stage.is-revealed .delvex-reveal{
+.delvee-stage.is-revealed .delvee-reveal{
   opacity: 1;
-  animation: delvexRevealIn 220ms ease-out forwards;
+  animation: delveeRevealIn 220ms ease-out forwards;
 }
-.delvex-stage.is-revealed .delvex-envelope{
+.delvee-stage.is-revealed .delvee-envelope{
   opacity: 0.20;
 }
