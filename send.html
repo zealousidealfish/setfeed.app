@@ -281,6 +281,9 @@
               </p>
             </div>
 
+            <!-- ✅ When signed in, Status moves here (replaces the video slot area for visibility) -->
+            <div id="status-authed-slot" class="hidden" style="margin-top: var(--s-6);"></div>
+
             <div class="video-card" id="video-signed" aria-label="Walkthrough">
               <h2 style="margin-top:0;">Walkthrough</h2>
               <p class="lead" style="margin-bottom: 0;">
@@ -421,13 +424,18 @@
         </div>
       </div>
 
-      <h2>Status</h2>
-      <div class="status" role="status" aria-live="polite">
-        <div class="status-title">
-          <span class="dot" id="status-dot"></span>
-          <span id="status-title">Not connected</span>
+      <!-- ✅ Status block: normally lives here, but is moved into #status-authed-slot when signed in -->
+      <div id="status-home">
+        <div id="status-block">
+          <h2>Status</h2>
+          <div class="status" role="status" aria-live="polite">
+            <div class="status-title">
+              <span class="dot" id="status-dot"></span>
+              <span id="status-title">Not connected</span>
+            </div>
+            <p class="status-line" id="status-line">Ready.</p>
+          </div>
         </div>
-        <p class="status-line" id="status-line">Ready.</p>
       </div>
 
       <footer>
@@ -540,6 +548,23 @@
     const btnRollingClear = document.getElementById("btn-rolling-clear");
     const videoRolling = document.getElementById("video-rolling");
 
+    // Status positioning anchors
+    const statusBlock = document.getElementById("status-block");
+    const statusHome = document.getElementById("status-home");
+    const statusAuthedSlot = document.getElementById("status-authed-slot");
+
+    function placeStatusBlock(isAuthed) {
+      if (!statusBlock || !statusHome || !statusAuthedSlot) return;
+
+      if (isAuthed) {
+        statusAuthedSlot.classList.remove("hidden");
+        statusAuthedSlot.appendChild(statusBlock);
+      } else {
+        statusAuthedSlot.classList.add("hidden");
+        statusHome.appendChild(statusBlock);
+      }
+    }
+
     // -------------------------
     // Auth (real)
     // -------------------------
@@ -587,6 +612,9 @@
 
       // advanced scheduling visible only when authed
       if (signedAdvancedRow) signedAdvancedRow.classList.toggle("hidden", !isAuthed);
+
+      // move status block up into the old video area when authed
+      placeStatusBlock(isAuthed);
 
       // show small banner with email
       if (authBanner && authLabel) {
@@ -700,7 +728,6 @@
     let signedMode = "preset"; // "preset" | "2m" | "3m" | "10m" | "1h"
 
     function setSignedChipHighlightEnabled(enabled) {
-      // When not on "Tomorrow preset", remove any visual "selected" state from chips.
       if (!signedChipButtons.length) return;
 
       if (!enabled) {
@@ -708,7 +735,6 @@
         return;
       }
 
-      // When returning to preset mode, restore highlight to currently selected preset time.
       signedChipButtons.forEach(b => {
         const t = b.getAttribute("data-time") || "";
         b.setAttribute("aria-pressed", (t === signedPresetTime) ? "true" : "false");
@@ -732,7 +758,6 @@
         btn.setAttribute("aria-pressed", "true");
         signedMode = btn.getAttribute("data-mode") || "preset";
 
-        // ✅ Your requested behavior:
         // If mode != "preset", clear highlight on 8am/1pm/6pm.
         // If mode == "preset", restore highlight on selected time.
         setSignedChipHighlightEnabled(signedMode === "preset");
