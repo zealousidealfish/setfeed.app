@@ -42,7 +42,8 @@
     // Your public site URL (GitHub Pages custom domain)
     const SITE_ORIGIN = "https://setfeed.app";
 
-    firebase.initializeApp(firebaseConfig);
+    // Avoid duplicate init if you ever embed this file somewhere.
+    if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
     // Pin region deterministically
     const functions = firebase.app().functions("europe-west2");
@@ -322,7 +323,7 @@
             <h2>Delivery</h2>
             <div class="panel">
               <p class="panel-sub" id="signed-delivery-sub" style="margin-bottom: var(--s-3);">
-                Signed sends can schedule sooner (e.g., Delven 2–3 minutes, 10 minutes / 1 hour) or use tomorrow presets.
+                Signed sends can schedule sooner (e.g., Delvex 2–3 minutes, 10 minutes / 1 hour) or use tomorrow presets.
               </p>
 
               <!-- Preset time chips (tomorrow) -->
@@ -335,14 +336,14 @@
               <!-- Advanced options (only when signed in) -->
               <div class="sf-adv-row hidden" id="signed-advanced-row">
                 <button class="sf-adv-btn" type="button" aria-pressed="true" data-mode="preset">Tomorrow preset</button>
-                <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="2m">Delven (2 min)</button>
-                <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="3m">Delven (3 min)</button>
+                <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="2m">Delvex (2 min)</button>
+                <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="3m">Delvex (3 min)</button>
                 <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="10m">In 10 minutes</button>
                 <button class="sf-adv-btn" type="button" aria-pressed="false" data-mode="1h">In 1 hour</button>
               </div>
 
               <small class="help" id="signed-delivery-help" style="margin-top: 10px;">
-                Delven is a short-delay surprise drop. Recipient should keep Inbox open for precise timing.
+                Delvex is a short-delay surprise drop. Recipient should keep Inbox open for precise timing.
               </small>
             </div>
           </div>
@@ -581,8 +582,8 @@
 
       if (signedDeliverySub && signedDeliveryHelp) {
         if (isAuthed) {
-          signedDeliverySub.textContent = "Signed in: Delven (2–3 min), 10 minutes / 1 hour, or tomorrow presets.";
-          signedDeliveryHelp.textContent = "Delven is a short-delay surprise drop. Recipient should keep Inbox open for precise timing.";
+          signedDeliverySub.textContent = "Signed in: Delvex (2–3 min), 10 minutes / 1 hour, or tomorrow presets.";
+          signedDeliveryHelp.textContent = "Delvex is a short-delay surprise drop. Recipient should keep Inbox open for precise timing.";
         } else {
           signedDeliverySub.textContent = "Sign in (Email link or Google) to send Signed (Secure / Personal).";
           signedDeliveryHelp.textContent = "Rolling is always available without signing in.";
@@ -860,7 +861,7 @@
 
         setStatus("good", "Scheduled", "Message scheduled.");
         if (signedMode === "2m" || signedMode === "3m") {
-          showScheduledDialog("Delven scheduled. Keep Inbox open on the recipient device for precise timing.");
+          showScheduledDialog("Delvex scheduled. Keep Inbox open on the recipient device for precise timing.");
         } else {
           showScheduledDialog("Your signed message is scheduled. You can close this tab — Setfeed will deliver it on time.");
         }
