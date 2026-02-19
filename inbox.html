@@ -229,6 +229,37 @@
     document.getElementById("y").textContent = new Date().getFullYear();
 
     // -------------------------
+    // Signed redirect autofill (from send.html)
+    // -------------------------
+    function applyAutofillFromQuery() {
+      const params = new URLSearchParams(window.location.search || "");
+      const code = params.get("code");
+      if (!code) return;
+
+       const input = document.getElementById("code-input");
+      if (input) {
+        input.value = code;
+
+        // ✅ Auto-focus (and select) so it feels instant
+        requestAnimationFrame(() => {
+          try {
+            input.focus({ preventScroll: true });
+          } catch (_) {
+            input.focus();
+          }
+          try { input.setSelectionRange(0, input.value.length); } catch (_) {}
+        });
+      }
+
+      // Immediately remove the code from the URL (privacy / avoids copying/sharing)
+      try {
+        history.replaceState(null, "", "./inbox.html");
+      } catch (_) {}
+    }
+
+    applyAutofillFromQuery();
+
+    // -------------------------
     // Status helper
     // -------------------------
     const statusDot = document.getElementById("status-dot");
@@ -462,8 +493,6 @@
       return Array.isArray(payload.envelopes) ? payload.envelopes : [];
     }
 
-    // We keep plaintext only in-memory, never rendered in the list.
-    // Keyed by signedEnvelopeId.
     let decryptedById = new Map();
 
     function renderMessages(items){
@@ -489,7 +518,6 @@
             </div>
           </div>
 
-          <!-- IMPORTANT: no plaintext preview -->
           <div class="msg-body">${safeText("Hidden — press Open")}</div>
 
           <div class="msg-actions">
@@ -501,7 +529,6 @@
         msgList.appendChild(card);
       }
 
-      // Open → show decrypted plaintext in Delvex modal
       msgList.querySelectorAll("button[data-open]").forEach(btn => {
         btn.addEventListener("click", () => {
           const id = btn.getAttribute("data-open");
@@ -519,7 +546,6 @@
         });
       });
 
-      // Consume (direct button on card)
       msgList.querySelectorAll("button[data-consume]").forEach(btn => {
         btn.addEventListener("click", async () => {
           const id = btn.getAttribute("data-consume");
@@ -563,10 +589,9 @@
         setStatus("good", "Fetching…", "Calling fetchSignedEnvelopes…");
         const envelopes = await fetchSignedEnvelopesForCode(rawCode);
 
-        // Decrypt in memory, but DO NOT render previews.
         decryptedById = new Map();
-
         const uiItems = [];
+
         for (const env of envelopes) {
           const ciphertext = env.ciphertext || env.ciphertextB64;
           const iv = env.iv || env.ivB64;
