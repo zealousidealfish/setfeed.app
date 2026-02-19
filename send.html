@@ -247,7 +247,7 @@
       <div id="panel-signed" role="tabpanel" aria-labelledby="tab-signed">
         <div class="row">
           <div class="col" id="signin">
-            <div class="field">
+            <div class="field" id="signed-email-field">
               <label for="signed-email">Email</label>
               <input id="signed-email" type="email" autocomplete="email" placeholder="you@example.com" />
             </div>
@@ -267,7 +267,7 @@
                 <span>Google</span>
               </button>
 
-              <button class="btn btn-lg btn-quiet" id="btn-sign-out" type="button" disabled>Sign out</button>
+              <button class="btn btn-lg btn-quiet hidden" id="btn-sign-out" type="button" disabled>Sign out</button>
             </div>
 
             <div class="sf-auth-banner hidden" id="sf-auth-banner">
@@ -327,7 +327,7 @@
               </p>
 
               <!-- Preset time chips (tomorrow) -->
-              <div class="chips" aria-label="Tomorrow preset times (signed)">
+              <div class="chips" aria-label="Tomorrow preset times (signed)" id="signed-chips">
                 <button class="chip" type="button" aria-pressed="false" data-time="08:00">8am</button>
                 <button class="chip" type="button" aria-pressed="true"  data-time="13:00">1pm</button>
                 <button class="chip" type="button" aria-pressed="false" data-time="18:00">6pm</button>
@@ -515,6 +515,7 @@
     // Elements
     // -------------------------
     const signedEmail = document.getElementById("signed-email");
+    const signedEmailField = document.getElementById("signed-email-field");
     const signedCode = document.getElementById("signed-code");
     const signedBody = document.getElementById("signed-body");
     const btnSendLink = document.getElementById("btn-send-link");
@@ -529,6 +530,9 @@
     const signedAdvancedRow = document.getElementById("signed-advanced-row");
     const authBanner = document.getElementById("sf-auth-banner");
     const authLabel = document.getElementById("sf-auth-label");
+
+    const signedChips = document.getElementById("signed-chips");
+    const signedChipButtons = Array.from(document.querySelectorAll('#signed-chips .chip[data-time]'));
 
     const rollingCodeInput = document.getElementById("rolling-code");
     const rollingBodyInput = document.getElementById("rolling-body");
@@ -563,15 +567,17 @@
 
     function renderAuthUI(user) {
       const isAuthed = !!user;
-      const emailField = signedEmail ? signedEmail.closest(".field") : null;
-      if (emailField) emailField.classList.toggle("hidden", isAuthed);
 
-      btnSendLink.classList.toggle("hidden", isAuthed);
+      // Hide email field + email-link button when authed
+      if (signedEmailField) signedEmailField.classList.toggle("hidden", isAuthed);
+      if (btnSendLink) btnSendLink.classList.toggle("hidden", isAuthed);
 
+      // Hide Google button when authed
+      if (btnGoogle) btnGoogle.classList.toggle("hidden", isAuthed);
 
-      btnGoogle.classList.toggle("hidden", isAuthed);
       setSignedAuthedFlag(isAuthed);
 
+      // Sign out only visible when authed
       btnSignOut.disabled = !isAuthed;
       btnSignOut.classList.toggle("hidden", !isAuthed);
 
@@ -693,59 +699,47 @@
     let signedPresetTime = "13:00";
     let signedMode = "preset"; // "preset" | "2m" | "3m" | "10m" | "1h"
 
-    const signedPresetChips = Array.from(document.querySelectorAll('#panel-signed .chip[data-time]'));
-    const signedModeButtons = Array.from(document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]'));
+    function setSignedChipHighlightEnabled(enabled) {
+      // When not on "Tomorrow preset", remove any visual "selected" state from chips.
+      if (!signedChipButtons.length) return;
 
-    function clearSignedPresetChipHighlight() {
-      signedPresetChips.forEach(b => b.setAttribute("aria-pressed", "false"));
+      if (!enabled) {
+        signedChipButtons.forEach(b => b.setAttribute("aria-pressed", "false"));
+        return;
+      }
+
+      // When returning to preset mode, restore highlight to currently selected preset time.
+      signedChipButtons.forEach(b => {
+        const t = b.getAttribute("data-time") || "";
+        b.setAttribute("aria-pressed", (t === signedPresetTime) ? "true" : "false");
+      });
     }
 
-    function restoreSignedPresetChipHighlight() {
-      // highlight whichever preset time is currently selected
-      const match = signedPresetChips.find(b => (b.getAttribute("data-time") || "") === signedPresetTime);
-      clearSignedPresetChipHighlight();
-      if (match) match.setAttribute("aria-pressed", "true");
-    }
-
-    function setSignedMode(mode) {
-      signedMode = mode;
-
-      // highlight the selected mode button
-      signedModeButtons.forEach(b => b.setAttribute("aria-pressed", "false"));
-      const active = signedModeButtons.find(b => (b.getAttribute("data-mode") || "") === mode);
-      if (active) active.setAttribute("aria-pressed", "true");
-
-      // if NOT preset mode, remove highlight from the preset chips (avoid confusion)
-      if (mode !== "preset") clearSignedPresetChipHighlight();
-      else restoreSignedPresetChipHighlight();
-    }
-
-    function setSignedPresetTime(time) {
-      signedPresetTime = time || "13:00";
-      // only show the chip highlight when we're in "preset"
-      if (signedMode === "preset") restoreSignedPresetChipHighlight();
-    }
-
-    // Clicking a preset chip should also switch back to preset mode (makes the UI feel obvious)
-    signedPresetChips.forEach(btn => {
+    signedChipButtons.forEach(btn => {
       btn.addEventListener("click", () => {
-        const t = btn.getAttribute("data-time") || "13:00";
-        setSignedPresetTime(t);
-        setSignedMode("preset");
+        // Only allow changing preset time while in preset mode
+        if (signedMode !== "preset") return;
+
+        signedChipButtons.forEach(b => b.setAttribute("aria-pressed", "false"));
+        btn.setAttribute("aria-pressed", "true");
+        signedPresetTime = btn.getAttribute("data-time") || "13:00";
       });
     });
 
-    signedModeButtons.forEach(btn => {
+    document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]').forEach(btn => {
       btn.addEventListener("click", () => {
-        const mode = btn.getAttribute("data-mode") || "preset";
-        setSignedMode(mode);
+        document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]').forEach(b => b.setAttribute("aria-pressed", "false"));
+        btn.setAttribute("aria-pressed", "true");
+        signedMode = btn.getAttribute("data-mode") || "preset";
+
+        // ✅ Your requested behavior:
+        // If mode != "preset", clear highlight on 8am/1pm/6pm.
+        // If mode == "preset", restore highlight on selected time.
+        setSignedChipHighlightEnabled(signedMode === "preset");
       });
     });
 
-    // Ensure initial UI is consistent with defaults
-    setSignedMode(signedMode);
-
-
+    // Rolling chips (unchanged)
     let rollingPresetTime = "13:00";
     document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(btn => {
       btn.addEventListener("click", () => {
@@ -764,6 +758,19 @@
     // -------------------------
     function normalizeCodeAndroid(raw) {
       return raw.trim().toUpperCase().replace(/[\s-]/g, "");
+    }
+
+    // ✅ Simple client-side code validation for the Send page
+    function isValidSignedCode(raw) {
+      const n = normalizeCodeAndroid(raw || "");
+      // Signed codes: SF-… (Personal) or SFS-… (Secure)
+      return (n.startsWith("SF") || n.startsWith("SFS")) && n.length >= 6;
+    }
+
+    function isValidRollingCode(raw) {
+      const n = normalizeCodeAndroid(raw || "");
+      // Rolling codes: SFR-…
+      return n.startsWith("SFR") && n.length >= 6;
     }
 
     function bytesToB64(bytes) {
@@ -876,6 +883,10 @@
         setStatus("warn", "Missing details", "Add a code and a message, then try again.");
         return;
       }
+      if (!isValidSignedCode(code)) {
+        setStatus("warn", "Invalid code", "Signed codes must start with SF- (Personal) or SFS- (Secure).");
+        return;
+      }
 
       try {
         setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
@@ -923,6 +934,10 @@
 
       if (!code || !body) {
         setStatus("warn", "Missing details", "Add a rolling code and a message, then try again.");
+        return;
+      }
+      if (!isValidRollingCode(code)) {
+        setStatus("warn", "Invalid code", "Rolling codes must start with SFR-.");
         return;
       }
 
@@ -982,6 +997,9 @@
     // Init
     refreshRollingSendEnabled();
     setStatus("good", "Ready", "App Check is active. Encryption + sending are wired.");
+
+    // Ensure initial preset highlight behavior is correct
+    setSignedChipHighlightEnabled(signedMode === "preset");
 
     // If someone lands here with #signin, keep Signed tab selected.
     if (window.location.hash && window.location.hash.toLowerCase().includes("signin")) {
