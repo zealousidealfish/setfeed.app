@@ -36,6 +36,7 @@
     const RECAPTCHA_SITE_KEY = "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI";
 
     // Your public site URL (GitHub Pages custom domain)
+    // Keep Setfeed here (Delvee is a separate site later).
     const SITE_ORIGIN = "https://setfeed.app";
 
     if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
@@ -91,43 +92,23 @@
     /* status placement slots */
     .sf-status-slot{ margin-top: 10px; }
 
-    /* Advanced schedule buttons: make them match the rounded "chip" theme */
+    /* Advanced row layout; visuals come from existing .chip styles in styles.css */
     .sf-adv-row{
       display:flex;
       flex-wrap:wrap;
-      gap:10px;
-      margin-top: 10px;
-      align-items:center;
+      gap: var(--s-2, 10px);
+      margin-top: var(--s-3, 12px);
+    }
+    .sf-adv-row .sf-adv-btn{
+      font: inherit;           /* no bold / consistent type */
+      letter-spacing: inherit; /* consistent with preset chips */
     }
 
-    /* If styles.css already styles .chip well, we just ensure these behave like chips */
-    .sf-adv-btn{
-      appearance:none;
-      -webkit-appearance:none;
-      border:none;
-      background:transparent;
-      color:inherit;
-      font:inherit;
-      cursor:pointer;
-      line-height:1;
-    }
-
-    /* Fallback styling (in case .chip styles are minimal) */
-    .sf-adv-btn.chip{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      padding: 10px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--border, rgba(255,255,255,0.14));
-      background: var(--chip-bg, transparent);
-      user-select:none;
-      white-space:nowrap;
-    }
-    .sf-adv-btn.chip[aria-pressed="true"]{
-      background: var(--chip-on-bg, rgba(255,255,255,0.08));
-      border-color: var(--chip-on-border, rgba(255,255,255,0.22));
-      box-shadow: 0 0 0 3px var(--chip-ring, rgba(255,255,255,0.08));
+    /* Prevent odd grey "active" flash on some browsers while keeping accessibility */
+    .sf-adv-row .sf-adv-btn:active{
+      transform: none;
+      filter: none;
+      opacity: 1;
     }
   </style>
 </head>
@@ -252,7 +233,7 @@
             <h2>Delivery</h2>
             <div class="panel">
               <p class="panel-sub" id="signed-delivery-sub" style="margin-bottom: var(--s-3);">
-                Signed sends can schedule sooner (e.g., Delvee in 2–3, 10 minutes / 1 hour) or use tomorrow presets.
+                Signed sends can schedule sooner (e.g., Delvee in 2–3 minutes, 10 minutes / 1 hour) or use tomorrow presets.
               </p>
 
               <!-- Preset time chips (tomorrow) -->
@@ -263,8 +244,9 @@
               </div>
 
               <!-- Advanced options (only when signed in) -->
-              <div class="sf-adv-row hidden" id="signed-advanced-row">
-                <button class="chip sf-adv-btn" type="button" aria-pressed="true" data-mode="preset">Tomorrow preset</button>
+              <!-- IMPORTANT: these reuse .chip styling to match presets exactly -->
+              <div class="sf-adv-row hidden" id="signed-advanced-row" aria-label="Signed advanced delivery">
+                <button class="chip sf-adv-btn" type="button" aria-pressed="true"  data-mode="preset">Tomorrow preset</button>
                 <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="2m">Delvee in 2</button>
                 <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="3m">Delvee in 3</button>
                 <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="10m">In 10 minutes</button>
@@ -476,7 +458,6 @@
       } else {
         statusSlotTop.classList.add("hidden");
         statusSlotBottom.classList.remove("hidden");
-        // statusBox is inside statusSlotBottom already, but we re-append to be safe
         statusSlotBottom.querySelector(".status-title") || statusSlotBottom.appendChild(statusBox);
       }
     }
@@ -484,15 +465,12 @@
     function renderAuthUI(user) {
       const isAuthed = !!user;
 
-      // hide email + send link when authed
       const emailField = signedEmail ? signedEmail.closest(".field") : null;
       if (emailField) emailField.classList.toggle("hidden", isAuthed);
       if (btnSendLink) btnSendLink.classList.toggle("hidden", isAuthed);
 
-      // hide google when authed
       if (btnGoogle) btnGoogle.classList.toggle("hidden", isAuthed);
 
-      // sign out only visible when authed
       if (btnSignOut) {
         btnSignOut.disabled = !isAuthed;
         btnSignOut.classList.toggle("hidden", !isAuthed);
@@ -500,20 +478,16 @@
 
       setSignedAuthedFlag(isAuthed);
 
-      // when authed, hide walkthrough (both tabs)
       if (videoSigned) videoSigned.classList.toggle("hidden", isAuthed);
       if (videoRolling) videoRolling.classList.toggle("hidden", isAuthed);
 
-      // advanced scheduling visible only when authed
       if (signedAdvancedRow) signedAdvancedRow.classList.toggle("hidden", !isAuthed);
 
-      // show banner with email
       if (authBanner && authLabel) {
         authBanner.classList.toggle("hidden", !isAuthed);
         if (isAuthed) authLabel.textContent = user.email || "Signed in";
       }
 
-      // move status box into the former video position when authed
       moveStatusToTop(isAuthed);
 
       if (signedDeliverySub && signedDeliveryHelp) {
@@ -527,6 +501,9 @@
       }
 
       refreshSignedSendEnabled(isAuthed);
+      // Apply guardrails after auth render (so the send button state is correct)
+      setBodyCodeErrorIfNeeded(true);
+      setBodyCodeErrorIfNeeded(false);
     }
 
     auth.onAuthStateChanged((user) => renderAuthUI(user));
@@ -625,7 +602,6 @@
         signedPresetChips.forEach(b => b.setAttribute("aria-pressed", "false"));
         return;
       }
-      // restore highlight to current signedPresetTime
       signedPresetChips.forEach(b => {
         const t = b.getAttribute("data-time") || "";
         b.setAttribute("aria-pressed", (t === signedPresetTime) ? "true" : "false");
@@ -645,7 +621,6 @@
       else setSignedPresetHighlightVisible(true);
     }
 
-    // Clicking a preset chip should imply preset mode
     signedPresetChips.forEach(btn => {
       btn.addEventListener("click", () => {
         signedPresetTime = btn.getAttribute("data-time") || "13:00";
@@ -656,6 +631,7 @@
     signedAdvBtns.forEach(btn => {
       btn.addEventListener("click", () => {
         const mode = btn.getAttribute("data-mode") || "preset";
+        // CRITICAL: ensure 10m/1h actually set signedMode, otherwise it would fall back to preset (1pm).
         setSignedMode(mode);
       });
     });
@@ -668,6 +644,66 @@
         rollingPresetTime = btn.getAttribute("data-time") || "13:00";
       });
     });
+
+    // -------------------------
+    // Guardrail: prevent app receive codes inside message body
+    // (Setfeed = text. Delvee = images.)
+    // From your Android ReceiveCodeService:
+    // - Personal: SF-XXXX-XXXX
+    // - Secure:   SFS-<HIGH ENTROPY>
+    // - Rolling:  SFR-<HIGH ENTROPY>
+    // -------------------------
+    function messageContainsSetfeedReceiveCode(text) {
+      const s = String(text || "");
+
+      // Match the known prefixes anywhere in the body.
+      // Also tolerate whitespace/newlines around hyphens.
+      const hasPrefixed =
+        /\bSF\s*-\s*[A-Z0-9]{4}\s*-\s*[A-Z0-9]{4}\b/i.test(s) ||
+        /\bSFS\s*-\s*[A-Z0-9]{10,}\b/i.test(s) ||
+        /\bSFR\s*-\s*[A-Z0-9]{10,}\b/i.test(s);
+
+      if (hasPrefixed) return true;
+
+      // Conservative fallback: code-ish tokens like ABCDEF-ABCDEF(-ABCDEF) that are long enough.
+      const tokens = s.match(/[A-Za-z0-9]{4,}(?:\s*-\s*[A-Za-z0-9]{4,}){1,}/g) || [];
+      return tokens.some(t => {
+        const tok = t.replace(/\s+/g, "");
+        return /^(?:[A-Z0-9]{4,}-){1,}[A-Z0-9]{4,}$/i.test(tok) && tok.length >= 12;
+      });
+    }
+
+    function applyBodyGuardrails() {
+      const isAuthed = !!auth.currentUser;
+
+      const signedHas = messageContainsSetfeedReceiveCode(signedBody.value);
+      const rollingHas = messageContainsSetfeedReceiveCode(rollingBodyInput.value);
+
+      // If either is present, show the rule clearly (Status is global).
+      if (signedHas || rollingHas) {
+        setStatus(
+          "warn",
+          "Not allowed in Setfeed",
+          "That looks like a Setfeed receive code inside the message. Delvee is for images; Setfeed is for notes/messages. Remove the code from the message."
+        );
+      }
+
+      // Recompute enablement with the guardrail applied.
+      const signedBase = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
+      btnSignedSend.disabled = !(signedBase && !signedHas);
+
+      const rollingBase = rollingCodeInput.value.trim().length > 0 && rollingBodyInput.value.trim().length > 0;
+      btnRollingSend.disabled = !(rollingBase && !rollingHas);
+
+      return { signedOk: !signedHas, rollingOk: !rollingHas };
+    }
+
+    // keep this for renderAuthUI compatibility
+    function setBodyCodeErrorIfNeeded(isSigned) {
+      // Delegate to a single source of truth so button state can't drift.
+      const res = applyBodyGuardrails();
+      return isSigned ? res.signedOk : res.rollingOk;
+    }
 
     // -------------------------
     // Crypto helpers (WebCrypto)
@@ -768,15 +804,29 @@
     // -------------------------
     // Send handlers
     // -------------------------
-    signedCode.addEventListener("input", () => refreshSignedSendEnabled(!!auth.currentUser));
-    signedBody.addEventListener("input", () => refreshSignedSendEnabled(!!auth.currentUser));
-    rollingCodeInput.addEventListener("input", refreshRollingSendEnabled);
-    rollingBodyInput.addEventListener("input", refreshRollingSendEnabled);
+    signedCode.addEventListener("input", () => {
+      refreshSignedSendEnabled(!!auth.currentUser);
+      applyBodyGuardrails();
+    });
+    signedBody.addEventListener("input", () => {
+      refreshSignedSendEnabled(!!auth.currentUser);
+      applyBodyGuardrails();
+    });
+    rollingCodeInput.addEventListener("input", () => {
+      refreshRollingSendEnabled();
+      applyBodyGuardrails();
+    });
+    rollingBodyInput.addEventListener("input", () => {
+      refreshRollingSendEnabled();
+      applyBodyGuardrails();
+    });
 
     btnSignedSend.addEventListener("click", async () => {
       const user = auth.currentUser;
       const code = signedCode.value.trim();
       const body = signedBody.value.trim();
+
+      if (!setBodyCodeErrorIfNeeded(true)) return;
 
       if (!user) {
         setStatus("warn", "Sign-in required", "Sign in (Email link or Google) to send Signed messages.");
@@ -828,6 +878,8 @@
       const code = rollingCodeInput.value.trim();
       const body = rollingBodyInput.value.trim();
 
+      if (!setBodyCodeErrorIfNeeded(false)) return;
+
       if (!code || !body) {
         setStatus("warn", "Missing details", "Add a rolling code and a message, then try again.");
         return;
@@ -876,6 +928,7 @@
       signedCode.value = "";
       signedBody.value = "";
       refreshSignedSendEnabled(!!auth.currentUser);
+      applyBodyGuardrails();
       setStatus("warn", "Cleared", "Signed send fields cleared.");
     });
 
@@ -883,12 +936,14 @@
       rollingCodeInput.value = "";
       rollingBodyInput.value = "";
       refreshRollingSendEnabled();
+      applyBodyGuardrails();
       setStatus("warn", "Cleared", "Rolling send fields cleared.");
     });
 
     // Init
     refreshRollingSendEnabled();
     setSignedMode("preset");
+    applyBodyGuardrails();
     setStatus("good", "Ready", "App Check is active. Encryption + sending are wired.");
 
     if (window.location.hash && window.location.hash.toLowerCase().includes("signin")) {
