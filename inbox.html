@@ -71,9 +71,7 @@
     .sf-route.show { display:block; }
 
     /* Make inbox content start “at the top” of the card */
-    .sf-inbox-top {
-      margin-top: var(--s-3);
-    }
+    .sf-inbox-top { margin-top: var(--s-3); }
 
     /* Section header */
     .sf-section-head{
@@ -271,7 +269,8 @@
         <a href="./send.html">Send</a>
         <a href="./receive.html">Receive</a>
         <a class="auth-only hidden" href="./inbox.html" aria-current="page">Inbox</a>
-        <a class="auth-only hidden hidden" id="nav-hidden" href="./inbox.html#hidden">Hidden</a>
+        <!-- Always visible when authed -->
+        <a class="auth-only hidden" id="nav-hidden" href="./inbox.html#hidden">Hidden</a>
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
         <a class="nav-cta" href="#" aria-label="Download Setfeed app">Download app</a>
@@ -283,7 +282,6 @@
     <div class="card">
       <h1>Inbox</h1>
 
-      <!-- ✅ Put “messages” content immediately below the title -->
       <div class="sf-inbox-top">
         <div class="status" role="status" aria-live="polite" id="status-bar">
           <div class="status-title">
@@ -296,7 +294,6 @@
         <!-- ROUTES -->
         <div id="route-inbox" class="sf-route show">
           <div id="inbox-ui" class="hidden">
-            <!-- Fetch controls first -->
             <div class="field" style="margin-top: var(--s-4);">
               <label for="code-input">Secure or Personal code</label>
               <input id="code-input" type="text" inputmode="text" placeholder="Paste SF-… or SFS-…" />
@@ -349,7 +346,6 @@
             </div>
             <div id="list-released"></div>
 
-            <!-- Put the explanatory panel AFTER messages -->
             <div class="panel" style="margin-top: var(--s-6);">
               <p class="panel-title">How it works</p>
               <p class="panel-sub">
@@ -391,8 +387,6 @@
         </div>
       </div>
 
-      <!-- ✅ Sign-in panel moved BELOW inbox content.
-           Also: hide the Google button entirely when signed in. -->
       <div class="panel" style="margin-top: var(--s-6);">
         <p class="panel-title">Sign in</p>
         <p class="panel-sub">
@@ -423,26 +417,26 @@
     </div>
   </div>
 
-  <!-- Delvex opening modal -->
-  <div class="delvex-backdrop" id="delvex-modal" role="dialog" aria-modal="true" aria-labelledby="delvex-title">
-    <div class="delvex-modal">
-      <div class="delvex-head">
-        <div class="delvex-title" id="delvex-title">
-          <span class="delvex-badge">Delvex</span>
-          <span id="delvex-who">Opening…</span>
+  <!-- Delvee opening modal -->
+  <div class="delvee-backdrop" id="delvee-modal" role="dialog" aria-modal="true" aria-labelledby="delvee-title">
+    <div class="delvee-modal">
+      <div class="delvee-head">
+        <div class="delvee-title" id="delvee-title">
+          <span class="delvee-badge">Delvee</span>
+          <span id="delvee-who">Opening…</span>
         </div>
-        <button class="btn btn-quiet" id="delvex-close" type="button">Close</button>
+        <button class="btn btn-quiet" id="delvee-close" type="button">Close</button>
       </div>
 
-      <div class="delvex-body">
-        <div class="delvex-stage" id="delvex-stage">
-          <div class="delvex-bolt" aria-hidden="true">
+      <div class="delvee-body">
+        <div class="delvee-stage" id="delvee-stage">
+          <div class="delvee-bolt" aria-hidden="true">
             <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
               <path class="bolt-fill" d="M36 2L10 36h18l-4 26 30-40H36l4-20z"/>
             </svg>
           </div>
 
-          <div class="delvex-confetti" id="delvex-confetti" aria-hidden="true">
+          <div class="delvee-confetti" id="delvee-confetti" aria-hidden="true">
             <i style="left:12%; top:22%"></i>
             <i style="left:22%; top:58%"></i>
             <i style="left:35%; top:18%"></i>
@@ -452,13 +446,13 @@
             <i style="left:86%; top:34%"></i>
           </div>
 
-          <div class="delvex-envelope" aria-hidden="true">
-            <div class="delvex-flap"></div>
+          <div class="delvee-envelope" aria-hidden="true">
+            <div class="delvee-flap"></div>
           </div>
 
-          <div class="delvex-reveal" id="delvex-reveal">
+          <div class="delvee-reveal" id="delvee-reveal">
             <h3 style="margin-top:0;">Message</h3>
-            <p id="delvex-text"></p>
+            <p id="delvee-text"></p>
             <small class="help" style="margin-top:10px;">
               Decryption is local in your browser.
             </small>
@@ -466,9 +460,9 @@
         </div>
       </div>
 
-      <div class="delvex-actions">
-        <button class="btn btn-secondary" id="delvex-consume" type="button">Consume</button>
-        <button class="btn btn-primary" id="delvex-ok" type="button">Done</button>
+      <div class="delvee-actions">
+        <button class="btn btn-secondary" id="delvee-consume" type="button">Consume</button>
+        <button class="btn btn-primary" id="delvee-ok" type="button">Done</button>
       </div>
     </div>
   </div>
@@ -517,6 +511,10 @@
     const hiddenUi = document.getElementById("hidden-ui");
     const inboxUi = document.getElementById("inbox-ui");
 
+    function currentRoute(){
+      return (window.location.hash || "").toLowerCase().includes("hidden") ? "hidden" : "inbox";
+    }
+
     function showRoute(which){
       const isHidden = which === "hidden";
       routeInbox.classList.toggle("show", !isHidden);
@@ -525,10 +523,6 @@
       // Only show contents when authed
       hiddenUi.classList.toggle("hidden", !(auth.currentUser));
       inboxUi.classList.toggle("hidden", !(auth.currentUser) || isHidden);
-    }
-
-    function currentRoute(){
-      return (window.location.hash || "").toLowerCase().includes("hidden") ? "hidden" : "inbox";
     }
 
     window.addEventListener("hashchange", () => showRoute(currentRoute()));
@@ -542,7 +536,6 @@
     const btnSignOut = document.getElementById("btn-sign-out");
     const authPill = document.getElementById("auth-pill");
     const inboxNav = document.querySelectorAll(".auth-only");
-    const navHidden = document.getElementById("nav-hidden");
 
     function setSignedAuthedFlag(isAuthed) {
       try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
@@ -553,16 +546,21 @@
       const isAuthed = !!user;
       setSignedAuthedFlag(isAuthed);
 
-      // ✅ Hide Google button when signed in (your request)
+      // Hide Google button when signed in
       btnGoogle.classList.toggle("hidden", isAuthed);
 
       btnSignOut.disabled = !isAuthed;
-      inboxUi.classList.toggle("hidden", !isAuthed);
       authPill.textContent = isAuthed ? (user.email || "Signed in") : "Not signed in";
+
+      // ✅ Default to Hidden tab when signing in (only if no hash already)
+      if (isAuthed) {
+        const hasHash = !!(window.location.hash || "");
+        if (!hasHash) window.location.hash = "#hidden";
+      }
 
       showRoute(currentRoute());
 
-      if (isAuthed) setStatus("good", "Signed in", "Paste a Secure/Personal code and press Fetch.");
+      if (isAuthed) setStatus("good", "Signed in", "Hidden tab is available. Use Inbox to fetch signed messages.");
       else setStatus("warn", "Not signed in", "Sign in to fetch signed inbox messages.");
     }
 
@@ -617,6 +615,19 @@
       try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
     }
 
+    function readBool(key, fallback=false){
+      try {
+        const v = localStorage.getItem(key);
+        if (v == null) return fallback;
+        return v === "true";
+      } catch (_) {
+        return fallback;
+      }
+    }
+    function writeBool(key, value){
+      try { localStorage.setItem(key, value ? "true" : "false"); } catch (_) {}
+    }
+
     function uniq(arr){
       const out = [];
       const seen = new Set();
@@ -644,15 +655,14 @@
     function getBlockedSenders(){ return uniq(readJson(LS.blockedSenders, [])); }
     function setBlockedSenders(v){ writeJson(LS.blockedSenders, uniq(v)); }
 
-    function getShowBlocked(){ return (localStorage.getItem(LS.showBlocked) === "true"); }
-    function setShowBlocked(v){ try { localStorage.setItem(LS.showBlocked, v ? "true" : "false"); } catch (_) {} }
+    function getShowBlocked(){ return readBool(LS.showBlocked, false); }
+    function setShowBlocked(v){ writeBool(LS.showBlocked, !!v); }
 
-    function getAutoPolling(){ return (localStorage.getItem(LS.autoPolling) === "true"); }
-    function setAutoPolling(v){ try { localStorage.setItem(LS.autoPolling, v ? "true" : "false"); } catch (_) {} }
+    function getAutoPolling(){ return readBool(LS.autoPolling, false); }
+    function setAutoPolling(v){ writeBool(LS.autoPolling, !!v); }
 
     function refreshHiddenNav(){
       const hiddenCount = getHiddenReleasedIds().length;
-      navHidden.classList.toggle("hidden", !(hiddenCount > 0));
       const pillHidden = document.getElementById("pill-hidden");
       if (pillHidden) pillHidden.textContent = `${hiddenCount} hidden`;
     }
@@ -774,53 +784,53 @@
     })();
 
     // -------------------------
-    // Delvex modal hooks
+    // Delvee modal hooks
     // -------------------------
-    const delvexModal = document.getElementById("delvex-modal");
-    const delvexClose = document.getElementById("delvex-close");
-    const delvexOk = document.getElementById("delvex-ok");
-    const delvexStage = document.getElementById("delvex-stage");
-    const delvexText = document.getElementById("delvex-text");
-    const delvexWho = document.getElementById("delvex-who");
-    const delvexConsume = document.getElementById("delvex-consume");
+    const delveeModal = document.getElementById("delvee-modal");
+    const delveeClose = document.getElementById("delvee-close");
+    const delveeOk = document.getElementById("delvee-ok");
+    const delveeStage = document.getElementById("delvee-stage");
+    const delveeText = document.getElementById("delvee-text");
+    const delveeWho = document.getElementById("delvee-who");
+    const delveeConsume = document.getElementById("delvee-consume");
 
-    let delvexActiveEnvelopeId = null;
-    let delvexActiveCardEl = null;
+    let delveeActiveEnvelopeId = null;
+    let delveeActiveCardEl = null;
 
-    function delvexHide(){
-      delvexModal.classList.remove("show");
-      delvexStage.classList.remove("is-playing");
-      delvexStage.classList.remove("is-revealed");
-      delvexText.textContent = "";
-      delvexWho.textContent = "Opening…";
-      delvexConsume.disabled = false;
-      delvexConsume.textContent = "Consume";
-      delvexActiveEnvelopeId = null;
-      delvexActiveCardEl = null;
+    function delveeHide(){
+      delveeModal.classList.remove("show");
+      delveeStage.classList.remove("is-playing");
+      delveeStage.classList.remove("is-revealed");
+      delveeText.textContent = "";
+      delveeWho.textContent = "Opening…";
+      delveeConsume.disabled = false;
+      delveeConsume.textContent = "Consume";
+      delveeActiveEnvelopeId = null;
+      delveeActiveCardEl = null;
     }
 
-    function delvexShow({ envelopeId, body, senderUid }){
-      delvexActiveEnvelopeId = envelopeId;
-      delvexWho.textContent = senderUid ? `From ${senderUid}` : "A surprise drop";
-      delvexText.textContent = "";
+    function delveeShow({ envelopeId, body, senderUid }){
+      delveeActiveEnvelopeId = envelopeId;
+      delveeWho.textContent = senderUid ? `From ${senderUid}` : "A surprise drop";
+      delveeText.textContent = "";
 
-      delvexModal.classList.add("show");
-      delvexStage.classList.remove("is-playing");
-      delvexStage.classList.remove("is-revealed");
+      delveeModal.classList.add("show");
+      delveeStage.classList.remove("is-playing");
+      delveeStage.classList.remove("is-revealed");
 
       requestAnimationFrame(() => {
-        delvexStage.classList.add("is-playing");
+        delveeStage.classList.add("is-playing");
         setTimeout(() => {
-          delvexText.textContent = body || "";
-          delvexStage.classList.add("is-revealed");
+          delveeText.textContent = body || "";
+          delveeStage.classList.add("is-revealed");
         }, 920);
       });
     }
 
-    delvexClose.addEventListener("click", delvexHide);
-    delvexOk.addEventListener("click", delvexHide);
-    delvexModal.addEventListener("click", (e) => { if (e.target === delvexModal) delvexHide(); });
-    window.addEventListener("keydown", (e) => { if (e.key === "Escape") { delvexHide(); hideActionsModal(); } });
+    delveeClose.addEventListener("click", delveeHide);
+    delveeOk.addEventListener("click", delveeHide);
+    delveeModal.addEventListener("click", (e) => { if (e.target === delveeModal) delveeHide(); });
+    window.addEventListener("keydown", (e) => { if (e.key === "Escape") { delveeHide(); hideActionsModal(); } });
 
     // -------------------------
     // Released actions modal
@@ -1273,8 +1283,8 @@
       if (released.length === 0) renderEmpty(listReleased, "No released messages", "When delivery time arrives, messages appear here.");
       else listReleased.innerHTML = released.map(it => messageCardHTML(it, "released")).join("");
 
-      wireUpcoming(listUpcoming, upcoming);
-      wireAwaiting(listAwaiting, awaiting);
+      wireUpcoming(listUpcoming);
+      wireAwaiting(listAwaiting);
       wireReleased(listPinned, pinned);
       wireReleased(listReleased, released);
 
@@ -1285,7 +1295,7 @@
       return (latestItems || []).find(x => x.id === id) || null;
     }
 
-    function wireUpcoming(container, items){
+    function wireUpcoming(container){
       container.querySelectorAll(".sf-msg-card").forEach(card => {
         const id = card.getAttribute("data-id");
         if (!id) return;
@@ -1336,7 +1346,7 @@
       });
     }
 
-    function wireAwaiting(container, items){
+    function wireAwaiting(container){
       container.querySelectorAll(".sf-msg-card").forEach(card => {
         const id = card.getAttribute("data-id");
         if (!id) return;
@@ -1378,8 +1388,8 @@
         if (btnOpen) btnOpen.addEventListener("click", () => {
           const full = findItemById(id);
           const body = decryptedById.get(id) || "";
-          delvexActiveCardEl = card;
-          delvexShow({ envelopeId: id, body, senderUid: full ? (full.senderUid || null) : null });
+          delveeActiveCardEl = card;
+          delveeShow({ envelopeId: id, body, senderUid: full ? (full.senderUid || null) : null });
         });
 
         const btnConsume = card.querySelector(`button[data-consume="${CSS.escape(id)}"]`);
@@ -1398,12 +1408,12 @@
       });
     }
 
-    delvexConsume.addEventListener("click", async () => {
-      if (!delvexActiveEnvelopeId) return;
-      delvexConsume.disabled = true;
-      delvexConsume.textContent = "Consuming…";
-      await consumeEnvelope(delvexActiveEnvelopeId);
-      delvexHide();
+    delveeConsume.addEventListener("click", async () => {
+      if (!delveeActiveEnvelopeId) return;
+      delveeConsume.disabled = true;
+      delveeConsume.textContent = "Consuming…";
+      await consumeEnvelope(delveeActiveEnvelopeId);
+      delveeHide();
     });
 
     // -------------------------
@@ -1445,7 +1455,8 @@
     });
 
     btnShowBlocked.addEventListener("click", () => {
-      setShowBlocked(!getShowBlocked());
+      const next = !getShowBlocked();
+      setShowBlocked(next);
       applyToggleUI();
       renderAll();
     });
@@ -1487,7 +1498,7 @@
           const wasReleasedBefore = (prevT == null) ? !!prevIt : (prevT <= now);
 
           if (!wasReleasedBefore) {
-            notifyReleased("Setfeed — message released", it.senderUid ? `From ${it.senderUid}` : "A message is ready.");
+            notifyReleased("Delvee — message released", it.senderUid ? `From ${it.senderUid}` : "A message is ready.");
           }
         }
 
@@ -1495,7 +1506,7 @@
 
         if (!quiet) {
           if (latestItems.length === 0) setStatus("warn", "No messages", "No decryptable messages for this code (or none unconsumed).");
-          else setStatus("good", "Fetched", "Lists updated. Open reveals plaintext with Delvex.");
+          else setStatus("good", "Fetched", "Lists updated. Open reveals plaintext with Delvee.");
         }
       } catch (e) {
         console.error(e);
