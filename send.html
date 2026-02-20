@@ -231,7 +231,7 @@
       <h1>Schedule a message</h1>
       <p class="lead">
         Messages are encrypted in your browser before they reach Setfeed servers.
-        For Delvee pulses and image pulses, credits apply.
+        Delvee sessions may use credits depending on your plan.
       </p>
 
       <h2>Choose a send type</h2>
@@ -255,7 +255,7 @@
                 <div>
                   <div class="panel-title" style="margin:0;">Image preview</div>
                   <div class="panel-sub" style="margin:6px 0 0 0;">
-                    Pulse image requires Delvee credits.
+                    Pulse image opens Delvee. Credits are checked inside Delvee when starting sessions.
                   </div>
                 </div>
               </div>
@@ -279,13 +279,13 @@
 
               <div class="sf-credits-row">
                 <small class="help" id="sf-image-help" style="margin-top:0;">
-                  Pulse image requires Delvee credits.
+                  Sign in + choose Pulse to enable.
                 </small>
                 <span class="sf-credits-pill" id="sf-credits-pill">Credits: —</span>
               </div>
 
               <div class="actions" style="margin-top: 10px;">
-                <a class="btn btn-secondary" href="https://delvee.app" rel="noreferrer">Get credits</a>
+                <a class="btn btn-secondary" href="https://delvee.app" rel="noreferrer">Open Delvee</a>
               </div>
             </div>
 
@@ -386,14 +386,14 @@
               </div>
 
               <small class="help" id="signed-delivery-help" style="margin-top: 10px;">
-                Pulse is a short Delvee-style send. Credits may be required for images.
+                Pulse opens Delvee. Credits (if required) are enforced when starting sessions in Delvee.
               </small>
             </div>
 
             <div class="panel" style="margin-top: var(--s-6);">
               <p class="panel-title" style="margin-top:0;">Delvee credits</p>
               <p class="panel-sub">
-                You get <b>2 free credits</b> with Setfeed when you sign in with Google (one per user). More credits unlock more pulses.
+                You get <b>2 free credits</b> with Setfeed when you sign in with Google (one per user). More credits unlock more sessions.
               </p>
 
               <div class="actions" style="margin-top: 10px;">
@@ -672,6 +672,7 @@
     function setCreditsUI(n) {
       if (creditsPill) creditsPill.textContent = (typeof n === "number" && Number.isFinite(n)) ? `Credits: ${n}` : "Credits: —";
       creditsBalance = (typeof n === "number" && Number.isFinite(n)) ? n : null;
+      // ✅ IMPORTANT: credits do NOT gate the Pulse image button anymore
       refreshPulseImageEnabled();
     }
 
@@ -777,17 +778,16 @@
     function refreshPulseImageEnabled() {
       const isAuthed = !!auth.currentUser;
       const fileOk = !!(sfImageFile && sfImageFile.files && sfImageFile.files[0]);
-
       const isPulseMode = (signedMode === "pulse");
-      const hasCredits = (typeof creditsBalance === "number" && creditsBalance > 0);
 
-      btnPulseImage.disabled = !(isAuthed && fileOk && isPulseMode && hasCredits);
+      // ✅ CHANGE: credits do NOT gate the button anymore
+      btnPulseImage.disabled = !(isAuthed && fileOk && isPulseMode);
 
       if (sfImageHelp) {
-        if (!isAuthed) sfImageHelp.textContent = "Sign in to pulse images via Delvee.";
-        else if (!isPulseMode) sfImageHelp.textContent = "Select “Pulse” to enable image pulses.";
-        else if (!hasCredits) sfImageHelp.textContent = "No credits remaining. Get credits in Delvee to pulse images.";
-        else sfImageHelp.textContent = "Pulse image requires Delvee credits.";
+        if (!isAuthed) sfImageHelp.textContent = "Sign in to open Delvee pulse image.";
+        else if (!isPulseMode) sfImageHelp.textContent = "Select “Pulse” to enable image preview + open Delvee.";
+        else if (!fileOk) sfImageHelp.textContent = "Choose an image to continue.";
+        else sfImageHelp.textContent = "Opens Delvee. Credits (if required) are handled inside Delvee when starting sessions.";
       }
     }
 
@@ -795,13 +795,9 @@
       const user = auth.currentUser;
       const file = sfImageFile.files && sfImageFile.files[0] ? sfImageFile.files[0] : null;
 
-      if (!user) { setStatus("warn", "Sign-in required", "Sign in to pulse images via Delvee."); return; }
+      if (!user) { setStatus("warn", "Sign-in required", "Sign in to open Delvee pulse image."); return; }
       if (!file) { setStatus("warn", "No image", "Choose an image first."); return; }
       if (signedMode !== "pulse") { setStatus("warn", "Choose Pulse", "Select Pulse to route images to Delvee."); return; }
-      if (!(typeof creditsBalance === "number" && creditsBalance > 0)) {
-        setStatus("warn", "No credits", "You need Delvee credits to pulse an image.");
-        return;
-      }
 
       setStatus("good", "Opening Delvee…", "Continuing image pulse in Delvee.");
       const url = `https://delvee.app/index.html?from=setfeed&pulse=image`;
@@ -954,7 +950,7 @@
       if (signedDeliverySub && signedDeliveryHelp) {
         if (isAuthed) {
           signedDeliverySub.textContent = "Signed in: Pulse mode and advanced delivery available.";
-          signedDeliveryHelp.textContent = "Pulse is a short Delvee-style send. Credits may be required for images.";
+          signedDeliveryHelp.textContent = "Pulse opens Delvee. Credits (if required) are enforced when starting sessions in Delvee.";
         } else {
           signedDeliverySub.textContent = "Sign in (Email link or Google) to use Signed (Secure / Personal).";
           signedDeliveryHelp.textContent = "Rolling is always available without signing in.";
