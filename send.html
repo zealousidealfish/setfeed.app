@@ -1,3 +1,4 @@
+<!-- setfeed/send.html (FULL FILE REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -150,123 +151,56 @@
       user-select: none;
       text-align: center;
     }
-    .sf-subhead:hover{ text-decoration: underline; }
+    .sf-subhead:hover{
+      text-decoration: underline;
+    }
 
-    /* --------
-       Pretty file input (chip)
-       -------- */
-    .sf-file-row{
-      display:flex;
-      flex-wrap:wrap;
-      gap: 10px;
-      align-items:center;
-    }
-    .sf-file-input{
-      position:absolute;
-      width:1px;
-      height:1px;
-      padding:0;
-      margin:-1px;
-      overflow:hidden;
-      clip: rect(0,0,0,0);
-      white-space:nowrap;
-      border:0;
-    }
+    /* ✅ File input as a chip */
+    .sf-file-input{ display:none !important; }
+
     .sf-file-chip{
       display:inline-flex;
       align-items:center;
       gap:10px;
-      min-height: 42px;
-      padding: 0 14px;
+      padding: 10px 12px;
       border-radius: 999px;
       border: 1px solid var(--line);
       background: color-mix(in srgb, var(--surface-variant) 12%, transparent);
       color: var(--text);
       font: inherit;
-      letter-spacing: inherit;
+      line-height: 1;
       cursor: pointer;
       user-select: none;
-      max-width: 100%;
-    }
-    .sf-file-chip:hover{
-      background: color-mix(in srgb, var(--surface-variant) 18%, transparent);
+      white-space: nowrap;
     }
     .sf-file-chip:active{
-      transform: translateY(0.5px);
+      transform: translateY(1px);
+      opacity: 0.95;
     }
-    .sf-file-chip:focus-visible{
-      outline: 2px solid color-mix(in srgb, var(--primary) 70%, transparent);
-      outline-offset: 2px;
-    }
-    .sf-file-chip .sf-file-dot{
-      width: 8px; height: 8px;
+    .sf-file-dot{
+      width: 8px;
+      height: 8px;
       border-radius: 999px;
-      background: color-mix(in srgb, var(--primary) 70%, transparent);
+      background: color-mix(in srgb, var(--text) 55%, transparent);
       flex: 0 0 auto;
     }
-    .sf-file-chip .sf-file-label{
-      white-space: nowrap;
-      flex: 0 0 auto;
-    }
-    .sf-file-chip .sf-file-name{
-      opacity: 0.75;
+    .sf-file-name{
+      max-width: 260px;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: min(360px, 55vw);
     }
-
-    /* --------
-       Signed-in email + inbox formatting
-       -------- */
-    .sf-auth-banner{
-      margin-top: 10px;
-      display:flex;
-      align-items:center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
+    .sf-file-clear{
+      border: 0;
+      background: transparent;
+      color: color-mix(in srgb, var(--text) 75%, transparent);
+      padding: 0;
+      margin-left: 2px;
+      cursor: pointer;
+      font: inherit;
+      line-height: 1;
     }
-    .sf-auth-left{
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      min-width: 0;
-    }
-    .sf-auth-pill{
-      display:inline-flex;
-      align-items:center;
-      gap: 8px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
-      background: color-mix(in srgb, var(--surface-variant) 14%, transparent);
-      font-weight: var(--fw-medium);
-      font-size: 13px;
-      white-space: nowrap;
-      flex: 0 0 auto;
-    }
-    .sf-auth-email{
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      opacity: 0.85;
-      font-size: 13px;
-    }
-    .sf-auth-actions{
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      flex: 0 0 auto;
-    }
-
-    /* Pulse image card spacing (so it doesn’t “loom”) */
-    .sf-pulse-image-card{
-      margin-bottom: 12px;
+    .sf-file-clear:hover{
+      color: var(--text);
     }
   </style>
 </head>
@@ -294,9 +228,9 @@
 
   <div class="wrap">
     <div class="card">
-      <h1>Send a scheduled pulse</h1>
+      <h1>Schedule a message</h1>
       <p class="lead">
-        Notes are encrypted in your browser before they reach Setfeed servers.
+        Messages are encrypted in your browser before they reach Setfeed servers.
         For Delvee pulses and image pulses, credits apply.
       </p>
 
@@ -314,8 +248,9 @@
       <div id="panel-signed" role="tabpanel" aria-labelledby="tab-signed" class="hidden">
         <div class="row">
           <div class="col" id="signin">
-            <!-- Image preview (SIGNED, Pulse mode only) -->
-            <div class="sf-pulse-image-card hidden" id="sf-image-card">
+
+            <!-- ✅ Image preview (Pulse mode only) -->
+            <div class="sf-pulse-image-card hidden" id="sf-pulse-image-card">
               <div class="sf-pulse-image-head">
                 <div>
                   <div class="panel-title" style="margin:0;">Image preview</div>
@@ -331,16 +266,15 @@
               </div>
 
               <div class="actions" style="margin-top: 12px;">
-                <div class="sf-file-row">
-                  <input class="sf-file-input" id="sf-image-file" type="file" accept="image/*" />
-                  <label class="sf-file-chip" id="sf-image-chip" for="sf-image-file" role="button" tabindex="0" aria-label="Choose an image file">
-                    <span class="sf-file-dot" aria-hidden="true"></span>
-                    <span class="sf-file-label">Choose file</span>
-                    <span class="sf-file-name" id="sf-image-filename">No file chosen</span>
-                  </label>
+                <!-- native input hidden; chip triggers it -->
+                <input id="sf-image-file" class="sf-file-input" type="file" accept="image/*" />
 
-                  <button class="btn btn-lg btn-primary" id="btn-pulse-image" type="button" disabled>Pulse image</button>
-                </div>
+                <button class="sf-file-chip" id="sf-btn-choose-image" type="button" aria-label="Choose image">
+                  <span class="sf-file-dot" aria-hidden="true"></span>
+                  <span id="sf-file-chip-label">Choose image</span>
+                </button>
+
+                <button class="btn btn-lg btn-primary" id="btn-pulse-image" type="button" disabled>Pulse image</button>
               </div>
 
               <div class="sf-credits-row">
@@ -371,13 +305,8 @@
             </div>
 
             <div class="sf-auth-banner hidden" id="sf-auth-banner">
-              <div class="sf-auth-left">
-                <div class="sf-auth-pill" aria-label="Signed in badge">Signed in</div>
-                <div class="sf-auth-email" id="sf-auth-label">—</div>
-              </div>
-              <div class="sf-auth-actions">
-                <button class="btn btn-secondary" id="btn-go-inbox" type="button">Go to Inbox</button>
-              </div>
+              <span id="sf-auth-label">Signed in</span>
+              <button class="btn btn-secondary" id="btn-go-inbox" type="button">Go to Inbox</button>
             </div>
 
             <div class="note">
@@ -419,12 +348,12 @@
             </div>
 
             <div class="field">
-              <label for="signed-body">Add note</label>
-              <textarea id="signed-body" maxlength="1200" placeholder="Add a note…"></textarea>
+              <label for="signed-body">Add a message</label>
+              <textarea id="signed-body" maxlength="1200" placeholder="Add a message…"></textarea>
             </div>
 
             <div class="actions">
-              <button class="btn btn-lg btn-primary" id="btn-signed-send" type="button" disabled>Encrypt and send</button>
+              <button class="btn btn-lg btn-primary" id="btn-signed-send" type="button" disabled>Pulse text</button>
               <button class="btn btn-lg btn-quiet" id="btn-signed-clear" type="button">Clear</button>
             </div>
 
@@ -467,8 +396,8 @@
                 <button class="btn btn-secondary" id="btn-claim-credits" type="button">Claim free credits</button>
               </div>
 
-              <small class="help" id="sf-credits-help" data-base-currency="GBP" data-p10="2" data-p20="3" data-unlim="3.5">
-                Packages: — · — · —
+              <small class="help" id="sf-credits-help">
+                Packages: 10 credits = £2 · 20 credits = £3 · unlimited session = £3.50
               </small>
             </div>
           </div>
@@ -505,12 +434,12 @@
 
           <div class="col">
             <div class="field">
-              <label for="rolling-body">Add note</label>
-              <textarea id="rolling-body" maxlength="1200" placeholder="Add a note…"></textarea>
+              <label for="rolling-body">Add a message</label>
+              <textarea id="rolling-body" maxlength="1200" placeholder="Add a message…"></textarea>
             </div>
 
             <div class="actions">
-              <button class="btn btn-lg btn-primary" id="btn-rolling-send" type="button" disabled>Encrypt and send</button>
+              <button class="btn btn-lg btn-primary" id="btn-rolling-send" type="button" disabled>Pulse text</button>
               <button class="btn btn-lg btn-quiet" id="btn-rolling-clear" type="button">Clear</button>
             </div>
 
@@ -621,16 +550,62 @@
     const btnRollingClear = document.getElementById("btn-rolling-clear");
     const videoRolling = document.getElementById("video-rolling");
 
-    // Image preview (signed)
-    const sfImageCard = document.getElementById("sf-image-card");
+    // Image preview (signed, pulse mode only)
+    const pulseImageCard = document.getElementById("sf-pulse-image-card");
     const sfImageFile = document.getElementById("sf-image-file");
-    const sfImageFilename = document.getElementById("sf-image-filename");
     const btnPulseImage = document.getElementById("btn-pulse-image");
     const previewEmpty = document.getElementById("sf-preview-empty");
     const previewImg = document.getElementById("sf-preview-img");
     const sfImageHelp = document.getElementById("sf-image-help");
     const creditsPill = document.getElementById("sf-credits-pill");
     const btnClaimCredits = document.getElementById("btn-claim-credits");
+
+    // File chip controls
+    const sfBtnChooseImage = document.getElementById("sf-btn-choose-image");
+    const sfFileChipLabel = document.getElementById("sf-file-chip-label");
+
+    function renderChosenImageName() {
+      const f = (sfImageFile && sfImageFile.files && sfImageFile.files[0]) ? sfImageFile.files[0] : null;
+      if (!sfFileChipLabel) return;
+
+      if (!f) {
+        sfFileChipLabel.textContent = "Choose image";
+        return;
+      }
+
+      sfFileChipLabel.innerHTML = "";
+      const name = document.createElement("span");
+      name.className = "sf-file-name";
+      name.textContent = f.name;
+
+      const clear = document.createElement("button");
+      clear.className = "sf-file-clear";
+      clear.type = "button";
+      clear.textContent = "×";
+      clear.setAttribute("aria-label", "Clear selected image");
+      clear.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        sfImageFile.value = "";
+        setPreviewFile(null);
+        renderChosenImageName();
+        refreshPulseImageEnabled();
+      });
+
+      sfFileChipLabel.appendChild(name);
+      sfFileChipLabel.appendChild(clear);
+    }
+
+    if (sfBtnChooseImage && sfImageFile) {
+      sfBtnChooseImage.addEventListener("click", () => sfImageFile.click());
+      sfImageFile.addEventListener("change", () => {
+        const f = sfImageFile.files && sfImageFile.files[0] ? sfImageFile.files[0] : null;
+        setPreviewFile(f);
+        renderChosenImageName();
+        refreshPulseImageEnabled();
+      });
+      renderChosenImageName();
+    }
 
     // Clickable subhead -> Delvee
     const delveeCta = document.getElementById("sf-delvee-cta");
@@ -654,7 +629,6 @@
       try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
       document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
     }
-
     function refreshSignedSendEnabled(isAuthed) {
       const canSend = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
       btnSignedSend.disabled = !canSend;
@@ -663,7 +637,6 @@
       const canSend = rollingCodeInput.value.trim().length > 0 && rollingBodyInput.value.trim().length > 0;
       btnRollingSend.disabled = !canSend;
     }
-
     function moveStatusToTop(isAuthed) {
       if (!statusBox || !statusSlotTop || !statusSlotBottom) return;
       if (isAuthed) {
@@ -701,6 +674,7 @@
       }
     }
 
+    // Optional: claim starter credits once (server must enforce one-per-user)
     btnClaimCredits.addEventListener("click", async () => {
       if (!auth.currentUser) { setStatus("warn", "Sign-in required", "Sign in with Google to claim free credits."); return; }
       try {
@@ -737,24 +711,17 @@
       });
     }
 
-    function refreshSignedButtonLabel() {
-      // ✅ Rule: only show “Pulse” wording when Pulse mode selected
-      btnSignedSend.textContent = (signedMode === "pulse") ? "Pulse text" : "Encrypt and send";
-    }
-
     function setSignedMode(nextMode) {
       signedMode = nextMode || "preset";
       signedAdvBtns.forEach(b => b.setAttribute("aria-pressed", "false"));
       const btn = signedAdvBtns.find(b => (b.getAttribute("data-mode") || "") === signedMode);
       if (btn) btn.setAttribute("aria-pressed", "true");
-
       if (signedMode !== "preset") setSignedPresetHighlightVisible(false);
       else setSignedPresetHighlightVisible(true);
 
-      // ✅ Only show image preview section in Pulse mode
-      if (sfImageCard) sfImageCard.classList.toggle("hidden", signedMode !== "pulse");
+      // ✅ Only show image preview when Pulse mode is selected
+      if (pulseImageCard) pulseImageCard.classList.toggle("hidden", signedMode !== "pulse");
 
-      refreshSignedButtonLabel();
       refreshPulseImageEnabled();
     }
 
@@ -777,72 +744,28 @@
     });
 
     // -------------------------
-    // Pretty prices (localized formatting)
-    // -------------------------
-    function guessCurrencyFromLocale() {
-      // Heuristic (keeps behavior stable, avoids huge mappings)
-      const lang = (navigator.language || "").toLowerCase();
-      if (lang.startsWith("en-gb")) return "GBP";
-      if (lang.startsWith("en-us")) return "USD";
-      if (lang.startsWith("en-ca")) return "CAD";
-      if (lang.startsWith("en-au")) return "AUD";
-      // Most of Europe browsers will still show EUR nicely
-      if (lang.startsWith("de") || lang.startsWith("fr") || lang.startsWith("es") || lang.startsWith("it") || lang.startsWith("nl") || lang.startsWith("pt")) return "EUR";
-      return "GBP";
-    }
-
-    function fmtMoney(amount, currency) {
-      const cur = currency || "GBP";
-      try {
-        return new Intl.NumberFormat(navigator.language, { style: "currency", currency: cur, maximumFractionDigits: 2 }).format(amount);
-      } catch (_) {
-        // fallback
-        const sym = (cur === "USD") ? "$" : (cur === "EUR") ? "€" : "£";
-        return `${sym}${Number(amount).toFixed(2)}`;
-      }
-    }
-
-    function renderCreditsPricing() {
-      const el = document.getElementById("sf-credits-help");
-      if (!el) return;
-
-      const base = (el.getAttribute("data-base-currency") || "GBP").toUpperCase();
-      const p10 = Number(el.getAttribute("data-p10") || "2");
-      const p20 = Number(el.getAttribute("data-p20") || "3");
-      const unlim = Number(el.getAttribute("data-unlim") || "3.5");
-
-      // “currency to be based on local time” → interpret as local region/locale display
-      const cur = guessCurrencyFromLocale() || base;
-
-      el.textContent =
-        `Packages: 10 credits = ${fmtMoney(p10, cur)} · 20 credits = ${fmtMoney(p20, cur)} · unlimited session = ${fmtMoney(unlim, cur)}`;
-    }
-
-    // -------------------------
     // Image preview helpers
     // -------------------------
     function setPreviewFile(file) {
       if (!file) {
-        if (previewImg) previewImg.src = "";
-        if (previewImg) previewImg.classList.add("hidden");
-        if (previewEmpty) previewEmpty.classList.remove("hidden");
-        if (sfImageFilename) sfImageFilename.textContent = "No file chosen";
+        previewImg.src = "";
+        previewImg.classList.add("hidden");
+        previewEmpty.classList.remove("hidden");
         return;
       }
       const url = URL.createObjectURL(file);
-      if (previewImg) previewImg.src = url;
-      if (previewImg) previewImg.classList.remove("hidden");
-      if (previewEmpty) previewEmpty.classList.add("hidden");
-      if (sfImageFilename) sfImageFilename.textContent = file.name || "Selected";
+      previewImg.src = url;
+      previewImg.classList.remove("hidden");
+      previewEmpty.classList.add("hidden");
     }
 
     function refreshPulseImageEnabled() {
       const isAuthed = !!auth.currentUser;
       const fileOk = !!(sfImageFile && sfImageFile.files && sfImageFile.files[0]);
+
       const isPulseMode = (signedMode === "pulse");
       const hasCredits = (typeof creditsBalance === "number" && creditsBalance > 0);
 
-      // ✅ Pulse image requires credits + Pulse mode
       btnPulseImage.disabled = !(isAuthed && fileOk && isPulseMode && hasCredits);
 
       if (sfImageHelp) {
@@ -853,17 +776,9 @@
       }
     }
 
-    if (sfImageFile) {
-      sfImageFile.addEventListener("change", () => {
-        const f = (sfImageFile.files && sfImageFile.files[0]) ? sfImageFile.files[0] : null;
-        setPreviewFile(f);
-        refreshPulseImageEnabled();
-      });
-    }
-
     btnPulseImage.addEventListener("click", async () => {
       const user = auth.currentUser;
-      const file = (sfImageFile && sfImageFile.files && sfImageFile.files[0]) ? sfImageFile.files[0] : null;
+      const file = sfImageFile.files && sfImageFile.files[0] ? sfImageFile.files[0] : null;
 
       if (!user) { setStatus("warn", "Sign-in required", "Sign in to pulse images via Delvee."); return; }
       if (!file) { setStatus("warn", "No image", "Choose an image first."); return; }
@@ -901,7 +816,7 @@
       const rollingHas = messageContainsSetfeedReceiveCode(rollingBodyInput.value);
 
       if (signedHas || rollingHas) {
-        setStatus("warn", "Not allowed in Setfeed", "That looks like a Setfeed receive code inside the note. Remove the code.");
+        setStatus("warn", "Not allowed in Setfeed", "That looks like a Setfeed receive code inside the message. Remove the code.");
       }
 
       const signedBase = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
@@ -1033,16 +948,14 @@
         }
       }
 
-      // If user signs out while in pulse mode, keep the UI consistent
-      if (!isAuthed && signedMode === "pulse") {
-        // leave the mode as-is (user chose it), but ensure enable states are correct
-        if (sfImageCard) sfImageCard.classList.toggle("hidden", false);
-      }
+      // ✅ ensure pulse-image card visibility matches mode after auth render
+      if (pulseImageCard) pulseImageCard.classList.toggle("hidden", signedMode !== "pulse");
 
       refreshSignedSendEnabled(isAuthed);
       refreshRollingSendEnabled();
       applyBodyGuardrails();
 
+      // Credits + image enable
       loadCredits().catch(() => {});
       refreshPulseImageEnabled();
     }
@@ -1055,7 +968,7 @@
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: "select_account" });
         await auth.signInWithPopup(provider);
-        setStatus("good", "Signed in", "Signed sends are available.");
+        setStatus("good", "Signed in", "Signed pulses are available.");
       } catch (e) {
         console.error(e);
         setStatus("warn", "Couldn’t sign in", "Google sign-in failed. Check pop-up blocking and try again.");
@@ -1098,7 +1011,7 @@
         setStatus("good", "Signing in…", "Finishing email-link sign-in…");
         await auth.signInWithEmailLink(email, href);
         try { localStorage.removeItem(EMAIL_FOR_SIGNIN_KEY); } catch (_) {}
-        setStatus("good", "Signed in", "Signed sends are available.");
+        setStatus("good", "Signed in", "Signed pulses are available.");
         history.replaceState(null, "", "./send.html#signin");
       } catch (e) {
         console.error(e);
@@ -1126,11 +1039,10 @@
       if (!ok) return;
 
       if (!user) { setStatus("warn", "Sign-in required", "Sign in (Email link or Google) to send Signed messages."); return; }
-      if (!code || !body) { setStatus("warn", "Missing details", "Add a code and a note, then try again."); return; }
+      if (!code || !body) { setStatus("warn", "Missing details", "Add a code and a message, then try again."); return; }
 
       try {
-        const pulse = (signedMode === "pulse");
-        setStatus("good", pulse ? "Pulsing…" : "Sending…", "Encrypting in your browser and scheduling delivery…");
+        setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
 
         const enc = await encryptBodyForCode(code, body);
         const codeHash = await sha256Hex(enc.normalizedPassphrase);
@@ -1170,7 +1082,7 @@
       const ok = applyBodyGuardrails().rollingOk;
       if (!ok) return;
 
-      if (!code || !body) { setStatus("warn", "Missing details", "Add a rolling code and a note, then try again."); return; }
+      if (!code || !body) { setStatus("warn", "Missing details", "Add a rolling code and a message, then try again."); return; }
 
       try {
         setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
@@ -1221,8 +1133,7 @@
 
     // Init
     refreshRollingSendEnabled();
-    renderCreditsPricing();
-    setSignedMode("preset"); // sets button label + hides image card
+    setSignedMode("preset");              // ensures image card starts hidden
     applyBodyGuardrails();
     refreshPulseImageEnabled();
     setStatus("good", "Ready", "App Check is active. Encryption + sending are wired.");
