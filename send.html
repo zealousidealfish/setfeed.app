@@ -453,15 +453,13 @@
       }
     }
 
-    // -------------------------
-    // Auth UI render
-    // -------------------------
     function renderAuthUI(user) {
       const isAuthed = !!user;
 
       const emailField = signedEmail ? signedEmail.closest(".field") : null;
       if (emailField) emailField.classList.toggle("hidden", isAuthed);
       if (btnSendLink) btnSendLink.classList.toggle("hidden", isAuthed);
+
       if (btnGoogle) btnGoogle.classList.toggle("hidden", isAuthed);
 
       if (btnSignOut) {
@@ -494,8 +492,8 @@
       }
 
       refreshSignedSendEnabled(isAuthed);
-      setBodyCodeErrorIfNeeded(true);
-      setBodyCodeErrorIfNeeded(false);
+      refreshRollingSendEnabled();
+      applyBodyGuardrails();
     }
     auth.onAuthStateChanged((user) => renderAuthUI(user));
 
@@ -649,10 +647,6 @@
 
       return { signedOk: !signedHas, rollingOk: !rollingHas };
     }
-    function setBodyCodeErrorIfNeeded(isSigned) {
-      const res = applyBodyGuardrails();
-      return isSigned ? res.signedOk : res.rollingOk;
-    }
 
     // Crypto helpers (WebCrypto)
     function normalizeCodeAndroid(raw) { return raw.trim().toUpperCase().replace(/[\s-]/g, ""); }
@@ -737,7 +731,8 @@
       const user = auth.currentUser;
       const code = signedCode.value.trim();
       const body = signedBody.value.trim();
-      if (!setBodyCodeErrorIfNeeded(true)) return;
+      const ok = applyBodyGuardrails().signedOk;
+      if (!ok) return;
 
       if (!user) { setStatus("warn", "Sign-in required", "Sign in (Email link or Google) to send Signed messages."); return; }
       if (!code || !body) { setStatus("warn", "Missing details", "Add a code and a message, then try again."); return; }
@@ -781,7 +776,8 @@
     btnRollingSend.addEventListener("click", async () => {
       const code = rollingCodeInput.value.trim();
       const body = rollingBodyInput.value.trim();
-      if (!setBodyCodeErrorIfNeeded(false)) return;
+      const ok = applyBodyGuardrails().rollingOk;
+      if (!ok) return;
 
       if (!code || !body) { setStatus("warn", "Missing details", "Add a rolling code and a message, then try again."); return; }
 
