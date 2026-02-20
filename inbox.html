@@ -117,6 +117,18 @@
     .sf-msg-title{
       font-weight: 750;
       letter-spacing: -0.01em;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      min-width: 0;
+    }
+    .sf-msg-title-text{
+      min-width: 0;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 44ch;
     }
     .sf-msg-meta{
       display:flex;
@@ -256,6 +268,26 @@
     }
     .sf-toggle:hover{ background: rgba(255,255,255,0.07); }
     .sf-toggle:active{ transform: translateY(0.5px); }
+
+    /* ✅ message-kind pill */
+    .sf-kind{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border-radius: 999px;
+      padding: 4px 8px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: rgba(233,238,246,0.92);
+      font-weight: 800;
+      font-size: 11px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .sf-kind.delvee{
+      border-color: rgba(59,130,246,0.40);
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.10);
+    }
   </style>
 </head>
 
@@ -306,6 +338,7 @@
             <div class="msg-toolbar">
               <div class="left">
                 <button class="btn btn-primary" id="btn-fetch" type="button">Fetch</button>
+                <button class="btn btn-secondary" id="btn-fetch-summaries" type="button">Fetch summaries</button>
                 <button class="btn btn-quiet" id="btn-clear" type="button">Clear</button>
               </div>
               <div class="right">
@@ -319,6 +352,9 @@
               </button>
               <button class="sf-toggle" id="btn-show-blocked" type="button">
                 <span id="blocked-label">Hidden senders: Hidden</span>
+              </button>
+              <button class="sf-toggle" id="btn-summaries-only" type="button">
+                <span id="summaries-label">Show: All</span>
               </button>
             </div>
 
@@ -455,7 +491,7 @@
           </div>
 
           <div class="delvee-reveal" id="delvee-reveal">
-            <h3 style="margin-top:0;">Message</h3>
+            <h3 style="margin-top:0;" id="delvee-heading">Message</h3>
             <p id="delvee-text"></p>
             <small class="help" style="margin-top:10px;">
               Decryption is local in your browser.
@@ -644,17 +680,37 @@
     function getBlockedSenders(){ return uniq(readJson(LS.blockedSenders, [])); }
     function setBlockedSenders(v){ writeJson(LS.blockedSenders, uniq(v)); }
 
-    function getShowBlocked(){ return (localStorage.getItem(LS.showBlocked) === "true"); }
-    function setShowBlocked(v){ try { localStorage.setItem(LS.showBlocked, v ? "true" : "false"); } catch (_) {} }
+    // ✅ robust (localStorage can throw in some privacy modes)
+    function getShowBlocked(){
+      try { return (localStorage.getItem(LS.showBlocked) === "true"); } catch (_) { return false; }
+    }
+    function setShowBlocked(v){
+      try { localStorage.setItem(LS.showBlocked, v ? "true" : "false"); } catch (_) {}
+    }
 
-    function getAutoPolling(){ return (localStorage.getItem(LS.autoPolling) === "true"); }
-    function setAutoPolling(v){ try { localStorage.setItem(LS.autoPolling, v ? "true" : "false"); } catch (_) {} }
+    function getAutoPolling(){
+      try { return (localStorage.getItem(LS.autoPolling) === "true"); } catch (_) { return false; }
+    }
+    function setAutoPolling(v){
+      try { localStorage.setItem(LS.autoPolling, v ? "true" : "false"); } catch (_) {}
+    }
 
     function refreshHiddenNav(){
       const hiddenCount = getHiddenReleasedIds().length;
       const pillHidden = document.getElementById("pill-hidden");
       if (pillHidden) pillHidden.textContent = `${hiddenCount} hidden`;
       // navHidden visibility is handled by auth state now
+    }
+
+    // -------------------------
+    // Message kind detection
+    // -------------------------
+    function detectKindFromPlaintext(pt){
+      const s = (pt || "").trim();
+      if (s.startsWith("Delvee — pulse summary")) {
+        return { kind: "delvee_summary", label: "Delvee Summary", pillText: "Delvee", pillCls: "delvee" };
+      }
+      return { kind: "generic", label: "Message", pillText: "", pillCls: "" };
     }
 
     // -------------------------
@@ -732,6 +788,7 @@
     // -------------------------
     const codeInput = document.getElementById("code-input");
     const btnFetch = document.getElementById("btn-fetch");
+    const btnFetchSummaries = document.getElementById("btn-fetch-summaries");
     const btnClear = document.getElementById("btn-clear");
     const countPill = document.getElementById("count-pill");
 
@@ -740,6 +797,9 @@
 
     const btnShowBlocked = document.getElementById("btn-show-blocked");
     const blockedLabel = document.getElementById("blocked-label");
+
+    const btnSummariesOnly = document.getElementById("btn-summaries-only");
+    const summariesLabel = document.getElementById("summaries-label");
 
     const listPinned = document.getElementById("list-pinned");
     const listUpcoming = document.getElementById("list-upcoming");
@@ -783,6 +843,7 @@
     const delveeText = document.getElementById("delvee-text");
     const delveeWho = document.getElementById("delvee-who");
     const delveeConsume = document.getElementById("delvee-consume");
+    const delveeHeading = document.getElementById("delvee-heading");
 
     let delveeActiveEnvelopeId = null;
     let delveeActiveCardEl = null;
@@ -797,12 +858,14 @@
       delveeConsume.textContent = "Consume";
       delveeActiveEnvelopeId = null;
       delveeActiveCardEl = null;
+      if (delveeHeading) delveeHeading.textContent = "Message";
     }
 
-    function delveeShow({ envelopeId, body, senderUid }){
+    function delveeShow({ envelopeId, body, senderUid, kindLabel }){
       delveeActiveEnvelopeId = envelopeId;
       delveeWho.textContent = senderUid ? `From ${senderUid}` : "A surprise drop";
       delveeText.textContent = "";
+      if (delveeHeading) delveeHeading.textContent = kindLabel || "Message";
 
       delveeModal.classList.add("show");
       delveeStage.classList.remove("is-playing");
@@ -883,6 +946,9 @@
       setBlockedSenders(blocked);
       hideActionsModal();
       renderAll();
+
+      // ✅ immediately reflect in toggle label (and sanity-check storage)
+      applyToggleUI();
       setStatus("warn", "Sender hidden", "Messages from this sender are hidden on this device.");
     });
 
@@ -933,6 +999,9 @@
     let decryptedById = new Map();
     let latestItems = [];
 
+    // UI-only filter (in-memory)
+    let summariesOnly = false;
+
     async function buildLatestItems(rawCode, envelopes){
       decryptedById = new Map();
       const out = [];
@@ -954,8 +1023,22 @@
         const pt = await decryptEnvelopeForCode(rawCode, ciphertext, iv, salt);
         if (pt == null) continue;
 
+        const k = detectKindFromPlaintext(pt);
+
         decryptedById.set(id, pt);
-        out.push({ id, senderUid, when, deliverMillis, ciphertext, iv, salt });
+        out.push({
+          id,
+          senderUid,
+          when,
+          deliverMillis,
+          ciphertext,
+          iv,
+          salt,
+          kind: k.kind,
+          kindLabel: k.label,
+          kindPillText: k.pillText,
+          kindPillCls: k.pillCls
+        });
       }
 
       return out;
@@ -978,6 +1061,9 @@
       const released = [];
 
       for (const it of items || []) {
+        // ✅ summaries-only filter applies everywhere (but does not affect Hidden route)
+        if (summariesOnly && it.kind !== "delvee_summary") continue;
+
         const deliverMillis = it.deliverMillis;
         const isReleased = (deliverMillis == null) ? true : (deliverMillis <= now);
 
@@ -985,6 +1071,8 @@
 
         if (isReleased) {
           if (hiddenReleasedIds.has(it.id)) continue;
+
+          // ✅ hide blocked senders unless explicitly shown
           if (!showBlocked && isSenderBlocked) continue;
 
           const body = decryptedById.get(it.id) || "";
@@ -1150,6 +1238,12 @@
         if (!isAwaiting) btns.push(`<button class="btn btn-secondary" type="button" data-make-awaiting="${safeText(item.id)}">Mark awaiting</button>`);
       }
 
+      const titleText = (item && item.kindLabel) ? item.kindLabel : (mode === "pinned" ? "Pinned message" : "Message");
+      const pill =
+        (item && item.kind === "delvee_summary")
+          ? `<span class="sf-kind delvee">${safeText(item.kindPillText || "Delvee")}</span>`
+          : ``;
+
       return `
         <div class="sf-msg-card" data-id="${safeText(item.id)}" data-mode="${safeText(mode)}">
           <div class="sf-swipe-bg">
@@ -1159,7 +1253,10 @@
 
           <div class="sf-drag">
             <div class="sf-msg-top">
-              <div class="sf-msg-title">${safeText(mode === "pinned" ? "Pinned message" : "Message")}</div>
+              <div class="sf-msg-title">
+                ${pill}
+                <span class="sf-msg-title-text">${safeText(titleText)}</span>
+              </div>
               <div class="sf-msg-meta">
                 <span>${safeText(when)}</span>
                 <span>${safeText(sender)}</span>
@@ -1260,13 +1357,13 @@
         listPinned.innerHTML = "";
       }
 
-      if (upcoming.length === 0) renderEmpty(listUpcoming, "No upcoming messages", "Upcoming messages appear here until delivery time.");
+      if (upcoming.length === 0) renderEmpty(listUpcoming, summariesOnly ? "No upcoming summaries" : "No upcoming messages", "Upcoming messages appear here until delivery time.");
       else listUpcoming.innerHTML = upcoming.map(it => messageCardHTML(it, "upcoming")).join("");
 
-      if (awaiting.length === 0) renderEmpty(listAwaiting, "No awaiting messages", "Swipe right on an upcoming message to mark it Awaiting.");
+      if (awaiting.length === 0) renderEmpty(listAwaiting, summariesOnly ? "No awaiting summaries" : "No awaiting messages", "Swipe right on an upcoming message to mark it Awaiting.");
       else listAwaiting.innerHTML = awaiting.map(it => messageCardHTML(it, "awaiting")).join("");
 
-      if (released.length === 0) renderEmpty(listReleased, "No released messages", "When delivery time arrives, messages appear here.");
+      if (released.length === 0) renderEmpty(listReleased, summariesOnly ? "No released summaries" : "No released messages", "When delivery time arrives, messages appear here.");
       else listReleased.innerHTML = released.map(it => messageCardHTML(it, "released")).join("");
 
       wireUpcoming(listUpcoming, upcoming);
@@ -1375,7 +1472,8 @@
           const full = findItemById(id);
           const body = decryptedById.get(id) || "";
           delveeActiveCardEl = card;
-          delveeShow({ envelopeId: id, body, senderUid: full ? (full.senderUid || null) : null });
+          const kindLabel = full && full.kindLabel ? full.kindLabel : "Message";
+          delveeShow({ envelopeId: id, body, senderUid: full ? (full.senderUid || null) : null, kindLabel });
         });
 
         const btnConsume = card.querySelector(`button[data-consume="${CSS.escape(id)}"]`);
@@ -1410,6 +1508,7 @@
     function applyToggleUI(){
       autoLabel.textContent = `Auto polling: ${getAutoPolling() ? "On" : "Off"}`;
       blockedLabel.textContent = `Hidden senders: ${getShowBlocked() ? "Shown" : "Hidden"}`;
+      summariesLabel.textContent = `Show: ${summariesOnly ? "Summaries" : "All"}`;
     }
 
     function stopAuto(){
@@ -1440,8 +1539,17 @@
       }
     });
 
+    // ✅ Fix: always re-render after toggling; robust storage already handled
     btnShowBlocked.addEventListener("click", () => {
-      setShowBlocked(!getShowBlocked());
+      const next = !getShowBlocked();
+      setShowBlocked(next);
+      applyToggleUI();
+      renderAll();
+      setStatus("good", "Updated", next ? "Hidden senders are now shown." : "Hidden senders are now hidden.");
+    });
+
+    btnSummariesOnly.addEventListener("click", () => {
+      summariesOnly = !summariesOnly;
       applyToggleUI();
       renderAll();
     });
@@ -1511,13 +1619,32 @@
       }
     });
 
+    // ✅ “Fetch summaries” = fetch, then switch filter to summaries-only
+    btnFetchSummaries.addEventListener("click", async () => {
+      btnFetchSummaries.disabled = true;
+      const prev = btnFetchSummaries.textContent;
+      btnFetchSummaries.textContent = "Fetching…";
+      try {
+        await doFetch(codeInput.value, { quiet:false });
+        summariesOnly = true;
+        applyToggleUI();
+        renderAll();
+        setStatus("good", "Summaries", "Showing Delvee Summaries only.");
+      } finally {
+        btnFetchSummaries.disabled = false;
+        btnFetchSummaries.textContent = prev;
+      }
+    });
+
     btnClear.addEventListener("click", () => {
       codeInput.value = "";
       setAwaitingIds([]);
 
       decryptedById = new Map();
       latestItems = [];
+      summariesOnly = false;
 
+      applyToggleUI();
       renderAll();
       setStatus("warn", "Cleared", "Inbox cleared. Paste a code and press Fetch.");
     });
