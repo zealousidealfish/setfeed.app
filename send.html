@@ -122,6 +122,38 @@
       color: #ffffff !important;
       border-color: rgba(255,255,255,0.18) !important;
     }
+
+    .sf-credits-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    .sf-credits-pill{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
+      color: var(--text);
+      font-weight: var(--fw-medium);
+      font-size: 13.2px;
+      white-space: nowrap;
+    }
+
+    /* Make "Create pulse lobby with Delvee" feel like a link (clickable) */
+    .sf-subhead{
+      cursor: pointer;
+      user-select: none;
+      text-align: center; /* your earlier request */
+    }
+    .sf-subhead:hover{
+      text-decoration: underline;
+    }
   </style>
 </head>
 
@@ -140,7 +172,9 @@
         <a class="auth-only hidden" href="./inbox.html">Inbox</a>
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
-        <a class="nav-cta" href="#" aria-label="Download Setfeed app">Download app</a>
+
+        <!-- ✅ Fix: Download app now links to Delvee -->
+        <a class="nav-cta" href="https://delvee.app" rel="noreferrer" aria-label="Open Delvee">Download app</a>
       </nav>
     </div>
   </header>
@@ -150,7 +184,7 @@
       <h1>Send a scheduled pulse</h1>
       <p class="lead">
         Notes are encrypted in your browser before they reach Setfeed servers.
-        For short surprise drops, use a pulse delay.
+        For Delvee pulses and image pulses, credits apply.
       </p>
 
       <h2>Choose a send type</h2>
@@ -167,13 +201,13 @@
       <div id="panel-signed" role="tabpanel" aria-labelledby="tab-signed" class="hidden">
         <div class="row">
           <div class="col" id="signin">
-            <!-- Image preview (signed pulses, especially 2–3 min) -->
+            <!-- Image preview (signed pulses, Pulse mode) -->
             <div class="sf-pulse-image-card">
               <div class="sf-pulse-image-head">
                 <div>
                   <div class="panel-title" style="margin:0;">Image preview</div>
                   <div class="panel-sub" style="margin:6px 0 0 0;">
-                    For <b>Pulse in 2 / Pulse in 3</b>, images open Delvee.
+                    Pulse image requires Delvee credits.
                   </div>
                 </div>
               </div>
@@ -188,9 +222,16 @@
                 <button class="btn btn-lg btn-primary" id="btn-pulse-image" type="button" disabled>Pulse image</button>
               </div>
 
-              <small class="help" id="sf-image-help">
-                Single image is free. Multiple quick pulses may require credits (enforced server-side).
-              </small>
+              <div class="sf-credits-row">
+                <small class="help" id="sf-image-help" style="margin-top:0;">
+                  Pulse image requires Delvee credits.
+                </small>
+                <span class="sf-credits-pill" id="sf-credits-pill">Credits: —</span>
+              </div>
+
+              <div class="actions" style="margin-top: 10px;">
+                <a class="btn btn-secondary" href="https://delvee.app" rel="noreferrer">Get credits</a>
+              </div>
             </div>
 
             <div class="field">
@@ -198,12 +239,13 @@
               <input id="signed-email" type="email" autocomplete="email" placeholder="you@example.com" />
             </div>
 
-            <div class="actions">
-              <button class="btn btn-lg" id="btn-send-link" type="button">Send sign-in link</button>
-
+            <div class="actions" style="flex-direction: column; align-items: stretch;">
+              <!-- ✅ requested: Google button above “Create pulse lobby…” (and above email sign-in UI on this page) -->
               <button class="btn btn-lg btn-primary" id="btn-google" type="button" aria-label="Continue with Google">
                 <span>Google</span>
               </button>
+
+              <button class="btn btn-lg" id="btn-send-link" type="button">Send sign-in link</button>
 
               <button class="btn btn-lg btn-quiet hidden" id="btn-sign-out" type="button" disabled>Sign out</button>
             </div>
@@ -242,7 +284,7 @@
           </div>
 
           <div class="col">
-            <div class="sf-subhead">
+            <div class="sf-subhead" id="sf-delvee-cta" role="link" tabindex="0" aria-label="Create pulse lobby with Delvee">
               Create pulse lobby with Delvee
             </div>
 
@@ -279,14 +321,29 @@
 
               <div class="sf-adv-row hidden" id="signed-advanced-row" aria-label="Signed advanced delivery">
                 <button class="chip sf-adv-btn" type="button" aria-pressed="true"  data-mode="preset">Tomorrow preset</button>
-                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="2m">Pulse in 2</button>
-                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="3m">Pulse in 3</button>
+                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="pulse">Pulse</button>
                 <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="10m">In 10 minutes</button>
                 <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="1h">In 1 hour</button>
               </div>
 
               <small class="help" id="signed-delivery-help" style="margin-top: 10px;">
-                Pulse delays are short surprise drops. After the delay, you’ll receive a summary of what was pulsed.
+                Pulse is a short Delvee-style send. Credits may be required for images.
+              </small>
+            </div>
+
+            <div class="panel" style="margin-top: var(--s-6);">
+              <p class="panel-title" style="margin-top:0;">Delvee credits</p>
+              <p class="panel-sub">
+                You get <b>2 free credits</b> with Setfeed when you sign in with Google (one per user). More credits unlock more pulses.
+              </p>
+
+              <div class="actions" style="margin-top: 10px;">
+                <a class="btn btn-primary" href="https://delvee.app" rel="noreferrer">Open Delvee</a>
+                <button class="btn btn-secondary" id="btn-claim-credits" type="button">Claim free credits</button>
+              </div>
+
+              <small class="help" id="sf-credits-help">
+                Packages: 10 credits = £2 · 20 credits = £3 · unlimited session = £3.50
               </small>
             </div>
           </div>
@@ -445,6 +502,16 @@
     const previewEmpty = document.getElementById("sf-preview-empty");
     const previewImg = document.getElementById("sf-preview-img");
     const sfImageHelp = document.getElementById("sf-image-help");
+    const creditsPill = document.getElementById("sf-credits-pill");
+    const btnClaimCredits = document.getElementById("btn-claim-credits");
+
+    // Clickable subhead -> Delvee
+    const delveeCta = document.getElementById("sf-delvee-cta");
+    if (delveeCta) {
+      const go = () => { window.location.href = "https://delvee.app"; };
+      delveeCta.addEventListener("click", go);
+      delveeCta.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") go(); });
+    }
 
     // Status movement slots
     const statusBox = document.getElementById("status-box");
@@ -480,6 +547,49 @@
         statusSlotBottom.appendChild(statusBox);
       }
     }
+
+    // -------------------------
+    // Credits (Delvee)
+    // -------------------------
+    let creditsBalance = null; // number | null
+
+    function setCreditsUI(n) {
+      if (creditsPill) creditsPill.textContent = (typeof n === "number" && Number.isFinite(n)) ? `Credits: ${n}` : "Credits: —";
+      creditsBalance = (typeof n === "number" && Number.isFinite(n)) ? n : null;
+      refreshPulseImageEnabled();
+    }
+
+    async function loadCredits() {
+      if (!auth.currentUser) { setCreditsUI(null); return; }
+      try {
+        const call = functions.httpsCallable("getDelveeCreditsBalance");
+        const res = await call({});
+        const data = (res && res.data) ? res.data : {};
+        const bal = (typeof data.balance === "number") ? data.balance : (typeof data.credits === "number" ? data.credits : null);
+        setCreditsUI((typeof bal === "number") ? bal : null);
+      } catch (e) {
+        // Soft-fail if function not deployed yet
+        setCreditsUI(null);
+      }
+    }
+
+    // Optional: claim starter credits once (server must enforce one-per-user)
+    btnClaimCredits.addEventListener("click", async () => {
+      if (!auth.currentUser) { setStatus("warn", "Sign-in required", "Sign in with Google to claim free credits."); return; }
+      try {
+        btnClaimCredits.disabled = true;
+        setStatus("good", "Claiming…", "Requesting starter credits…");
+        const call = functions.httpsCallable("claimDelveeStarterCredits");
+        await call({});
+        await loadCredits();
+        setStatus("good", "Credits updated", "Starter credits claimed (if eligible).");
+      } catch (e) {
+        console.warn("[claimDelveeStarterCredits] failed:", e);
+        setStatus("warn", "Couldn’t claim", "If you already claimed, this is expected. Otherwise deploy the credits function.");
+      } finally {
+        btnClaimCredits.disabled = false;
+      }
+    });
 
     // -------------------------
     // Scheduling UI
@@ -545,13 +655,18 @@
     function refreshPulseImageEnabled() {
       const isAuthed = !!auth.currentUser;
       const fileOk = !!(sfImageFile && sfImageFile.files && sfImageFile.files[0]);
-      const isPulseDelay = (signedMode === "2m" || signedMode === "3m");
-      btnPulseImage.disabled = !(isAuthed && fileOk && isPulseDelay);
+
+      const isPulseMode = (signedMode === "pulse");
+      const hasCredits = (typeof creditsBalance === "number" && creditsBalance > 0);
+
+      // ✅ New rule: Pulse image requires credits + Pulse mode
+      btnPulseImage.disabled = !(isAuthed && fileOk && isPulseMode && hasCredits);
 
       if (sfImageHelp) {
         if (!isAuthed) sfImageHelp.textContent = "Sign in to pulse images via Delvee.";
-        else if (!isPulseDelay) sfImageHelp.textContent = "Select “Pulse in 2” or “Pulse in 3” to send an image via Delvee.";
-        else sfImageHelp.textContent = "Single image is free. Multiple quick pulses may require credits (enforced server-side).";
+        else if (!isPulseMode) sfImageHelp.textContent = "Select “Pulse” to enable image pulses.";
+        else if (!hasCredits) sfImageHelp.textContent = "No credits remaining. Get credits in Delvee to pulse images.";
+        else sfImageHelp.textContent = "Pulse image requires Delvee credits.";
       }
     }
 
@@ -564,17 +679,19 @@
     btnPulseImage.addEventListener("click", async () => {
       const user = auth.currentUser;
       const file = sfImageFile.files && sfImageFile.files[0] ? sfImageFile.files[0] : null;
+
       if (!user) { setStatus("warn", "Sign-in required", "Sign in to pulse images via Delvee."); return; }
       if (!file) { setStatus("warn", "No image", "Choose an image first."); return; }
-      if (!(signedMode === "2m" || signedMode === "3m")) {
-        setStatus("warn", "Choose a pulse delay", "Select Pulse in 2 or Pulse in 3 to route images to Delvee.");
+      if (signedMode !== "pulse") { setStatus("warn", "Choose Pulse", "Select Pulse to route images to Delvee."); return; }
+      if (!(typeof creditsBalance === "number" && creditsBalance > 0)) {
+        setStatus("warn", "No credits", "You need Delvee credits to pulse an image.");
         return;
       }
 
-      // Routing rule (UI-side): image pulses go to Delvee for 2/3 minute mode.
+      // UI routing: open Delvee for image pulse.
+      // The server-side enforcement + credit decrement must happen in Delvee/functions.
       setStatus("good", "Opening Delvee…", "Continuing image pulse in Delvee.");
-      const mins = (signedMode === "2m") ? 2 : 3;
-      const url = `https://delvee.app/index.html?from=setfeed&pulse=${mins}`;
+      const url = `https://delvee.app/index.html?from=setfeed&pulse=image`;
       try { window.open(url, "_blank", "noopener"); } catch (_) { window.location.href = url; }
     });
 
@@ -601,11 +718,7 @@
       const rollingHas = messageContainsSetfeedReceiveCode(rollingBodyInput.value);
 
       if (signedHas || rollingHas) {
-        setStatus(
-          "warn",
-          "Not allowed in Setfeed",
-          "That looks like a Setfeed receive code inside the note. Remove the code."
-        );
+        setStatus("warn", "Not allowed in Setfeed", "That looks like a Setfeed receive code inside the note. Remove the code.");
       }
 
       const signedBase = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
@@ -700,9 +813,7 @@
       const isAuthed = !!user;
 
       // default tab behavior (only if user hasn't manually chosen)
-      if (!userChoseTab) {
-        setTab(isAuthed ? "signed" : "rolling");
-      }
+      if (!userChoseTab) setTab(isAuthed ? "signed" : "rolling");
 
       const emailField = signedEmail ? signedEmail.closest(".field") : null;
       if (emailField) emailField.classList.toggle("hidden", isAuthed);
@@ -731,8 +842,8 @@
 
       if (signedDeliverySub && signedDeliveryHelp) {
         if (isAuthed) {
-          signedDeliverySub.textContent = "Signed in: pulse delays (2–3 minutes) available.";
-          signedDeliveryHelp.textContent = "If you use Pulse in 2/3, image pulses continue in Delvee, and a summary is sent after the delay.";
+          signedDeliverySub.textContent = "Signed in: Pulse mode and advanced delivery available.";
+          signedDeliveryHelp.textContent = "Pulse is a short Delvee-style send. Credits may be required for images.";
         } else {
           signedDeliverySub.textContent = "Sign in (Email link or Google) to use Signed (Secure / Personal).";
           signedDeliveryHelp.textContent = "Rolling is always available without signing in.";
@@ -742,6 +853,9 @@
       refreshSignedSendEnabled(isAuthed);
       refreshRollingSendEnabled();
       applyBodyGuardrails();
+
+      // Credits + image enable
+      loadCredits().catch(() => {});
       refreshPulseImageEnabled();
     }
     auth.onAuthStateChanged((user) => renderAuthUI(user));
@@ -833,8 +947,7 @@
         const codeHash = await sha256Hex(enc.normalizedPassphrase);
 
         let deliverAtLocalIso;
-        if (signedMode === "2m") deliverAtLocalIso = deliverAtLocalIsoInMinutes(2);
-        else if (signedMode === "3m") deliverAtLocalIso = deliverAtLocalIsoInMinutes(3);
+        if (signedMode === "pulse") deliverAtLocalIso = deliverAtLocalIsoInMinutes(2);
         else if (signedMode === "10m") deliverAtLocalIso = deliverAtLocalIsoInMinutes(10);
         else if (signedMode === "1h") deliverAtLocalIso = deliverAtLocalIsoInMinutes(60);
         else deliverAtLocalIso = deliverAtLocalIsoTomorrow(signedPresetTime);
