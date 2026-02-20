@@ -300,13 +300,18 @@
               </button>
 
               <button class="btn btn-lg" id="btn-send-link" type="button">Send sign-in link</button>
-
-              <button class="btn btn-lg btn-quiet hidden" id="btn-sign-out" type="button" disabled>Sign out</button>
             </div>
 
+            <!-- ✅ Polished signed-in banner -->
             <div class="sf-auth-banner hidden" id="sf-auth-banner">
-              <span id="sf-auth-label">Signed in</span>
-              <button class="btn btn-secondary" id="btn-go-inbox" type="button">Go to Inbox</button>
+              <div class="sf-auth-left">
+                <span class="sf-auth-email" id="sf-auth-label">Signed in</span>
+              </div>
+
+              <div class="sf-auth-actions">
+                <button class="btn btn-secondary" id="btn-go-inbox" type="button">Go to Inbox</button>
+                <button class="btn btn-quiet" id="btn-sign-out" type="button" disabled>Sign out</button>
+              </div>
             </div>
 
             <div class="note">
@@ -353,7 +358,7 @@
             </div>
 
             <div class="actions">
-              <button class="btn btn-lg btn-primary" id="btn-signed-send" type="button" disabled>Pulse text</button>
+              <button class="btn btn-lg btn-primary" id="btn-signed-send" type="button" disabled>Encrypt and send</button>
               <button class="btn btn-lg btn-quiet" id="btn-signed-clear" type="button">Clear</button>
             </div>
 
@@ -439,7 +444,7 @@
             </div>
 
             <div class="actions">
-              <button class="btn btn-lg btn-primary" id="btn-rolling-send" type="button" disabled>Pulse text</button>
+              <button class="btn btn-lg btn-primary" id="btn-rolling-send" type="button" disabled>Encrypt and send</button>
               <button class="btn btn-lg btn-quiet" id="btn-rolling-clear" type="button">Clear</button>
             </div>
 
@@ -629,14 +634,23 @@
       try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
       document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
     }
+
+    function updateSignedSendLabel() {
+      // Only show "Pulse" wording when Pulse mode selected; otherwise "Encrypt and send"
+      btnSignedSend.textContent = (signedMode === "pulse") ? "Encrypt & pulse" : "Encrypt and send";
+    }
+
     function refreshSignedSendEnabled(isAuthed) {
       const canSend = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
       btnSignedSend.disabled = !canSend;
+      updateSignedSendLabel();
     }
+
     function refreshRollingSendEnabled() {
       const canSend = rollingCodeInput.value.trim().length > 0 && rollingBodyInput.value.trim().length > 0;
       btnRollingSend.disabled = !canSend;
     }
+
     function moveStatusToTop(isAuthed) {
       if (!statusBox || !statusSlotTop || !statusSlotBottom) return;
       if (isAuthed) {
@@ -722,6 +736,7 @@
       // ✅ Only show image preview when Pulse mode is selected
       if (pulseImageCard) pulseImageCard.classList.toggle("hidden", signedMode !== "pulse");
 
+      updateSignedSendLabel();
       refreshPulseImageEnabled();
     }
 
@@ -916,12 +931,10 @@
       const emailField = signedEmail ? signedEmail.closest(".field") : null;
       if (emailField) emailField.classList.toggle("hidden", isAuthed);
       if (btnSendLink) btnSendLink.classList.toggle("hidden", isAuthed);
-
       if (btnGoogle) btnGoogle.classList.toggle("hidden", isAuthed);
 
       if (btnSignOut) {
         btnSignOut.disabled = !isAuthed;
-        btnSignOut.classList.toggle("hidden", !isAuthed);
       }
 
       setSignedAuthedFlag(isAuthed);
@@ -948,7 +961,7 @@
         }
       }
 
-      // ✅ ensure pulse-image card visibility matches mode after auth render
+      // ensure pulse-image card visibility matches mode after auth render
       if (pulseImageCard) pulseImageCard.classList.toggle("hidden", signedMode !== "pulse");
 
       refreshSignedSendEnabled(isAuthed);
@@ -968,7 +981,7 @@
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: "select_account" });
         await auth.signInWithPopup(provider);
-        setStatus("good", "Signed in", "Signed pulses are available.");
+        setStatus("good", "Signed in", "Signed sending is available.");
       } catch (e) {
         console.error(e);
         setStatus("warn", "Couldn’t sign in", "Google sign-in failed. Check pop-up blocking and try again.");
@@ -1011,7 +1024,7 @@
         setStatus("good", "Signing in…", "Finishing email-link sign-in…");
         await auth.signInWithEmailLink(email, href);
         try { localStorage.removeItem(EMAIL_FOR_SIGNIN_KEY); } catch (_) {}
-        setStatus("good", "Signed in", "Signed pulses are available.");
+        setStatus("good", "Signed in", "Signed sending is available.");
         history.replaceState(null, "", "./send.html#signin");
       } catch (e) {
         console.error(e);
@@ -1136,6 +1149,7 @@
     setSignedMode("preset");              // ensures image card starts hidden
     applyBodyGuardrails();
     refreshPulseImageEnabled();
+    updateSignedSendLabel();
     setStatus("good", "Ready", "App Check is active. Encryption + sending are wired.");
 
     // If user arrived from sign-in flow, prefer signed
