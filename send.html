@@ -1,4 +1,3 @@
-<!-- send.html (FULL FILE REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -149,10 +148,125 @@
     .sf-subhead{
       cursor: pointer;
       user-select: none;
-      text-align: center; /* your earlier request */
+      text-align: center;
     }
-    .sf-subhead:hover{
-      text-decoration: underline;
+    .sf-subhead:hover{ text-decoration: underline; }
+
+    /* --------
+       Pretty file input (chip)
+       -------- */
+    .sf-file-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      align-items:center;
+    }
+    .sf-file-input{
+      position:absolute;
+      width:1px;
+      height:1px;
+      padding:0;
+      margin:-1px;
+      overflow:hidden;
+      clip: rect(0,0,0,0);
+      white-space:nowrap;
+      border:0;
+    }
+    .sf-file-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      min-height: 42px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 12%, transparent);
+      color: var(--text);
+      font: inherit;
+      letter-spacing: inherit;
+      cursor: pointer;
+      user-select: none;
+      max-width: 100%;
+    }
+    .sf-file-chip:hover{
+      background: color-mix(in srgb, var(--surface-variant) 18%, transparent);
+    }
+    .sf-file-chip:active{
+      transform: translateY(0.5px);
+    }
+    .sf-file-chip:focus-visible{
+      outline: 2px solid color-mix(in srgb, var(--primary) 70%, transparent);
+      outline-offset: 2px;
+    }
+    .sf-file-chip .sf-file-dot{
+      width: 8px; height: 8px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--primary) 70%, transparent);
+      flex: 0 0 auto;
+    }
+    .sf-file-chip .sf-file-label{
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+    .sf-file-chip .sf-file-name{
+      opacity: 0.75;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: min(360px, 55vw);
+    }
+
+    /* --------
+       Signed-in email + inbox formatting
+       -------- */
+    .sf-auth-banner{
+      margin-top: 10px;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
+    }
+    .sf-auth-left{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .sf-auth-pill{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+      background: color-mix(in srgb, var(--surface-variant) 14%, transparent);
+      font-weight: var(--fw-medium);
+      font-size: 13px;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+    .sf-auth-email{
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      opacity: 0.85;
+      font-size: 13px;
+    }
+    .sf-auth-actions{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+
+    /* Pulse image card spacing (so it doesn’t “loom”) */
+    .sf-pulse-image-card{
+      margin-bottom: 12px;
     }
   </style>
 </head>
@@ -173,7 +287,6 @@
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
 
-        <!-- ✅ Fix: Download app now links to Delvee -->
         <a class="nav-cta" href="https://delvee.app" rel="noreferrer" aria-label="Open Delvee">Download app</a>
       </nav>
     </div>
@@ -201,8 +314,8 @@
       <div id="panel-signed" role="tabpanel" aria-labelledby="tab-signed" class="hidden">
         <div class="row">
           <div class="col" id="signin">
-            <!-- Image preview (signed pulses, Pulse mode) -->
-            <div class="sf-pulse-image-card">
+            <!-- Image preview (SIGNED, Pulse mode only) -->
+            <div class="sf-pulse-image-card hidden" id="sf-image-card">
               <div class="sf-pulse-image-head">
                 <div>
                   <div class="panel-title" style="margin:0;">Image preview</div>
@@ -218,8 +331,16 @@
               </div>
 
               <div class="actions" style="margin-top: 12px;">
-                <input id="sf-image-file" type="file" accept="image/*" />
-                <button class="btn btn-lg btn-primary" id="btn-pulse-image" type="button" disabled>Pulse image</button>
+                <div class="sf-file-row">
+                  <input class="sf-file-input" id="sf-image-file" type="file" accept="image/*" />
+                  <label class="sf-file-chip" id="sf-image-chip" for="sf-image-file" role="button" tabindex="0" aria-label="Choose an image file">
+                    <span class="sf-file-dot" aria-hidden="true"></span>
+                    <span class="sf-file-label">Choose file</span>
+                    <span class="sf-file-name" id="sf-image-filename">No file chosen</span>
+                  </label>
+
+                  <button class="btn btn-lg btn-primary" id="btn-pulse-image" type="button" disabled>Pulse image</button>
+                </div>
               </div>
 
               <div class="sf-credits-row">
@@ -240,7 +361,6 @@
             </div>
 
             <div class="actions" style="flex-direction: column; align-items: stretch;">
-              <!-- ✅ requested: Google button above “Create pulse lobby…” (and above email sign-in UI on this page) -->
               <button class="btn btn-lg btn-primary" id="btn-google" type="button" aria-label="Continue with Google">
                 <span>Google</span>
               </button>
@@ -251,8 +371,13 @@
             </div>
 
             <div class="sf-auth-banner hidden" id="sf-auth-banner">
-              <span id="sf-auth-label">Signed in</span>
-              <button class="btn btn-secondary" id="btn-go-inbox" type="button">Go to Inbox</button>
+              <div class="sf-auth-left">
+                <div class="sf-auth-pill" aria-label="Signed in badge">Signed in</div>
+                <div class="sf-auth-email" id="sf-auth-label">—</div>
+              </div>
+              <div class="sf-auth-actions">
+                <button class="btn btn-secondary" id="btn-go-inbox" type="button">Go to Inbox</button>
+              </div>
             </div>
 
             <div class="note">
@@ -299,7 +424,7 @@
             </div>
 
             <div class="actions">
-              <button class="btn btn-lg btn-primary" id="btn-signed-send" type="button" disabled>Pulse text</button>
+              <button class="btn btn-lg btn-primary" id="btn-signed-send" type="button" disabled>Encrypt and send</button>
               <button class="btn btn-lg btn-quiet" id="btn-signed-clear" type="button">Clear</button>
             </div>
 
@@ -342,8 +467,8 @@
                 <button class="btn btn-secondary" id="btn-claim-credits" type="button">Claim free credits</button>
               </div>
 
-              <small class="help" id="sf-credits-help">
-                Packages: 10 credits = £2 · 20 credits = £3 · unlimited session = £3.50
+              <small class="help" id="sf-credits-help" data-base-currency="GBP" data-p10="2" data-p20="3" data-unlim="3.5">
+                Packages: — · — · —
               </small>
             </div>
           </div>
@@ -385,7 +510,7 @@
             </div>
 
             <div class="actions">
-              <button class="btn btn-lg btn-primary" id="btn-rolling-send" type="button" disabled>Pulse text</button>
+              <button class="btn btn-lg btn-primary" id="btn-rolling-send" type="button" disabled>Encrypt and send</button>
               <button class="btn btn-lg btn-quiet" id="btn-rolling-clear" type="button">Clear</button>
             </div>
 
@@ -497,7 +622,9 @@
     const videoRolling = document.getElementById("video-rolling");
 
     // Image preview (signed)
+    const sfImageCard = document.getElementById("sf-image-card");
     const sfImageFile = document.getElementById("sf-image-file");
+    const sfImageFilename = document.getElementById("sf-image-filename");
     const btnPulseImage = document.getElementById("btn-pulse-image");
     const previewEmpty = document.getElementById("sf-preview-empty");
     const previewImg = document.getElementById("sf-preview-img");
@@ -527,6 +654,7 @@
       try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
       document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
     }
+
     function refreshSignedSendEnabled(isAuthed) {
       const canSend = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
       btnSignedSend.disabled = !canSend;
@@ -535,6 +663,7 @@
       const canSend = rollingCodeInput.value.trim().length > 0 && rollingBodyInput.value.trim().length > 0;
       btnRollingSend.disabled = !canSend;
     }
+
     function moveStatusToTop(isAuthed) {
       if (!statusBox || !statusSlotTop || !statusSlotBottom) return;
       if (isAuthed) {
@@ -568,12 +697,10 @@
         const bal = (typeof data.balance === "number") ? data.balance : (typeof data.credits === "number" ? data.credits : null);
         setCreditsUI((typeof bal === "number") ? bal : null);
       } catch (e) {
-        // Soft-fail if function not deployed yet
         setCreditsUI(null);
       }
     }
 
-    // Optional: claim starter credits once (server must enforce one-per-user)
     btnClaimCredits.addEventListener("click", async () => {
       if (!auth.currentUser) { setStatus("warn", "Sign-in required", "Sign in with Google to claim free credits."); return; }
       try {
@@ -609,15 +736,28 @@
         b.setAttribute("aria-pressed", (t === signedPresetTime) ? "true" : "false");
       });
     }
+
+    function refreshSignedButtonLabel() {
+      // ✅ Rule: only show “Pulse” wording when Pulse mode selected
+      btnSignedSend.textContent = (signedMode === "pulse") ? "Pulse text" : "Encrypt and send";
+    }
+
     function setSignedMode(nextMode) {
       signedMode = nextMode || "preset";
       signedAdvBtns.forEach(b => b.setAttribute("aria-pressed", "false"));
       const btn = signedAdvBtns.find(b => (b.getAttribute("data-mode") || "") === signedMode);
       if (btn) btn.setAttribute("aria-pressed", "true");
+
       if (signedMode !== "preset") setSignedPresetHighlightVisible(false);
       else setSignedPresetHighlightVisible(true);
+
+      // ✅ Only show image preview section in Pulse mode
+      if (sfImageCard) sfImageCard.classList.toggle("hidden", signedMode !== "pulse");
+
+      refreshSignedButtonLabel();
       refreshPulseImageEnabled();
     }
+
     signedPresetChips.forEach(btn => btn.addEventListener("click", () => {
       signedPresetTime = btn.getAttribute("data-time") || "13:00";
       setSignedMode("preset");
@@ -637,29 +777,72 @@
     });
 
     // -------------------------
+    // Pretty prices (localized formatting)
+    // -------------------------
+    function guessCurrencyFromLocale() {
+      // Heuristic (keeps behavior stable, avoids huge mappings)
+      const lang = (navigator.language || "").toLowerCase();
+      if (lang.startsWith("en-gb")) return "GBP";
+      if (lang.startsWith("en-us")) return "USD";
+      if (lang.startsWith("en-ca")) return "CAD";
+      if (lang.startsWith("en-au")) return "AUD";
+      // Most of Europe browsers will still show EUR nicely
+      if (lang.startsWith("de") || lang.startsWith("fr") || lang.startsWith("es") || lang.startsWith("it") || lang.startsWith("nl") || lang.startsWith("pt")) return "EUR";
+      return "GBP";
+    }
+
+    function fmtMoney(amount, currency) {
+      const cur = currency || "GBP";
+      try {
+        return new Intl.NumberFormat(navigator.language, { style: "currency", currency: cur, maximumFractionDigits: 2 }).format(amount);
+      } catch (_) {
+        // fallback
+        const sym = (cur === "USD") ? "$" : (cur === "EUR") ? "€" : "£";
+        return `${sym}${Number(amount).toFixed(2)}`;
+      }
+    }
+
+    function renderCreditsPricing() {
+      const el = document.getElementById("sf-credits-help");
+      if (!el) return;
+
+      const base = (el.getAttribute("data-base-currency") || "GBP").toUpperCase();
+      const p10 = Number(el.getAttribute("data-p10") || "2");
+      const p20 = Number(el.getAttribute("data-p20") || "3");
+      const unlim = Number(el.getAttribute("data-unlim") || "3.5");
+
+      // “currency to be based on local time” → interpret as local region/locale display
+      const cur = guessCurrencyFromLocale() || base;
+
+      el.textContent =
+        `Packages: 10 credits = ${fmtMoney(p10, cur)} · 20 credits = ${fmtMoney(p20, cur)} · unlimited session = ${fmtMoney(unlim, cur)}`;
+    }
+
+    // -------------------------
     // Image preview helpers
     // -------------------------
     function setPreviewFile(file) {
       if (!file) {
-        previewImg.src = "";
-        previewImg.classList.add("hidden");
-        previewEmpty.classList.remove("hidden");
+        if (previewImg) previewImg.src = "";
+        if (previewImg) previewImg.classList.add("hidden");
+        if (previewEmpty) previewEmpty.classList.remove("hidden");
+        if (sfImageFilename) sfImageFilename.textContent = "No file chosen";
         return;
       }
       const url = URL.createObjectURL(file);
-      previewImg.src = url;
-      previewImg.classList.remove("hidden");
-      previewEmpty.classList.add("hidden");
+      if (previewImg) previewImg.src = url;
+      if (previewImg) previewImg.classList.remove("hidden");
+      if (previewEmpty) previewEmpty.classList.add("hidden");
+      if (sfImageFilename) sfImageFilename.textContent = file.name || "Selected";
     }
 
     function refreshPulseImageEnabled() {
       const isAuthed = !!auth.currentUser;
       const fileOk = !!(sfImageFile && sfImageFile.files && sfImageFile.files[0]);
-
       const isPulseMode = (signedMode === "pulse");
       const hasCredits = (typeof creditsBalance === "number" && creditsBalance > 0);
 
-      // ✅ New rule: Pulse image requires credits + Pulse mode
+      // ✅ Pulse image requires credits + Pulse mode
       btnPulseImage.disabled = !(isAuthed && fileOk && isPulseMode && hasCredits);
 
       if (sfImageHelp) {
@@ -670,15 +853,17 @@
       }
     }
 
-    sfImageFile.addEventListener("change", () => {
-      const f = sfImageFile.files && sfImageFile.files[0] ? sfImageFile.files[0] : null;
-      setPreviewFile(f);
-      refreshPulseImageEnabled();
-    });
+    if (sfImageFile) {
+      sfImageFile.addEventListener("change", () => {
+        const f = (sfImageFile.files && sfImageFile.files[0]) ? sfImageFile.files[0] : null;
+        setPreviewFile(f);
+        refreshPulseImageEnabled();
+      });
+    }
 
     btnPulseImage.addEventListener("click", async () => {
       const user = auth.currentUser;
-      const file = sfImageFile.files && sfImageFile.files[0] ? sfImageFile.files[0] : null;
+      const file = (sfImageFile && sfImageFile.files && sfImageFile.files[0]) ? sfImageFile.files[0] : null;
 
       if (!user) { setStatus("warn", "Sign-in required", "Sign in to pulse images via Delvee."); return; }
       if (!file) { setStatus("warn", "No image", "Choose an image first."); return; }
@@ -688,8 +873,6 @@
         return;
       }
 
-      // UI routing: open Delvee for image pulse.
-      // The server-side enforcement + credit decrement must happen in Delvee/functions.
       setStatus("good", "Opening Delvee…", "Continuing image pulse in Delvee.");
       const url = `https://delvee.app/index.html?from=setfeed&pulse=image`;
       try { window.open(url, "_blank", "noopener"); } catch (_) { window.location.href = url; }
@@ -850,11 +1033,16 @@
         }
       }
 
+      // If user signs out while in pulse mode, keep the UI consistent
+      if (!isAuthed && signedMode === "pulse") {
+        // leave the mode as-is (user chose it), but ensure enable states are correct
+        if (sfImageCard) sfImageCard.classList.toggle("hidden", false);
+      }
+
       refreshSignedSendEnabled(isAuthed);
       refreshRollingSendEnabled();
       applyBodyGuardrails();
 
-      // Credits + image enable
       loadCredits().catch(() => {});
       refreshPulseImageEnabled();
     }
@@ -867,7 +1055,7 @@
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: "select_account" });
         await auth.signInWithPopup(provider);
-        setStatus("good", "Signed in", "Signed pulses are available.");
+        setStatus("good", "Signed in", "Signed sends are available.");
       } catch (e) {
         console.error(e);
         setStatus("warn", "Couldn’t sign in", "Google sign-in failed. Check pop-up blocking and try again.");
@@ -910,7 +1098,7 @@
         setStatus("good", "Signing in…", "Finishing email-link sign-in…");
         await auth.signInWithEmailLink(email, href);
         try { localStorage.removeItem(EMAIL_FOR_SIGNIN_KEY); } catch (_) {}
-        setStatus("good", "Signed in", "Signed pulses are available.");
+        setStatus("good", "Signed in", "Signed sends are available.");
         history.replaceState(null, "", "./send.html#signin");
       } catch (e) {
         console.error(e);
@@ -937,11 +1125,12 @@
       const ok = applyBodyGuardrails().signedOk;
       if (!ok) return;
 
-      if (!user) { setStatus("warn", "Sign-in required", "Sign in (Email link or Google) to send Signed pulses."); return; }
+      if (!user) { setStatus("warn", "Sign-in required", "Sign in (Email link or Google) to send Signed messages."); return; }
       if (!code || !body) { setStatus("warn", "Missing details", "Add a code and a note, then try again."); return; }
 
       try {
-        setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
+        const pulse = (signedMode === "pulse");
+        setStatus("good", pulse ? "Pulsing…" : "Sending…", "Encrypting in your browser and scheduling delivery…");
 
         const enc = await encryptBodyForCode(code, body);
         const codeHash = await sha256Hex(enc.normalizedPassphrase);
@@ -970,7 +1159,7 @@
         window.location.href = "./inbox.html";
       } catch (e) {
         console.error(e);
-        const msg = (e && e.message) ? e.message : "Something went wrong while scheduling the pulse. Try again.";
+        const msg = (e && e.message) ? e.message : "Something went wrong while scheduling. Try again.";
         setStatus("warn", "Couldn’t send", msg);
       }
     });
@@ -1014,7 +1203,7 @@
       } catch (e) {
         console.error(e);
         const code = e && e.code ? e.code : "";
-        const msg = (e && e.message) ? e.message : "Something went wrong while scheduling the pulse. Try again.";
+        const msg = (e && e.message) ? e.message : "Something went wrong while scheduling. Try again.";
         setStatus("warn", "Couldn’t send", (code ? `${code}: ` : "") + msg);
       }
     });
@@ -1032,7 +1221,8 @@
 
     // Init
     refreshRollingSendEnabled();
-    setSignedMode("preset");
+    renderCreditsPricing();
+    setSignedMode("preset"); // sets button label + hides image card
     applyBodyGuardrails();
     refreshPulseImageEnabled();
     setStatus("good", "Ready", "App Check is active. Encryption + sending are wired.");
