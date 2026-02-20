@@ -68,6 +68,7 @@
     .code-card{ border-radius:16px; padding:12px; border:1px solid rgba(0,0,0,0.08); background:rgba(0,0,0,0.02); }
     [data-theme="dark"] .code-card{ border-color:rgba(255,255,255,0.10); background:rgba(255,255,255,0.06); }
     .code-label{ font-weight: 600; margin:0 0 8px 0; color: var(--text); }
+
     .code-box{
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       border-radius: 12px;
@@ -78,7 +79,14 @@
       text-align: center;
       color: var(--text);
     }
-    [data-theme="dark"] .code-box{ border-color: rgba(255,255,255,0.12); background: rgba(15,17,20,0.55); }
+
+    /* ✅ Per request: in dark mode, make code text black (and keep box readable). */
+    [data-theme="dark"] .code-box{
+      border-color: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.92);
+      color: #0F1114;
+    }
+
     .mini{ font-size:12px; opacity:0.85; margin-top:8px; line-height:1.35; color: var(--muted); }
     .row-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center; justify-content:space-between; }
     .row-actions .left, .row-actions .right{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
@@ -99,10 +107,20 @@
       color: var(--text);
       min-width: 220px;
     }
+
+    /* ✅ Fix: dropdown/input text not visible in dark mode */
     [data-theme="dark"] .sf-select, [data-theme="dark"] .sf-input{
       border-color: rgba(255,255,255,0.12);
-      background: rgba(15,17,20,0.55);
+      background: rgba(255,255,255,0.92);
+      color: #0F1114;
     }
+
+    /* Also ensure option text stays readable (some browsers render options oddly) */
+    [data-theme="dark"] .sf-select option{
+      color: #0F1114;
+      background: #ffffff;
+    }
+
     .sf-switch{
       display:flex; align-items:center; gap:10px;
       border: 1px solid rgba(0,0,0,0.10);
