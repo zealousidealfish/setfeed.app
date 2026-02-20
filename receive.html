@@ -30,7 +30,6 @@
       appId: "1:553573263069:web:e5c9884101ca38eaee1d34"
     };
 
-    // Avoid duplicate init if you ever embed this file somewhere.
     if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
     const functions = firebase.app().functions("europe-west2");
@@ -84,6 +83,41 @@
     .row-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center; justify-content:space-between; }
     .row-actions .left, .row-actions .right{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     .statusline{ margin-top:10px; font-size:13px; opacity:0.9; color: var(--muted); }
+
+    /* Delvee prefs */
+    .prefs-grid{ display:grid; grid-template-columns:1fr; gap:10px; margin-top: 10px; }
+    @media (min-width: 840px){ .prefs-grid{ grid-template-columns: 1.2fr 1fr; } }
+    .prefs-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+    .prefs-left{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .prefs-right{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+    .sf-select, .sf-input{
+      border-radius: 12px;
+      padding: 10px 12px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(255,255,255,0.85);
+      color: var(--text);
+      min-width: 220px;
+    }
+    [data-theme="dark"] .sf-select, [data-theme="dark"] .sf-input{
+      border-color: rgba(255,255,255,0.12);
+      background: rgba(15,17,20,0.55);
+    }
+    .sf-switch{
+      display:flex; align-items:center; gap:10px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(0,0,0,0.02);
+      padding: 10px 12px;
+      border-radius: 14px;
+      cursor: pointer;
+      user-select:none;
+    }
+    [data-theme="dark"] .sf-switch{
+      border-color: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+    }
+    .sf-switch input{ transform: scale(1.1); }
+    .prefs-note{ font-size: 12px; opacity: 0.85; line-height: 1.35; color: var(--muted); margin-top: 8px; }
   </style>
 </head>
 
@@ -157,6 +191,63 @@
             </div>
           </section>
 
+          <!-- ✅ Delvee summaries prefs (signed-in only) -->
+          <section class="panel auth-only hidden" aria-label="Delvee summaries">
+            <p class="panel-title">Delvee pulse summaries</p>
+            <p class="panel-sub">
+              If enabled, Delvee will send a session summary into your Setfeed destination.
+            </p>
+
+            <div class="prefs-row" style="margin-top: var(--s-3);">
+              <label class="sf-switch" for="dv-enabled">
+                <input id="dv-enabled" type="checkbox" />
+                <span>Receive Delvee summaries</span>
+              </label>
+
+              <div class="prefs-right">
+                <button class="btn btn-quiet" id="dv-reload" type="button">Reload</button>
+                <button class="btn btn-primary" id="dv-save" type="button">Save</button>
+              </div>
+            </div>
+
+            <div class="prefs-grid">
+              <div>
+                <label class="mini" for="dv-dest" style="display:block; margin-bottom:6px;">Destination</label>
+                <select id="dv-dest" class="sf-select">
+                  <option value="setfeed_web_inbox">Setfeed website inbox (this account)</option>
+                  <option value="setfeed_app_code">Setfeed app (paste a receive code)</option>
+                </select>
+
+                <div class="prefs-note">
+                  Website inbox uses your account’s receive codes. App destination uses a specific code you paste below.
+                </div>
+              </div>
+
+              <div id="dv-web-box">
+                <label class="mini" for="dv-web-type" style="display:block; margin-bottom:6px;">Website inbox code</label>
+                <select id="dv-web-type" class="sf-select">
+                  <option value="secure">Secure (recommended)</option>
+                  <option value="personal">Personal</option>
+                </select>
+
+                <div class="prefs-note">
+                  This decides which of your web codes Delvee targets when delivering into Inbox.
+                </div>
+              </div>
+
+              <div id="dv-app-box" class="hidden">
+                <label class="mini" for="dv-app-code" style="display:block; margin-bottom:6px;">App receive code</label>
+                <input id="dv-app-code" class="sf-input" placeholder="Paste SF-… or SFS-… (app)" />
+
+                <div class="prefs-note">
+                  Tip: use an app Secure code (SFS-…). Delvee will normalize it automatically.
+                </div>
+              </div>
+            </div>
+
+            <div class="statusline" id="dv-status">Ready.</div>
+          </section>
+
           <!-- Not signed in helper -->
           <section class="panel auth-off" aria-label="Sign in for web codes">
             <p class="panel-title">Want codes on web?</p>
@@ -228,8 +319,16 @@
       try { localStorage.setItem("sf_signed_authed", isAuthed ? "true" : "false"); } catch (_) {}
     }
 
-    auth.onAuthStateChanged((user) => applyAuthVisibility(!!user));
+    auth.onAuthStateChanged((user) => {
+      applyAuthVisibility(!!user);
+      if (user) {
+        loadDelveePrefs().catch(() => {});
+      }
+    });
 
+    // ---------------------------
+    // Web receive codes section
+    // ---------------------------
     const btnLoad = document.getElementById("btn-load-codes");
     const btnRefreshRolling = document.getElementById("btn-refresh-rolling");
 
@@ -347,6 +446,93 @@
     btnRefreshRolling.addEventListener("click", refreshRolling);
 
     setCopyEnabled(false);
+
+    // ---------------------------
+    // Delvee summary prefs section
+    // ---------------------------
+    const dvEnabled = document.getElementById("dv-enabled");
+    const dvDest = document.getElementById("dv-dest");
+    const dvWebBox = document.getElementById("dv-web-box");
+    const dvWebType = document.getElementById("dv-web-type");
+    const dvAppBox = document.getElementById("dv-app-box");
+    const dvAppCode = document.getElementById("dv-app-code");
+
+    const dvStatus = document.getElementById("dv-status");
+    const dvSave = document.getElementById("dv-save");
+    const dvReload = document.getElementById("dv-reload");
+
+    function setDvStatus(t){ if (dvStatus) dvStatus.textContent = t || "Ready."; }
+
+    function normalizeCodeLoose(raw) {
+      return String(raw || "").trim().toUpperCase().replace(/[\s-]/g, "");
+    }
+
+    function applyDestUI() {
+      const dest = dvDest.value;
+      dvWebBox.classList.toggle("hidden", dest !== "setfeed_web_inbox");
+      dvAppBox.classList.toggle("hidden", dest !== "setfeed_app_code");
+    }
+
+    dvDest.addEventListener("change", applyDestUI);
+
+    async function loadDelveePrefs() {
+      const user = auth.currentUser;
+      if (!user) { setDvStatus("Sign in first."); return; }
+
+      try {
+        setDvStatus("Loading Delvee prefs…");
+        const call = functions.httpsCallable("getDelveeSummaryPrefs");
+        const res = await call({});
+        const prefs = (res && res.data && res.data.prefs) ? res.data.prefs : null;
+
+        dvEnabled.checked = !!(prefs && prefs.enabled);
+        dvDest.value = (prefs && prefs.destination) ? prefs.destination : "setfeed_web_inbox";
+        dvWebType.value = (prefs && prefs.setfeedWebCodeType) ? prefs.setfeedWebCodeType : "secure";
+        dvAppCode.value = (prefs && prefs.setfeedAppReceiveCode) ? prefs.setfeedAppReceiveCode : "";
+
+        applyDestUI();
+        setDvStatus("Loaded.");
+      } catch (e) {
+        console.error("[getDelveeSummaryPrefs] failed:", e);
+        setDvStatus("Couldn’t load Delvee prefs. Deploy updated delvee.ts and try again.");
+      }
+    }
+
+    async function saveDelveePrefs() {
+      const user = auth.currentUser;
+      if (!user) { setDvStatus("Sign in first."); return; }
+
+      try {
+        setDvStatus("Saving…");
+        dvSave.disabled = true;
+
+        const enabled = !!dvEnabled.checked;
+        const destination = dvDest.value;
+
+        const payload = {
+          enabled,
+          destination,
+          setfeedWebCodeType: dvWebType.value,
+          setfeedAppReceiveCode: (destination === "setfeed_app_code") ? normalizeCodeLoose(dvAppCode.value) : null
+        };
+
+        const call = functions.httpsCallable("setDelveeSummaryPrefs");
+        await call(payload);
+
+        setDvStatus("Saved.");
+      } catch (e) {
+        console.error("[setDelveeSummaryPrefs] failed:", e);
+        setDvStatus((e && e.message) ? e.message : "Couldn’t save. Try again.");
+      } finally {
+        dvSave.disabled = false;
+      }
+    }
+
+    dvSave.addEventListener("click", saveDelveePrefs);
+    dvReload.addEventListener("click", () => loadDelveePrefs());
+
+    // Load once if already authed (fast path)
+    if (auth.currentUser) loadDelveePrefs().catch(() => {});
   </script>
 </body>
 </html>
