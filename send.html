@@ -203,6 +203,41 @@
     .sf-file-clear:hover{
       color: var(--text);
     }
+
+    /* Pulse session UI */
+    .sf-pulse-panel{
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 8%, transparent);
+    }
+    .sf-pulse-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    .sf-pulse-timer{
+      font-weight: 600;
+      color: var(--text);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .sf-pulse-note{
+      font-size: 12.5px;
+      opacity: 0.9;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.35;
+    }
+    .sf-btn-running{
+      pointer-events: none !important;
+      filter: saturate(0.7);
+      opacity: 0.85;
+    }
   </style>
 </head>
 
@@ -370,17 +405,47 @@
                 Sign in (Email link or Google) to send Signed (Secure / Personal).
               </p>
 
-              <div class="chips" aria-label="Tomorrow preset times (signed)" id="signed-preset-chips">
+              <!-- PRESET DAY OPTIONS (only for preset mode) -->
+              <div class="chips hidden" aria-label="Signed preset days" id="signed-day-chips">
+                <button class="chip" type="button" aria-pressed="true"  data-day="tomorrow">Tomorrow</button>
+                <button class="chip" type="button" aria-pressed="false" data-day="in1day">In 1 day</button>
+                <button class="chip" type="button" aria-pressed="false" data-day="week">In a week</button>
+              </div>
+
+              <!-- PRESET TIMES (only for preset mode) -->
+              <div class="chips" aria-label="Preset times (signed)" id="signed-time-chips">
                 <button class="chip" type="button" aria-pressed="false" data-time="08:00">8am</button>
                 <button class="chip" type="button" aria-pressed="true"  data-time="13:00">1pm</button>
                 <button class="chip" type="button" aria-pressed="false" data-time="18:00">6pm</button>
               </div>
 
+              <!-- PULSE DURATIONS (only for pulse mode) -->
+              <div class="chips hidden" aria-label="Pulse durations (signed)" id="signed-pulse-chips">
+                <button class="chip" type="button" aria-pressed="true"  data-pulse="2">2 minutes</button>
+                <button class="chip" type="button" aria-pressed="false" data-pulse="3">3 minutes</button>
+              </div>
+
+              <!-- ✅ Pulse is first and default when signed in -->
               <div class="sf-adv-row hidden" id="signed-advanced-row" aria-label="Signed advanced delivery">
-                <button class="chip sf-adv-btn" type="button" aria-pressed="true"  data-mode="preset">Tomorrow preset</button>
-                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="pulse">Pulse</button>
+                <button class="chip sf-adv-btn" type="button" aria-pressed="true"  data-mode="pulse">Pulse</button>
+                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="preset">Tomorrow</button>
                 <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="10m">In 10 minutes</button>
                 <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="1h">In 1 hour</button>
+              </div>
+
+              <!-- Pulse session controls (only visible while in pulse mode) -->
+              <div class="sf-pulse-panel hidden" id="sf-pulse-session-panel" aria-label="Pulse session">
+                <div class="sf-pulse-row">
+                  <div class="sf-pulse-timer" id="sf-pulse-timer">Not running.</div>
+                  <div class="actions" style="margin:0;">
+                    <button class="btn btn-secondary hidden" id="sf-pulse-add2" type="button">Add 2 minutes</button>
+                    <button class="btn btn-quiet hidden" id="sf-pulse-stop" type="button">Stop</button>
+                  </div>
+                </div>
+                <div class="sf-pulse-note" id="sf-pulse-note">
+                  When you start a pulse session, a summary is sent when the timer ends. “Add 2 minutes” uses <b>1 credit</b>.
+                  If you stop before any message is sent, credits are refunded automatically.
+                </div>
               </div>
 
               <small class="help" id="signed-delivery-help" style="margin-top: 10px;">
@@ -569,6 +634,17 @@
     const sfBtnChooseImage = document.getElementById("sf-btn-choose-image");
     const sfFileChipLabel = document.getElementById("sf-file-chip-label");
 
+    // Preset chips containers
+    const signedDayChipsEl = document.getElementById("signed-day-chips");
+    const signedTimeChipsEl = document.getElementById("signed-time-chips");
+    const signedPulseChipsEl = document.getElementById("signed-pulse-chips");
+
+    // Pulse session UI
+    const pulseSessionPanel = document.getElementById("sf-pulse-session-panel");
+    const pulseTimerEl = document.getElementById("sf-pulse-timer");
+    const btnPulseAdd2 = document.getElementById("sf-pulse-add2");
+    const btnPulseStop = document.getElementById("sf-pulse-stop");
+
     function setSignedAuthedFlag(isAuthed) {
       document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
       document.querySelectorAll(".no-auth-only").forEach(el => el.classList.toggle("hidden", isAuthed));
@@ -751,51 +827,201 @@
       }
     });
 
-    // Scheduling UI
+    // ---------------------------
+    // Scheduling UI (Signed)
+    // ---------------------------
     let signedPresetTime = "13:00";
-    let signedMode = "preset";
-    const signedPresetChips = Array.from(document.querySelectorAll('#signed-preset-chips .chip[data-time]'));
+    let signedMode = "preset"; // pulse | preset | 10m | 1h
+    let signedPresetDay = "tomorrow"; // tomorrow | in1day | week
+    let signedPulseMinutes = 2;
+
+    const signedDayChips = Array.from(document.querySelectorAll('#signed-day-chips .chip[data-day]'));
+    const signedTimeChips = Array.from(document.querySelectorAll('#signed-time-chips .chip[data-time]'));
+    const signedPulseChips = Array.from(document.querySelectorAll('#signed-pulse-chips .chip[data-pulse]'));
     const signedAdvBtns = Array.from(document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]'));
 
+    // Pulse session state (client-side UI timer)
+    let pulseRunning = false;
+    let pulseEndsAtMs = 0;
+    let pulseTick = null;
+
+    function fmtMmSs(ms) {
+      const s = Math.max(0, Math.ceil(ms / 1000));
+      const mm = String(Math.floor(s / 60)).padStart(2, "0");
+      const ss = String(s % 60).padStart(2, "0");
+      return `${mm}:${ss}`;
+    }
+
+    function stopPulseTimerUI(opts = { silent: false }) {
+      pulseRunning = false;
+      pulseEndsAtMs = 0;
+      if (pulseTick) { clearInterval(pulseTick); pulseTick = null; }
+
+      if (pulseTimerEl) pulseTimerEl.textContent = "Not running.";
+      if (btnPulseAdd2) btnPulseAdd2.classList.add("hidden");
+      if (btnPulseStop) btnPulseStop.classList.add("hidden");
+
+      btnSignedSend.disabled = !(!!auth.currentUser); // in pulse mode: enabled when authed
+      btnSignedSend.classList.remove("sf-btn-running");
+
+      if (!opts.silent) {
+        setStatus("warn", "Pulse stopped", "If no message was sent, credits are refunded automatically.");
+      }
+
+      refreshPulseImageEnabled();
+      updateSignedSendLabel();
+    }
+
+    function startPulseTimerUI(minutes) {
+      pulseRunning = true;
+      pulseEndsAtMs = Date.now() + (minutes * 60 * 1000);
+
+      if (btnPulseAdd2) btnPulseAdd2.classList.remove("hidden");
+      if (btnPulseStop) btnPulseStop.classList.remove("hidden");
+
+      btnSignedSend.disabled = true;
+      btnSignedSend.classList.add("sf-btn-running");
+
+      if (pulseTick) clearInterval(pulseTick);
+      pulseTick = setInterval(() => {
+        const remaining = pulseEndsAtMs - Date.now();
+        if (pulseTimerEl) pulseTimerEl.textContent = `Summary in ${fmtMmSs(remaining)}`;
+        if (remaining <= 0) {
+          clearInterval(pulseTick);
+          pulseTick = null;
+          pulseRunning = false;
+          btnSignedSend.classList.remove("sf-btn-running");
+          btnSignedSend.disabled = !(!!auth.currentUser);
+          if (pulseTimerEl) pulseTimerEl.textContent = "Summary should be sent now.";
+          setStatus("good", "Pulse complete", "Summary should be delivered shortly.");
+        }
+      }, 250);
+
+      // Force immediate render
+      if (pulseTimerEl) pulseTimerEl.textContent = `Summary in ${fmtMmSs(pulseEndsAtMs - Date.now())}`;
+    }
+
+    function openDelveePulse() {
+      const url = `https://delvee.app/index.html?from=setfeed&pulse=session`;
+      try { window.open(url, "_blank", "noopener"); } catch (_) { window.location.href = url; }
+    }
+
     function updateSignedSendLabel() {
-      btnSignedSend.textContent = (signedMode === "pulse") ? "Encrypt & pulse" : "Encrypt and send";
+      if (signedMode === "pulse") {
+        btnSignedSend.textContent = pulseRunning ? "Pulse running…" : "Start pulse session";
+      } else {
+        btnSignedSend.textContent = "Encrypt and send";
+      }
     }
 
     function setSignedPresetHighlightVisible(visible) {
       if (!visible) {
-        signedPresetChips.forEach(b => b.setAttribute("aria-pressed", "false"));
+        signedTimeChips.forEach(b => b.setAttribute("aria-pressed", "false"));
         return;
       }
-      signedPresetChips.forEach(b => {
+      signedTimeChips.forEach(b => {
         const t = b.getAttribute("data-time") || "";
         b.setAttribute("aria-pressed", (t === signedPresetTime) ? "true" : "false");
       });
     }
 
-    function setSignedMode(nextMode) {
-      signedMode = nextMode || "preset";
-      signedAdvBtns.forEach(b => b.setAttribute("aria-pressed", "false"));
-      const btn = signedAdvBtns.find(b => (b.getAttribute("data-mode") || "") === signedMode);
-      if (btn) btn.setAttribute("aria-pressed", "true");
+    function setSignedDayHighlightVisible(visible) {
+      if (!visible) {
+        signedDayChips.forEach(b => b.setAttribute("aria-pressed", "false"));
+        return;
+      }
+      signedDayChips.forEach(b => {
+        const d = b.getAttribute("data-day") || "";
+        b.setAttribute("aria-pressed", (d === signedPresetDay) ? "true" : "false");
+      });
+    }
 
-      if (signedMode !== "preset") setSignedPresetHighlightVisible(false);
-      else setSignedPresetHighlightVisible(true);
+    function setSignedPulseHighlightVisible(visible) {
+      if (!visible) {
+        signedPulseChips.forEach(b => b.setAttribute("aria-pressed", "false"));
+        return;
+      }
+      signedPulseChips.forEach(b => {
+        const m = parseInt(b.getAttribute("data-pulse") || "2", 10);
+        b.setAttribute("aria-pressed", (m === signedPulseMinutes) ? "true" : "false");
+      });
+    }
 
-      if (pulseImageCard) pulseImageCard.classList.toggle("hidden", signedMode !== "pulse");
+    function applySignedModeUI() {
+      // Pulse mode swaps top row chips
+      const isPulse = (signedMode === "pulse");
+      if (signedDayChipsEl) signedDayChipsEl.classList.toggle("hidden", isPulse || signedMode !== "preset");
+      if (signedTimeChipsEl) signedTimeChipsEl.classList.toggle("hidden", isPulse);
+      if (signedPulseChipsEl) signedPulseChipsEl.classList.toggle("hidden", !isPulse);
 
+      // Pulse image preview visibility
+      if (pulseImageCard) pulseImageCard.classList.toggle("hidden", !isPulse);
+
+      // Pulse session controls
+      if (pulseSessionPanel) pulseSessionPanel.classList.toggle("hidden", !isPulse);
+
+      // Disable/enabled state for start button in pulse mode
+      if (isPulse) {
+        // In pulse mode: allow starting even if code/body empty (auth only)
+        btnSignedSend.disabled = !auth.currentUser || pulseRunning;
+      }
+
+      setSignedPulseHighlightVisible(isPulse);
       updateSignedSendLabel();
       refreshPulseImageEnabled();
     }
 
-    signedPresetChips.forEach(btn => btn.addEventListener("click", () => {
+    function setSignedMode(nextMode) {
+      signedMode = nextMode || "preset";
+
+      signedAdvBtns.forEach(b => b.setAttribute("aria-pressed", "false"));
+      const btn = signedAdvBtns.find(b => (b.getAttribute("data-mode") || "") === signedMode);
+      if (btn) btn.setAttribute("aria-pressed", "true");
+
+      if (signedMode !== "preset") {
+        setSignedPresetHighlightVisible(false);
+        setSignedDayHighlightVisible(false);
+      } else {
+        setSignedPresetHighlightVisible(true);
+        setSignedDayHighlightVisible(true);
+      }
+
+      // Leaving pulse mode should stop the timer UI (otherwise it becomes confusing)
+      if (signedMode !== "pulse" && pulseRunning) {
+        stopPulseTimerUI({ silent: true });
+      }
+
+      applySignedModeUI();
+      applyBodyGuardrails();
+    }
+
+    // Preset day selection
+    signedDayChips.forEach(btn => btn.addEventListener("click", () => {
+      signedPresetDay = btn.getAttribute("data-day") || "tomorrow";
+      setSignedDayHighlightVisible(true);
+      setSignedMode("preset");
+    }));
+
+    // Preset time selection
+    signedTimeChips.forEach(btn => btn.addEventListener("click", () => {
       signedPresetTime = btn.getAttribute("data-time") || "13:00";
       setSignedMode("preset");
     }));
+
+    // Pulse duration selection
+    signedPulseChips.forEach(btn => btn.addEventListener("click", () => {
+      signedPulseMinutes = parseInt(btn.getAttribute("data-pulse") || "2", 10);
+      setSignedPulseHighlightVisible(true);
+      setSignedMode("pulse");
+    }));
+
+    // Advanced mode selection
     signedAdvBtns.forEach(btn => btn.addEventListener("click", () => {
       const mode = btn.getAttribute("data-mode") || "preset";
       setSignedMode(mode);
     }));
 
+    // Rolling chips
     let rollingPresetTime = "13:00";
     document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(btn => {
       btn.addEventListener("click", () => {
@@ -913,12 +1139,20 @@
         setStatus("warn", "Not allowed in Setfeed", "That looks like a Setfeed receive code inside the message. Remove the code.");
       }
 
-      const signedBase = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
+      // Signed:
+      // - pulse mode: start session (auth only) — message isn't required
+      // - other modes: require code + body
+      let signedBase = false;
+      if (signedMode === "pulse") signedBase = isAuthed && !pulseRunning;
+      else signedBase = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
+
       btnSignedSend.disabled = !(signedBase && !signedHas);
 
+      // Rolling:
       const rollingBase = rollingCodeInput.value.trim().length > 0 && rollingBodyInput.value.trim().length > 0;
       btnRollingSend.disabled = !(rollingBase && !rollingHas);
 
+      updateSignedSendLabel();
       return { signedOk: !signedHas, rollingOk: !rollingHas };
     }
 
@@ -981,18 +1215,21 @@
       const minute = pad2(d.getMinutes());
       return `${yyyy}-${mon}-${day}T${hour}:${minute}:00${sign}${offH}:${offM}`;
     }
-    function deliverAtLocalIsoTomorrow(presetHHMM) {
+
+    function deliverAtLocalIsoInDaysAtPresetTime(daysFromToday, presetHHMM) {
       const now = new Date();
-      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12, 0, 0, 0);
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (daysFromToday || 1), 12, 0, 0, 0);
       const [hh, mm] = (presetHHMM || "13:00").split(":").map(n => parseInt(n, 10));
-      tomorrow.setHours(hh, mm, 0, 0);
-      return toLocalIsoWithOffset(tomorrow);
+      d.setHours(hh, mm, 0, 0);
+      return toLocalIsoWithOffset(d);
     }
+
     function deliverAtLocalIsoInMinutes(minutes) {
       const d = new Date(Date.now() + minutes * 60 * 1000);
       d.setSeconds(0, 0);
       return toLocalIsoWithOffset(d);
     }
+
     function randomClientRequestId(prefix) { return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 
     signedCode.addEventListener("input", () => { applyBodyGuardrails(); refreshPulseImageEnabled(); });
@@ -1031,22 +1268,67 @@
         }
       }
 
-      if (pulseImageCard) pulseImageCard.classList.toggle("hidden", signedMode !== "pulse");
+      // ✅ Default to Pulse when signed-in (unless user already interacted)
+      if (isAuthed) {
+        if (!userChoseTab) {
+          // tab selection handled above
+        }
+        if (signedMode !== "pulse") setSignedMode("pulse");
+      } else {
+        // signed advanced options hidden anyway; keep a predictable default
+        if (signedMode !== "preset") setSignedMode("preset");
+        if (pulseRunning) stopPulseTimerUI({ silent: true });
+      }
 
       applyBodyGuardrails();
       loadCredits().catch(() => {});
       refreshPulseImageEnabled();
       updateSignedSendLabel();
+      applySignedModeUI();
     }
 
     auth.onAuthStateChanged((user) => renderAuthUI(user));
 
-    // Send handlers
-    function refreshSignedSendEnabled(isAuthed) {
-      const canSend = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
-      btnSignedSend.disabled = !canSend;
-      updateSignedSendLabel();
+    // Pulse session buttons
+    if (btnPulseAdd2) {
+      btnPulseAdd2.addEventListener("click", async () => {
+        if (!pulseRunning) return;
+
+        // UI timer extension
+        pulseEndsAtMs += 2 * 60 * 1000;
+
+        // Optional: if you later add a callable for extension, this won't break now.
+        try {
+          const call = functions.httpsCallable("extendDelveePulseSession");
+          await call({ minutes: 2 });
+        } catch (_) {
+          // No-op: credits enforcement happens in Delvee per your model.
+        }
+
+        // Best-effort local credit decrement display (does NOT enforce billing).
+        if (typeof creditsBalance === "number" && Number.isFinite(creditsBalance)) {
+          setCreditsUI(Math.max(0, creditsBalance - 1));
+        }
+
+        setStatus("good", "Extended", "Added 2 minutes. (Uses 1 credit.)");
+      });
     }
+
+    if (btnPulseStop) {
+      btnPulseStop.addEventListener("click", async () => {
+        if (!pulseRunning) return;
+
+        // Optional: if you later add a callable for stop/refund, this won't break now.
+        try {
+          const call = functions.httpsCallable("stopDelveePulseSession");
+          await call({});
+        } catch (_) {}
+
+        stopPulseTimerUI({ silent: false });
+      });
+    }
+
+    // Send handlers
     function refreshRollingSendEnabled() {
       const canSend = rollingCodeInput.value.trim().length > 0 && rollingBodyInput.value.trim().length > 0;
       btnRollingSend.disabled = !canSend;
@@ -1054,12 +1336,26 @@
 
     btnSignedSend.addEventListener("click", async () => {
       const user = auth.currentUser;
-      const code = signedCode.value.trim();
-      const body = signedBody.value.trim();
       const ok = applyBodyGuardrails().signedOk;
       if (!ok) return;
 
-      if (!user) { setStatus("warn", "Sign-in required", "Sign in (Email link or Google) to send Signed messages."); return; }
+      if (!user) { setStatus("warn", "Sign-in required", "Sign in (Email link or Google) to use Signed."); return; }
+
+      // ✅ Pulse mode: start a pulse session (no message required here)
+      if (signedMode === "pulse") {
+        if (pulseRunning) return;
+
+        setStatus("good", "Starting pulse…", "Opening Delvee and starting the timer…");
+        openDelveePulse();
+        startPulseTimerUI(signedPulseMinutes);
+        applyBodyGuardrails(); // will disable the button
+        return;
+      }
+
+      // Non-pulse: normal encrypted message scheduling
+      const code = signedCode.value.trim();
+      const body = signedBody.value.trim();
+
       if (!code || !body) { setStatus("warn", "Missing details", "Add a code and a message, then try again."); return; }
 
       try {
@@ -1069,10 +1365,20 @@
         const codeHash = await sha256Hex(enc.normalizedPassphrase);
 
         let deliverAtLocalIso;
-        if (signedMode === "pulse") deliverAtLocalIso = deliverAtLocalIsoInMinutes(2);
-        else if (signedMode === "10m") deliverAtLocalIso = deliverAtLocalIsoInMinutes(10);
+
+        if (signedMode === "10m") deliverAtLocalIso = deliverAtLocalIsoInMinutes(10);
         else if (signedMode === "1h") deliverAtLocalIso = deliverAtLocalIsoInMinutes(60);
-        else deliverAtLocalIso = deliverAtLocalIsoTomorrow(signedPresetTime);
+        else {
+          // preset mode uses day + time
+          // Interpretation:
+          // - Tomorrow = +1 day
+          // - In 1 day = +2 days (so it’s not redundant)
+          // - In a week = +7 days
+          let days = 1;
+          if (signedPresetDay === "in1day") days = 2;
+          if (signedPresetDay === "week") days = 7;
+          deliverAtLocalIso = deliverAtLocalIsoInDaysAtPresetTime(days, signedPresetTime);
+        }
 
         const userTimezone = getUserTimezone();
         const clientRequestId = randomClientRequestId("signed");
@@ -1111,7 +1417,7 @@
         const enc = await encryptBodyForCode(code, body);
         const codeHash = await sha256Hex(enc.normalizedPassphrase);
 
-        const deliverAtLocalIso = deliverAtLocalIsoTomorrow(rollingPresetTime);
+        const deliverAtLocalIso = deliverAtLocalIsoInDaysAtPresetTime(1, rollingPresetTime);
         const userTimezone = getUserTimezone();
         const clientRequestId = randomClientRequestId("rolling");
 
@@ -1143,7 +1449,6 @@
 
     btnSignedClear.addEventListener("click", () => {
       signedCode.value = ""; signedBody.value = "";
-      refreshSignedSendEnabled(!!auth.currentUser);
       applyBodyGuardrails();
       setStatus("warn", "Cleared", "Signed fields cleared.");
     });
@@ -1156,7 +1461,11 @@
 
     // Init
     refreshRollingSendEnabled();
+    // Default to preset initially; auth state will switch to pulse when signed in
     setSignedMode("preset");
+    setSignedPresetHighlightVisible(true);
+    setSignedDayHighlightVisible(true);
+    setSignedPulseHighlightVisible(true);
     applyBodyGuardrails();
     refreshPulseImageEnabled();
     updateSignedSendLabel();
