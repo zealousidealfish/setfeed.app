@@ -16,7 +16,7 @@
 
   <link rel="stylesheet" href="./styles.css" />
 
-  <!-- FIREBASE (AUTH + APP CHECK) -->
+  <!-- FIREBASE (AUTH + APP CHECK + FUNCTIONS) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
@@ -153,6 +153,26 @@
       line-height: 1.6;
       margin-top: 10px;
     }
+
+    .sf-pay-row{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      align-items:center;
+    }
+    .sf-pay-row .btn{
+      white-space: nowrap;
+    }
+    .sf-pay-status{
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .sf-danger{
+      color: color-mix(in srgb, #ff4d4d 70%, var(--text));
+    }
   </style>
 </head>
 
@@ -173,7 +193,6 @@
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
 
-        <!-- ✅ Fix: Download app now links to Delvee (your point-of-sale) -->
         <a class="nav-cta" href="https://delvee.app" rel="noreferrer" aria-label="Open Delvee">Download app</a>
       </nav>
     </div>
@@ -197,10 +216,82 @@
             <a class="btn btn-lg btn-quiet" href="./security.html">Security</a>
           </div>
 
+          <!-- -----------------------------
+               Delvee plans (Stripe Checkout)
+               ----------------------------- -->
           <div class="panel" style="margin-top: var(--s-6);">
-            <p class="panel-title" style="margin-top:0;">Delvee credits</p>
+            <p class="panel-title" style="margin-top:0;">Delvee Unlimited (Stripe)</p>
             <p class="panel-sub">
-              Delvee credits unlock pulse sessions and image pulses. Setfeed web is the sender — Delvee is the paid experience.
+              This web checkout is only for testing Stripe + webhook. Your Android app can still use Google Play Billing.
+            </p>
+
+            <div class="sf-price-grid" aria-label="Delvee unlimited plans">
+              <div class="sf-price-card">
+                <div class="sf-price-top">
+                  <div class="sf-price-name">Lobby Unlimited</div>
+                  <div class="sf-price-val">Monthly</div>
+                </div>
+                <p class="sf-price-sub">Unlimited Lobby pulses.</p>
+
+                <div class="sf-pay-row">
+                  <button class="btn btn-lg btn-primary auth-only hidden"
+                          type="button"
+                          data-lookup="delvee_lobby_unlimited_monthly">
+                    Subscribe (Lobby)
+                  </button>
+                  <a class="btn btn-lg btn-secondary no-auth-only" href="./send.html#signin">Sign in to subscribe</a>
+                </div>
+              </div>
+
+              <div class="sf-price-card">
+                <div class="sf-price-top">
+                  <div class="sf-price-name">Private Unlimited</div>
+                  <div class="sf-price-val">Monthly</div>
+                </div>
+                <p class="sf-price-sub">Unlimited Private pulses.</p>
+
+                <div class="sf-pay-row">
+                  <button class="btn btn-lg btn-primary auth-only hidden"
+                          type="button"
+                          data-lookup="delvee_private_unlimited_monthly">
+                    Subscribe (Private)
+                  </button>
+                  <a class="btn btn-lg btn-secondary no-auth-only" href="./send.html#signin">Sign in to subscribe</a>
+                </div>
+              </div>
+
+              <div class="sf-price-card">
+                <div class="sf-price-top">
+                  <div class="sf-price-name">Both Unlimited</div>
+                  <div class="sf-price-val">Monthly</div>
+                </div>
+                <p class="sf-price-sub">Unlimited Lobby + Private pulses.</p>
+
+                <div class="sf-pay-row">
+                  <button class="btn btn-lg btn-primary auth-only hidden"
+                          type="button"
+                          data-lookup="delvee_both_unlimited_monthly">
+                    Subscribe (Both)
+                  </button>
+                  <a class="btn btn-lg btn-secondary no-auth-only" href="./send.html#signin">Sign in to subscribe</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="sf-pay-status hidden" id="sf-pay-status" aria-live="polite"></div>
+
+            <small class="help">
+              After checkout completes, Stripe will call your webhook and your Firestore entitlements should update.
+            </small>
+          </div>
+
+          <!-- -----------------------------
+               Your existing “credits” copy
+               ----------------------------- -->
+          <div class="panel" style="margin-top: var(--s-6);">
+            <p class="panel-title" style="margin-top:0;">Delvee credits (copy)</p>
+            <p class="panel-sub">
+              This section is just your marketing copy. Your current Stripe backend maps <b>Unlimited Monthly</b> plans via lookup keys.
             </p>
 
             <div class="sf-price-grid" aria-label="Delvee pricing">
@@ -301,6 +392,7 @@
     function setSignedAuthedFlag(isAuthed) {
       try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
       document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
+      document.querySelectorAll(".no-auth-only").forEach(el => el.classList.toggle("hidden", isAuthed));
     }
 
     const btnGoogle = document.getElementById("btn-google");
@@ -309,6 +401,20 @@
     const pill = document.getElementById("sf-auth-pill");
     const pillLabel = document.getElementById("sf-auth-label");
     const creditsLine = document.getElementById("sf-credits-line");
+
+    const payStatus = document.getElementById("sf-pay-status");
+    function setPayStatus(msg, isError) {
+      if (!payStatus) return;
+      if (!msg) {
+        payStatus.classList.add("hidden");
+        payStatus.textContent = "";
+        payStatus.classList.remove("sf-danger");
+        return;
+      }
+      payStatus.classList.remove("hidden");
+      payStatus.textContent = msg;
+      payStatus.classList.toggle("sf-danger", !!isError);
+    }
 
     function setCreditsLine(n) {
       if (!creditsLine) return;
@@ -344,6 +450,7 @@
         if (isAuthed) pillLabel.textContent = user.email || "Signed in";
       }
 
+      setPayStatus("", false);
       loadCredits().catch(() => {});
     }
 
@@ -366,6 +473,55 @@
         console.error(e);
         alert("Couldn’t sign out. Try again.");
       }
+    });
+
+    // -------------------------
+    // Stripe Checkout (callable)
+    // -------------------------
+    async function startStripeCheckout(lookupKey) {
+      if (!auth.currentUser) {
+        alert("Please sign in first.");
+        return;
+      }
+
+      setPayStatus("Opening Stripe Checkout…", false);
+
+      try {
+        const call = functions.httpsCallable("createStripeCheckoutSession");
+        const res = await call({ lookupKey });
+        const data = (res && res.data) ? res.data : null;
+        const url = data && typeof data.url === "string" ? data.url : "";
+
+        if (!url) {
+          setPayStatus("Checkout session did not return a URL.", true);
+          return;
+        }
+
+        // Send them to Stripe-hosted Checkout
+        window.location.href = url;
+      } catch (e) {
+        console.error(e);
+        setPayStatus("Couldn’t start checkout. Check Functions logs + App Check and try again.", true);
+      }
+    }
+
+    // Wire all checkout buttons
+    document.querySelectorAll("button[data-lookup]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const lookupKey = btn.getAttribute("data-lookup") || "";
+        if (!lookupKey) return;
+
+        // UI: disable all checkout buttons while we start
+        const all = Array.from(document.querySelectorAll("button[data-lookup]"));
+        all.forEach(b => b.disabled = true);
+
+        try {
+          await startStripeCheckout(lookupKey);
+        } finally {
+          // If redirect fails, re-enable
+          all.forEach(b => b.disabled = false);
+        }
+      });
     });
   </script>
 </body>
