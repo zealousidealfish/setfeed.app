@@ -132,7 +132,9 @@
     .sf-price-actions{
       display:flex;
       justify-content:flex-end;
+      gap: 10px;
       margin-top: 10px;
+      flex-wrap: wrap;
     }
 
     .sf-auth-pill{
@@ -288,7 +290,6 @@
               </div>
             </div>
 
-            <!-- ✅ requested: replace Buy credits text with See more -->
             <div class="actions" style="margin-top: 12px;">
               <a class="btn btn-lg btn-quiet" id="btn-see-more" href="#plans">See more</a>
             </div>
@@ -300,7 +301,7 @@
             </small>
           </div>
 
-          <!-- ✅ requested: sign-in section disappears when signed in -->
+          <!-- Sign-in panel (hidden when authed) -->
           <div class="panel no-auth-only" id="signin" style="margin-top: var(--s-6);">
             <p class="panel-title">Sign in</p>
             <p class="panel-sub">Sign in with Google to buy a plan and to see Delvee credit balance.</p>
@@ -313,7 +314,7 @@
             <small class="help">Rolling is always available without signing in.</small>
           </div>
 
-          <!-- Signed-in mini panel (only when authed) -->
+          <!-- Signed-in mini panel -->
           <div class="panel auth-only hidden" style="margin-top: var(--s-6);">
             <p class="panel-title">Signed in</p>
 
@@ -331,7 +332,6 @@
             </div>
           </div>
 
-          <!-- ✅ requested: details at bottom + navigate via See more -->
           <section class="sf-plans" id="plans">
             <h2 style="margin:0;">Plan details</h2>
             <p class="sf-mini" style="margin-top:8px;">
@@ -378,7 +378,7 @@
 
           <div class="note">
             <p style="margin:0;">
-              Setfeed web focuses on sending. Delvee is where you promote plans.
+              Setfeed web focuses on sending. Delvee is where you host/join lobbies.
             </p>
           </div>
         </aside>
@@ -401,7 +401,7 @@
     document.getElementById("y").textContent = new Date().getFullYear();
 
     // -------------------------
-    // Auth wiring (Google popup)
+    // Auth + Checkout wiring
     // -------------------------
     const auth = firebase.auth();
 
@@ -460,16 +460,60 @@
 
     auth.onAuthStateChanged((user) => renderAuthed(user));
 
-    if (btnGoogle) {
-      btnGoogle.addEventListener("click", async () => {
-        try {
-          const provider = new firebase.auth.GoogleAuthProvider();
-          provider.setCustomParameters({ prompt: "select_account" });
-          await auth.signInWithPopup(provider);
-        } catch (e) {
-          console.error(e);
-          alert("Couldn’t sign in with Google. Check pop-up settings and try again.");
+    // ✅ Make Google sign-in work reliably:
+    // - Use redirect on mobile/Safari/blocked-popup cases
+    // - Use popup when allowed
+    // - Handle redirect result on load
+    async function signInWithGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+
+      // If already authed, no-op
+      if (auth.currentUser) return;
+
+      // Prefer popup, fall back to redirect on common popup-blocked environments.
+      try {
+        await auth.signInWithPopup(provider);
+      } catch (err) {
+        const code = (err && err.code) ? String(err.code) : "";
+        const popupBlocked =
+          code.includes("popup-blocked") ||
+          code.includes("popup-closed-by-user") ||
+          code.includes("cancelled-popup-request");
+
+        // Some browsers (esp. iOS Safari / in-app browsers) make popup unreliable.
+        // Redirect is the most robust.
+        if (popupBlocked || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+          await auth.signInWithRedirect(provider);
+          return;
         }
+
+        // If it's some other error, surface it.
+        console.error(err);
+        alert("Couldn’t sign in with Google. Check pop-up settings and try again.");
+      }
+    }
+
+    // Handle redirect results (if we used signInWithRedirect)
+    auth.getRedirectResult()
+      .then((result) => {
+        // If successful, onAuthStateChanged will update UI.
+        // Keep silent.
+      })
+      .catch((e) => {
+        // Don’t spam for normal cases; only show real errors.
+        const code = (e && e.code) ? String(e.code) : "";
+        if (code && !code.includes("auth/no-auth-event")) {
+          console.error(e);
+        }
+      });
+
+    if (btnGoogle) {
+      btnGoogle.addEventListener("click", async (e) => {
+        e.preventDefault();
+        btnGoogle.disabled = true;
+        try { await signInWithGoogle(); }
+        finally { btnGoogle.disabled = false; }
       });
     }
 
@@ -536,7 +580,6 @@
     const seeMore = document.getElementById("btn-see-more");
     if (seeMore) {
       seeMore.addEventListener("click", (e) => {
-        // keep normal anchor behavior, but smooth-scroll if supported
         const target = document.getElementById("plans");
         if (!target) return;
         e.preventDefault();
