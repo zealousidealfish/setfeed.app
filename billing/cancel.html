@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Checkout cancelled — Setfeed</title>
+  <meta name="theme-color" content="#FFFBFE" id="meta-theme-color" />
+  <link rel="stylesheet" href="/styles.css" />
+  <script>
+    (function(){
+      const themeKey = "sf_theme_mode";
+      const root = document.documentElement;
+      function applyTheme(){
+        const stored = localStorage.getItem(themeKey) || "system";
+        if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
+        else root.removeAttribute("data-theme");
+        const effective =
+          root.getAttribute("data-theme") ||
+          (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        const meta = document.getElementById("meta-theme-color");
+        if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
+      }
+      applyTheme();
+      window.addEventListener("storage", (e) => { if (e && e.key === themeKey) applyTheme(); });
+    })();
+  </script>
+</head>
+<body class="page-bg">
+  <div class="wrap">
+    <div class="card">
+      <h1>Checkout cancelled</h1>
+      <p class="lead">No payment was taken.</p>
+
+      <div class="actions" style="margin-top: var(--s-5);">
+        <a class="btn btn-lg btn-primary" href="/">Try again</a>
+        <a class="btn btn-lg btn-quiet" href="/privacy.html">Questions?</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
