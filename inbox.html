@@ -132,6 +132,15 @@
     .sf-toggle:hover{ background: rgba(255,255,255,0.07); }
     .sf-toggle:active{ transform: translateY(0.5px); }
 
+    /* ✅ Top-right toggle placement */
+    .sf-inbox-topbar{
+      display:flex;
+      align-items:center;
+      justify-content: flex-end;
+      margin-top: 10px;
+      margin-bottom: -6px;
+    }
+
     /* Section header */
     .sf-section-head{
       display:flex;
@@ -212,6 +221,57 @@
       gap:10px;
       flex-wrap: wrap;
       align-items:center;
+    }
+
+    /* ✅ Attachments strip (thumbnails) */
+    .sf-attach-strip{
+      margin-top: 10px;
+      display:flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .sf-attach-label{
+      font-size: 12px;
+      color: rgba(233,238,246,0.78);
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .sf-attach-thumbs{
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items:center;
+    }
+    .sf-thumb{
+      width: 72px;
+      height: 72px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.04);
+      object-fit: cover;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.22);
+    }
+    .sf-thumb:active{ transform: translateY(0.5px); }
+    .sf-thumb-skel{
+      width: 72px;
+      height: 72px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.04);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color: rgba(233,238,246,0.55);
+      font-size: 12px;
+    }
+    .sf-attach-actions{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+      margin-top: 8px;
     }
 
     /* Swipe affordance */
@@ -329,6 +389,24 @@
     .delvee-reveal{ display:none; }
     .delvee-stage.is-revealed .delvee-reveal{ display:block; }
 
+    /* ✅ Attachments inside modal */
+    .delvee-attachments{
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .delvee-attachments h4{
+      margin: 0 0 10px 0;
+      font-size: 13px;
+      color: rgba(233,238,246,0.85);
+      letter-spacing: -0.01em;
+    }
+    .delvee-thumb-grid{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items:center;
+    }
     .delvee-actions{
       display:flex;
       justify-content:flex-end;
@@ -419,6 +497,14 @@
       <!-- ROUTES -->
       <div id="route-inbox" class="sf-route show">
         <div id="inbox-ui" class="hidden">
+
+          <!-- ✅ Moved: Hidden senders toggle to top-right -->
+          <div class="sf-inbox-topbar">
+            <button class="sf-toggle" id="btn-show-blocked" type="button">
+              <span id="blocked-label">Hidden senders: Hidden</span>
+            </button>
+          </div>
+
           <!-- ✅ Codebar (aligned) -->
           <div class="sf-codebar" aria-label="Inbox code and actions">
             <div class="sf-codecol">
@@ -439,10 +525,6 @@
           <div class="sf-mini-row">
             <button class="sf-toggle" id="btn-auto" type="button">
               <span id="auto-label">Auto polling: Off</span>
-            </button>
-
-            <button class="sf-toggle" id="btn-show-blocked" type="button">
-              <span id="blocked-label">Hidden senders: Hidden</span>
             </button>
 
             <button class="sf-toggle" id="btn-summaries-only" type="button">
@@ -554,6 +636,14 @@
           <div class="delvee-reveal" id="delvee-reveal">
             <h3 style="margin-top:0;" id="delvee-heading">Message</h3>
             <p id="delvee-text"></p>
+
+            <!-- ✅ Attachments area -->
+            <div class="delvee-attachments hidden" id="delvee-attachments">
+              <h4 id="delvee-attachments-title">Images</h4>
+              <div class="delvee-thumb-grid" id="delvee-thumb-grid"></div>
+              <div class="sf-attach-actions" id="delvee-attach-actions"></div>
+            </div>
+
             <small class="help" style="margin-top:10px;">Decryption is local in your browser.</small>
           </div>
         </div>
@@ -820,6 +910,15 @@
       }
     }
 
+    async function decryptAttachmentBytesForCode(rawCode, encryptedBytes, ivB64, saltB64) {
+      const passphrase = normalizeCodeAndroid(rawCode);
+      const salt = b64ToBytes(saltB64);
+      const iv = b64ToBytes(ivB64);
+      const key = await deriveAesKeyFromPassphrase(passphrase, salt);
+      const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, encryptedBytes);
+      return new Uint8Array(pt);
+    }
+
     // -------------------------
     // Time formatting
     // -------------------------
@@ -896,6 +995,126 @@
     })();
 
     // -------------------------
+    // Attachments (signed URLs + decrypt + thumbnail caching)
+    // -------------------------
+    let lastFetchedCode = "";
+    const attachmentUrlCache = new Map(); // key -> objectUrl
+    const attachmentBusy = new Set(); // key
+
+    function cacheKey(envelopeId, attachmentId){ return `${envelopeId}::${attachmentId}`; }
+
+    function revokeAllAttachmentUrls(){
+      for (const url of attachmentUrlCache.values()) {
+        try { URL.revokeObjectURL(url); } catch (_) {}
+      }
+      attachmentUrlCache.clear();
+      attachmentBusy.clear();
+    }
+
+    function normalizeAttachments(raw){
+      const arr = Array.isArray(raw) ? raw : [];
+      return arr
+        .map((a) => (a || {}))
+        .map((a) => ({
+          attachmentId: (typeof a.attachmentId === "string") ? a.attachmentId : null,
+          storagePath: (typeof a.storagePath === "string") ? a.storagePath : null,
+          contentType: (typeof a.contentType === "string") ? a.contentType : null,
+          sizeBytes: (typeof a.sizeBytes === "number") ? a.sizeBytes : null,
+          ivB64: (typeof a.ivB64 === "string") ? a.ivB64 : null,
+          saltB64: (typeof a.saltB64 === "string") ? a.saltB64 : null,
+        }))
+        .filter((a) => a.attachmentId && a.contentType && a.ivB64 && a.saltB64);
+    }
+
+    async function openSignedAttachmentAsObjectUrl({ rawCode, signedEnvelopeId, attachment }) {
+      const k = cacheKey(signedEnvelopeId, attachment.attachmentId);
+      if (attachmentUrlCache.has(k)) return attachmentUrlCache.get(k);
+
+      if (attachmentBusy.has(k)) {
+        // wait-poll for a moment (simple + safe)
+        for (let i = 0; i < 30; i++) {
+          await new Promise(r => setTimeout(r, 120));
+          if (attachmentUrlCache.has(k)) return attachmentUrlCache.get(k);
+        }
+        throw new Error("Attachment busy");
+      }
+
+      attachmentBusy.add(k);
+      try {
+        // 1) mint short-lived download URL
+        const callable = functions.httpsCallable("createSignedAttachmentDownloadUrl");
+        const res = await callable({ signedEnvelopeId, attachmentId: attachment.attachmentId });
+        const payload = (res && res.data) ? res.data : {};
+        const downloadUrl = payload.downloadUrl;
+        if (!downloadUrl) throw new Error("No downloadUrl");
+
+        // 2) fetch encrypted bytes
+        const r = await fetch(downloadUrl);
+        if (!r.ok) throw new Error(`Download failed (${r.status})`);
+        const encBuf = await r.arrayBuffer();
+
+        // 3) decrypt bytes using existing scheme (PBKDF2 + AES-GCM) with per-attachment iv/salt
+        const plainBytes = await decryptAttachmentBytesForCode(rawCode, encBuf, attachment.ivB64, attachment.saltB64);
+
+        // 4) make object URL
+        const blob = new Blob([plainBytes], { type: attachment.contentType || "application/octet-stream" });
+        const url = URL.createObjectURL(blob);
+
+        attachmentUrlCache.set(k, url);
+        return url;
+      } finally {
+        attachmentBusy.delete(k);
+      }
+    }
+
+    async function renderThumbnailsInto(containerEl, item, rawCode, { maxThumbs = 3 } = {}) {
+      if (!containerEl) return;
+      if (!item || !Array.isArray(item.attachments) || item.attachments.length === 0) return;
+
+      // Avoid re-render spam
+      if (containerEl.getAttribute("data-loaded") === "true") return;
+
+      containerEl.innerHTML = "";
+      const show = item.attachments.slice(0, Math.max(0, maxThumbs));
+
+      for (let i = 0; i < show.length; i++) {
+        const a = show[i];
+        const skel = document.createElement("div");
+        skel.className = "sf-thumb-skel";
+        skel.textContent = "…";
+        containerEl.appendChild(skel);
+
+        try {
+          const url = await openSignedAttachmentAsObjectUrl({ rawCode, signedEnvelopeId: item.id, attachment: a });
+          const img = document.createElement("img");
+          img.className = "sf-thumb";
+          img.alt = "Image";
+          img.src = url;
+          img.title = "Open image";
+          img.addEventListener("click", () => {
+            // “Open image” works: open decrypted blob url
+            window.open(url, "_blank", "noopener");
+          });
+
+          containerEl.replaceChild(img, skel);
+        } catch (e) {
+          console.error(e);
+          skel.textContent = "x";
+        }
+      }
+
+      const remaining = item.attachments.length - show.length;
+      if (remaining > 0) {
+        const more = document.createElement("div");
+        more.className = "sf-thumb-skel";
+        more.textContent = `+${remaining}`;
+        containerEl.appendChild(more);
+      }
+
+      containerEl.setAttribute("data-loaded", "true");
+    }
+
+    // -------------------------
     // Delvee modal hooks
     // -------------------------
     const delveeModal = document.getElementById("delvee-modal");
@@ -907,7 +1126,18 @@
     const delveeConsume = document.getElementById("delvee-consume");
     const delveeHeading = document.getElementById("delvee-heading");
 
+    const delveeAttachments = document.getElementById("delvee-attachments");
+    const delveeAttachmentsTitle = document.getElementById("delvee-attachments-title");
+    const delveeThumbGrid = document.getElementById("delvee-thumb-grid");
+    const delveeAttachActions = document.getElementById("delvee-attach-actions");
+
     let delveeActiveEnvelopeId = null;
+
+    function clearDelveeAttachmentsUI(){
+      if (delveeThumbGrid) delveeThumbGrid.innerHTML = "";
+      if (delveeAttachActions) delveeAttachActions.innerHTML = "";
+      if (delveeAttachments) delveeAttachments.classList.add("hidden");
+    }
 
     function delveeHide(){
       delveeModal.classList.remove("show");
@@ -923,6 +1153,67 @@
       }
       delveeActiveEnvelopeId = null;
       if (delveeHeading) delveeHeading.textContent = "Message";
+      clearDelveeAttachmentsUI();
+    }
+
+    async function renderDelveeAttachmentsForEnvelope(envelopeId){
+      clearDelveeAttachmentsUI();
+      const item = findItemById(envelopeId);
+      if (!item || !Array.isArray(item.attachments) || item.attachments.length === 0) return;
+
+      const rawCode = (lastFetchedCode || (codeInput && codeInput.value) || "").trim();
+      if (!rawCode) return;
+
+      if (delveeAttachmentsTitle) {
+        delveeAttachmentsTitle.textContent = `Images (${item.attachments.length})`;
+      }
+
+      if (delveeAttachments) delveeAttachments.classList.remove("hidden");
+
+      // show skeletons first
+      for (let i = 0; i < item.attachments.length; i++) {
+        const sk = document.createElement("div");
+        sk.className = "sf-thumb-skel";
+        sk.textContent = "…";
+        delveeThumbGrid.appendChild(sk);
+      }
+
+      // render each thumb (handles multiple attachments)
+      for (let i = 0; i < item.attachments.length; i++) {
+        const a = item.attachments[i];
+        const skel = delveeThumbGrid.children[i];
+
+        try {
+          const url = await openSignedAttachmentAsObjectUrl({ rawCode, signedEnvelopeId: item.id, attachment: a });
+          const img = document.createElement("img");
+          img.className = "sf-thumb";
+          img.alt = "Image";
+          img.src = url;
+          img.title = "Open image";
+          img.addEventListener("click", () => window.open(url, "_blank", "noopener"));
+          delveeThumbGrid.replaceChild(img, skel);
+        } catch (e) {
+          console.error(e);
+          skel.textContent = "x";
+        }
+      }
+
+      // quick action: open all images
+      if (delveeAttachActions) {
+        const btnOpenAll = document.createElement("button");
+        btnOpenAll.className = "btn btn-secondary";
+        btnOpenAll.type = "button";
+        btnOpenAll.textContent = "Open all images";
+        btnOpenAll.addEventListener("click", async () => {
+          for (const a of item.attachments) {
+            try {
+              const url = await openSignedAttachmentAsObjectUrl({ rawCode, signedEnvelopeId: item.id, attachment: a });
+              window.open(url, "_blank", "noopener");
+            } catch (_) {}
+          }
+        });
+        delveeAttachActions.appendChild(btnOpenAll);
+      }
     }
 
     function delveeShow({ envelopeId, body, senderUid, kindLabel }){
@@ -930,6 +1221,8 @@
       if (delveeWho) delveeWho.textContent = senderUid ? `From ${senderUid}` : "A surprise drop";
       if (delveeHeading) delveeHeading.textContent = kindLabel || "Message";
       if (delveeText) delveeText.textContent = "";
+
+      clearDelveeAttachmentsUI();
 
       delveeModal.classList.add("show");
       if (delveeStage) {
@@ -939,9 +1232,11 @@
 
       requestAnimationFrame(() => {
         if (delveeStage) delveeStage.classList.add("is-playing");
-        setTimeout(() => {
+        setTimeout(async () => {
           if (delveeText) delveeText.textContent = body || "";
           if (delveeStage) delveeStage.classList.add("is-revealed");
+          // ✅ after reveal, render thumbnails + open works
+          await renderDelveeAttachmentsForEnvelope(envelopeId);
         }, 250);
       });
     }
@@ -1045,6 +1340,9 @@
 
         const k = detectKindFromPlaintext(pt);
 
+        // ✅ attachments are already returned by fetchSignedEnvelopes in your backend
+        const attachments = normalizeAttachments(env.attachments);
+
         decryptedById.set(id, pt);
         out.push({
           id,
@@ -1057,7 +1355,8 @@
           kind: k.kind,
           kindLabel: k.label,
           kindPillText: k.pillText,
-          kindPillCls: k.pillCls
+          kindPillCls: k.pillCls,
+          attachments
         });
       }
 
@@ -1270,6 +1569,21 @@
           ? `<span class="sf-kind delvee">${safeText(item.kindPillText || "Delvee")}</span>`
           : ``;
 
+      const attachmentCount = Array.isArray(item.attachments) ? item.attachments.length : 0;
+
+      const attachStrip = (isReleased && attachmentCount > 0)
+        ? `
+          <div class="sf-attach-strip">
+            <div class="sf-attach-label">Images: ${attachmentCount}</div>
+            <div class="sf-attach-thumbs" data-thumbs-for="${safeText(item.id)}">
+              <div class="sf-thumb-skel">…</div>
+              <div class="sf-thumb-skel">…</div>
+              <div class="sf-thumb-skel">…</div>
+            </div>
+          </div>
+        `
+        : ``;
+
       return `
         <div class="sf-msg-card" data-id="${safeText(item.id)}" data-mode="${safeText(mode)}">
           <div class="sf-swipe-bg">
@@ -1290,6 +1604,8 @@
             </div>
 
             <div class="sf-msg-body">${safeText(bodyText)}</div>
+
+            ${attachStrip}
 
             <div class="sf-msg-actions">
               ${btns.join("")}
@@ -1362,6 +1678,19 @@
       });
     }
 
+    async function hydrateVisibleThumbnails(rawCode){
+      // Thumbnails appear on released+pinned cards; load lazily after render.
+      const nodes = document.querySelectorAll("[data-thumbs-for]");
+      for (const node of nodes) {
+        const id = node.getAttribute("data-thumbs-for");
+        if (!id) continue;
+        const item = findItemById(id);
+        if (!item) continue;
+        // Only if released/pinned; safe to just try
+        await renderThumbnailsInto(node, item, rawCode, { maxThumbs: 3 });
+      }
+    }
+
     function renderAll(){
       refreshHiddenNav();
 
@@ -1398,6 +1727,10 @@
       wireReleased(listReleased);
 
       if (currentRoute() === "hidden") renderHidden();
+
+      // ✅ render thumbnails (best-effort; will silently fail if no code cached)
+      const rawCode = (lastFetchedCode || "").trim();
+      if (rawCode) hydrateVisibleThumbnails(rawCode).catch(() => {});
     }
 
     function findItemById(id){
@@ -1638,6 +1971,12 @@
         const envelopes = await fetchSignedEnvelopesForCode(code);
         const items = await buildLatestItems(code, envelopes);
 
+        // If the code changed, clear cached attachment URLs (they won’t decrypt for a different code)
+        if (lastFetchedCode && normalizeCodeAndroid(lastFetchedCode) !== normalizeCodeAndroid(code)) {
+          revokeAllAttachmentUrls();
+        }
+        lastFetchedCode = code;
+
         const prev = latestItems;
         latestItems = items;
 
@@ -1706,6 +2045,9 @@
       decryptedById = new Map();
       latestItems = [];
       summariesOnly = false;
+      lastFetchedCode = "";
+
+      revokeAllAttachmentUrls();
 
       applyToggleUI();
       refreshHiddenNav();
