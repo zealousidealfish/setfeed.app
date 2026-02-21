@@ -16,7 +16,7 @@
 
   <link rel="stylesheet" href="./styles.css" />
 
-  <!-- FIREBASE (AUTH + APP CHECK + FUNCTIONS) -->
+  <!-- FIREBASE -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
@@ -36,9 +36,11 @@
 
     if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
-    // Make these globals so the rest of the page can't accidentally shadow them
     window.sfAuth = firebase.auth();
     window.sfFunctions = firebase.app().functions("europe-west2");
+
+    // ✅ Set persistence early
+    window.sfAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
 
     function startAppCheck() {
       try {
@@ -260,7 +262,7 @@
                 </div>
                 <p class="sf-price-sub">Private pulses for 1:1 sessions.</p>
                 <div class="sf-price-actions">
-                  <button class="btn btn-primary auth-only hidden" id="buy-private" type="button">Buy now</button>
+                  <button class="btn btn-primary auth-only hidden" id="buy-private" type="button">Purchase</button>
                   <a class="btn btn-secondary no-auth-only" href="#signin">Sign in</a>
                 </div>
               </div>
@@ -272,7 +274,7 @@
                 </div>
                 <p class="sf-price-sub">Join lobbies and run group pulses.</p>
                 <div class="sf-price-actions">
-                  <button class="btn btn-primary auth-only hidden" id="buy-lobbies" type="button">Buy now</button>
+                  <button class="btn btn-primary auth-only hidden" id="buy-lobbies" type="button">Purchase</button>
                   <a class="btn btn-secondary no-auth-only" href="#signin">Sign in</a>
                 </div>
               </div>
@@ -284,7 +286,7 @@
                 </div>
                 <p class="sf-price-sub">Everything included (Private + Lobbies).</p>
                 <div class="sf-price-actions">
-                  <button class="btn btn-primary auth-only hidden" id="buy-max" type="button">Buy now</button>
+                  <button class="btn btn-primary auth-only hidden" id="buy-max" type="button">Purchase</button>
                   <a class="btn btn-secondary no-auth-only" href="#signin">Sign in</a>
                 </div>
               </div>
@@ -301,14 +303,12 @@
             </small>
           </div>
 
-          <!-- Sign-in panel (hidden when authed) -->
           <div class="panel no-auth-only" id="signin" style="margin-top: var(--s-6);">
             <p class="panel-title">Sign in</p>
             <p class="panel-sub">Sign in with Google to buy a plan and to see Delvee credit balance.</p>
 
             <div class="actions">
-              <!-- Inline fallback: even if JS binding fails, this still calls window.sfSignInGoogle() -->
-              <button class="btn btn-lg btn-primary" id="btn-google" type="button" onclick="window.sfSignInGoogle && window.sfSignInGoogle()">Continue with Google</button>
+              <button class="btn btn-lg btn-primary" id="btn-google" type="button">Continue with Google</button>
               <a class="btn btn-lg btn-secondary" id="btn-email" href="./send.html#signin">Continue with email</a>
             </div>
 
@@ -317,7 +317,6 @@
             <small class="help">Rolling is always available without signing in.</small>
           </div>
 
-          <!-- Signed-in mini panel -->
           <div class="panel auth-only hidden" style="margin-top: var(--s-6);">
             <p class="panel-title">Signed in</p>
 
@@ -403,9 +402,6 @@
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
 
-    // -------------------------
-    // Auth + Checkout wiring
-    // -------------------------
     const auth = window.sfAuth;
     const functions = window.sfFunctions;
 
@@ -418,7 +414,6 @@
     const btnSignout = document.getElementById("btn-signout");
     const pillLabel = document.getElementById("sf-auth-label");
     const creditsLine = document.getElementById("sf-credits-line");
-
     const payStatus = document.getElementById("sf-pay-status");
     const authStatus = document.getElementById("sf-auth-status");
 
@@ -434,7 +429,6 @@
       el.textContent = msg;
       el.classList.toggle("sf-danger", !!isError);
     }
-
     function setPayStatus(msg, isError) { setStatus(payStatus, msg, isError); }
     function setAuthStatus(msg, isError) { setStatus(authStatus, msg, isError); }
 
@@ -469,90 +463,66 @@
 
     auth.onAuthStateChanged((user) => renderAuthed(user));
 
-    // ✅ Redirect-first is the most reliable (works even when popups are blocked).
-    // If redirect is blocked/misconfigured, we show clear errors for the usual causes:
-    // - auth/operation-not-allowed (Google provider not enabled)
-    // - auth/unauthorized-domain (your domain not in Firebase Authorized domains)
-    async function doGoogleSignIn() {
+    // ✅ Finalize redirect result (if popup fallback went to redirect)
+    auth.getRedirectResult().catch((e) => {
+      console.error(e);
+      const code = (e && e.code) ? String(e.code) : "";
+      if (code === "auth/unauthorized-domain") {
+        setAuthStatus("This domain isn’t authorized for Firebase Auth. Add setfeed.app in Firebase Console → Authentication → Settings → Authorized domains.", true);
+      } else if (code) {
+        setAuthStatus(`Google sign-in failed: ${code}`, true);
+      }
+    });
+
+    async function doGoogleSignInPopupFirst() {
       setAuthStatus("", false);
 
       if (!auth) {
         setAuthStatus("Auth failed to initialize (firebase-auth not loaded).", true);
         return;
       }
-
       if (auth.currentUser) return;
 
-      try {
-        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-      } catch (_) {
-        // ignore
-      }
+      try { await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch (_) {}
 
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
 
       try {
         setAuthStatus("Opening Google sign-in…", false);
-        await auth.signInWithRedirect(provider);
+        await auth.signInWithPopup(provider);
       } catch (e) {
-        console.error(e);
+        console.warn("[popup] failed, falling back to redirect:", e);
+
         const code = (e && e.code) ? String(e.code) : "";
-        if (code === "auth/operation-not-allowed") {
-          setAuthStatus("Google sign-in is disabled in Firebase Auth. Enable Google provider in Firebase Console → Authentication → Sign-in method.", true);
-        } else if (code === "auth/unauthorized-domain") {
-          setAuthStatus("This domain isn’t authorized for Firebase Auth. Add it in Firebase Console → Authentication → Settings → Authorized domains.", true);
-        } else {
-          setAuthStatus("Couldn’t start Google sign-in. Check console for details.", true);
+        if (code === "auth/unauthorized-domain") {
+          setAuthStatus("This domain isn’t authorized for Firebase Auth. Add setfeed.app in Firebase Auth → Authorized domains.", true);
+          return;
+        }
+
+        try {
+          await auth.signInWithRedirect(provider);
+        } catch (err) {
+          console.error(err);
+          const c = (err && err.code) ? String(err.code) : "";
+          setAuthStatus(c ? `Couldn’t sign in: ${c}` : "Couldn’t sign in. Check console.", true);
         }
       }
     }
 
-    // Expose globally so inline onclick always works
-    window.sfSignInGoogle = doGoogleSignIn;
+    btnGoogle.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      doGoogleSignInPopupFirst();
+    });
 
-    // Handle redirect result on load (completes the flow)
-    auth.getRedirectResult()
-      .then(() => {
-        // If successful, onAuthStateChanged will update UI.
-        setAuthStatus("", false);
-      })
-      .catch((e) => {
-        const code = (e && e.code) ? String(e.code) : "";
-        if (!code) return;
+    btnSignout.addEventListener("click", async () => {
+      try { await auth.signOut(); } catch (e) {
         console.error(e);
-
-        if (code === "auth/operation-not-allowed") {
-          setAuthStatus("Google sign-in is disabled in Firebase Auth. Enable Google provider in Firebase Console → Authentication → Sign-in method.", true);
-        } else if (code === "auth/unauthorized-domain") {
-          setAuthStatus("This domain isn’t authorized for Firebase Auth. Add it in Firebase Console → Authentication → Settings → Authorized domains.", true);
-        } else {
-          setAuthStatus("Google sign-in failed. See console for details.", true);
-        }
-      });
-
-    // Also bind via JS (in case you remove the inline onclick later)
-    document.addEventListener("DOMContentLoaded", () => {
-      if (btnGoogle) {
-        btnGoogle.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          doGoogleSignIn();
-        });
-      }
-
-      if (btnSignout) {
-        btnSignout.addEventListener("click", async () => {
-          try { await auth.signOut(); } catch (e) {
-            console.error(e);
-            alert("Couldn’t sign out. Try again.");
-          }
-        });
+        alert("Couldn’t sign out. Try again.");
       }
     });
 
-    // -------------------------
     // Stripe Checkout (callable)
-    // -------------------------
     const LOOKUP_KEYS = {
       private: "delvee_private_unlimited_monthly",
       lobbies: "delvee_lobby_unlimited_monthly",
@@ -578,7 +548,6 @@
           setPayStatus("Checkout session did not return a URL.", true);
           return;
         }
-
         window.location.href = url;
       } catch (e) {
         console.error(e);
