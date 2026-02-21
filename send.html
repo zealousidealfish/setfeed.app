@@ -976,7 +976,7 @@
       applyBodyGuardrails();
     }
 
-    signedAdvBtns.forEach(btn => btn.addEventListener("click", () => {
+    signedAdvBtns.forEach(btn => btn.addEventListener("click", (e) => { e.preventDefault();
       const mode = btn.getAttribute("data-mode") || "tomorrow";
       setSignedMode(mode);
     }));
