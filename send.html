@@ -32,16 +32,15 @@
     };
 
     const RECAPTCHA_SITE_KEY = "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI";
-
-    // IMPORTANT:
-    // Use the CURRENT origin for email-link finish URL (works on setfeed.app + web.app + localhost).
     const SITE_ORIGIN = window.location.origin;
 
     if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
-    // Expose shared instances (same pattern as index.html)
     window.sfAuth = firebase.auth();
     window.sfFunctions = firebase.app().functions("europe-west2");
+
+    // ✅ IMPORTANT: Set persistence as early as possible (before any sign-in attempt).
+    window.sfAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
 
     function startAppCheck() {
       try {
@@ -88,7 +87,6 @@
     .hidden{ display:none !important; }
     .sf-status-slot{ margin-top: 10px; }
 
-    /* Keep all chips equal height everywhere on this page */
     .chip, .sf-adv-btn{
       min-height: 42px;
       display: inline-flex;
@@ -115,7 +113,6 @@
       opacity: 1;
     }
 
-    /* Requested textarea inversion */
     html[data-theme="dark"] #signed-body,
     html[data-theme="dark"] #rolling-body{
       background: #ffffff !important;
@@ -151,7 +148,6 @@
       white-space: nowrap;
     }
 
-    /* Make "Create pulse lobby with Delvee" feel like a link (clickable) */
     .sf-subhead{
       cursor: pointer;
       user-select: none;
@@ -161,7 +157,6 @@
       text-decoration: underline;
     }
 
-    /* ✅ File input as a chip */
     .sf-file-input{ display:none !important; }
 
     .sf-file-chip{
@@ -255,7 +250,6 @@
         <div class="row">
           <div class="col" id="signin">
 
-            <!-- ✅ Image preview (Pulse mode only) -->
             <div class="sf-pulse-image-card hidden" id="sf-pulse-image-card">
               <div class="sf-pulse-image-head">
                 <div>
@@ -300,7 +294,7 @@
             </div>
 
             <div class="actions no-auth-only" style="flex-direction: column; align-items: stretch;">
-              <!-- redirect-safe google sign-in (same behavior as index.html) -->
+              <!-- ✅ Popup-first, redirect fallback -->
               <button class="btn btn-lg btn-primary" id="btn-google" type="button" aria-label="Continue with Google">
                 <span>Continue with Google</span>
               </button>
@@ -308,7 +302,6 @@
               <button class="btn btn-lg" id="btn-send-link" type="button">Send sign-in link</button>
             </div>
 
-            <!-- ✅ Polished signed-in banner -->
             <div class="sf-auth-banner hidden auth-only" id="sf-auth-banner">
               <div class="sf-auth-left">
                 <span class="sf-auth-email" id="sf-auth-label">Signed in</span>
@@ -507,7 +500,6 @@
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
 
-    // Use the shared instances (same pattern across pages)
     const auth = window.sfAuth;
     const functions = window.sfFunctions;
 
@@ -574,7 +566,6 @@
     const creditsPill = document.getElementById("sf-credits-pill");
     const btnClaimCredits = document.getElementById("btn-claim-credits");
 
-    // File chip controls
     const sfBtnChooseImage = document.getElementById("sf-btn-choose-image");
     const sfFileChipLabel = document.getElementById("sf-file-chip-label");
 
@@ -583,24 +574,250 @@
       document.querySelectorAll(".no-auth-only").forEach(el => el.classList.toggle("hidden", isAuthed));
     }
 
-    // Ensure this page persists auth the same way as index.html
-    // (this is what makes other pages consistently “see” the session)
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+    // ✅ Finalize redirect-based sign-in if fallback was used anywhere
+    auth.getRedirectResult().catch((e) => {
+      console.error(e);
+      const code = (e && e.code) ? String(e.code) : "";
+      if (code === "auth/unauthorized-domain") {
+        setStatus("warn", "Auth domain not authorized", "Add setfeed.app in Firebase Auth → Authorized domains.");
+      } else if (code) {
+        setStatus("warn", "Sign-in failed", code);
+      }
+    });
 
-    // Redirect completion handler (important when sign-in started on a different page)
-    auth.getRedirectResult()
-      .then(() => {})
-      .catch((e) => {
-        console.error(e);
+    // ✅ Popup-first sign-in (fallback to redirect if blocked)
+    async function signInGooglePopupFirst() {
+      setStatus("good", "Signing in…", "Opening Google sign-in…");
+
+      try { await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch (_) {}
+
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+
+      try {
+        await auth.signInWithPopup(provider);
+        setStatus("good", "Signed in", "Signed sending is available.");
+      } catch (e) {
+        console.warn("[popup] failed, falling back to redirect:", e);
+
         const code = (e && e.code) ? String(e.code) : "";
-        if (code === "auth/unauthorized-domain") {
-          setStatus("warn", "Auth domain not authorized", "Add this domain in Firebase Auth → Settings → Authorized domains.");
-        } else if (code === "auth/operation-not-allowed") {
-          setStatus("warn", "Google provider disabled", "Enable Google in Firebase Auth → Sign-in method.");
-        } else if (code) {
-          setStatus("warn", "Sign-in failed", code);
+        const popupLikelyBlocked =
+          code === "auth/popup-blocked" ||
+          code === "auth/popup-closed-by-user" ||
+          code === "auth/cancelled-popup-request" ||
+          code === "auth/operation-not-supported-in-this-environment";
+
+        if (!popupLikelyBlocked) {
+          if (code === "auth/unauthorized-domain") {
+            setStatus("warn", "Domain not authorized", "Add setfeed.app in Firebase Auth → Authorized domains.");
+            return;
+          }
         }
+
+        try {
+          await auth.signInWithRedirect(provider);
+        } catch (err) {
+          console.error(err);
+          setStatus("warn", "Couldn’t sign in", (err && err.code) ? String(err.code) : "Sign-in failed.");
+        }
+      }
+    }
+
+    btnGoogle.addEventListener("click", (e) => {
+      e.preventDefault();
+      signInGooglePopupFirst();
+    });
+
+    // Email link sign-in
+    const EMAIL_FOR_SIGNIN_KEY = "sf_email_for_signin";
+
+    btnSendLink.addEventListener("click", async () => {
+      const email = (signedEmail && signedEmail.value ? signedEmail.value.trim() : "");
+      if (!email) {
+        setStatus("warn", "Email needed", "Enter your email to request a sign-in link.");
+        return;
+      }
+      try {
+        setStatus("good", "Sending link…", "Check your inbox for the sign-in link.");
+        const actionCodeSettings = { url: `${SITE_ORIGIN}/send.html#finishSignIn`, handleCodeInApp: true };
+        await auth.sendSignInLinkToEmail(email, actionCodeSettings);
+        try { localStorage.setItem(EMAIL_FOR_SIGNIN_KEY, email); } catch (_) {}
+        setStatus("good", "Link sent", "Open the link from your email on this device to finish signing in.");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t send link", "Email-link sign-in failed. Verify Auth is enabled and your domain is authorized.");
+      }
+    });
+
+    (async function finishEmailLinkIfPresent(){
+      try {
+        const href = window.location.href;
+        if (!auth.isSignInWithEmailLink(href)) return;
+
+        let email = "";
+        try { email = localStorage.getItem(EMAIL_FOR_SIGNIN_KEY) || ""; } catch (_) {}
+        if (!email) {
+          email = window.prompt("Confirm your email to finish sign-in:");
+          if (!email) {
+            setStatus("warn", "Sign-in not finished", "Email is required to finish sign-in.");
+            return;
+          }
+        }
+        setStatus("good", "Signing in…", "Finishing email-link sign-in…");
+        await auth.signInWithEmailLink(email, href);
+        try { localStorage.removeItem(EMAIL_FOR_SIGNIN_KEY); } catch (_) {}
+        setStatus("good", "Signed in", "Signed sending is available.");
+        history.replaceState(null, "", "./send.html#signin");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Sign-in failed", "Couldn’t finish email-link sign-in. Try sending a new link.");
+      }
+    })();
+
+    btnSignOut.addEventListener("click", async () => {
+      try {
+        await auth.signOut();
+        setStatus("warn", "Signed out", "Signed sending is unavailable until you sign in again.");
+      } catch (e) {
+        console.error(e);
+        setStatus("warn", "Couldn’t sign out", "Try again.");
+      }
+    });
+
+    btnGoInbox.addEventListener("click", () => { window.location.href = "./inbox.html"; });
+
+    // Clickable subhead -> Delvee
+    const delveeCta = document.getElementById("sf-delvee-cta");
+    if (delveeCta) {
+      const go = () => { window.location.href = "https://delvee.app"; };
+      delveeCta.addEventListener("click", go);
+      delveeCta.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") go(); });
+    }
+
+    // Status movement slots
+    const statusBox = document.getElementById("status-box");
+    const statusSlotTop = document.getElementById("status-slot-top");
+    const statusSlotBottom = document.getElementById("status-slot-bottom");
+
+    function moveStatusToTop(isAuthed) {
+      if (!statusBox || !statusSlotTop || !statusSlotBottom) return;
+      if (isAuthed) {
+        statusSlotTop.classList.remove("hidden");
+        statusSlotBottom.classList.add("hidden");
+        statusSlotTop.appendChild(statusBox);
+      } else {
+        statusSlotTop.classList.add("hidden");
+        statusSlotBottom.classList.remove("hidden");
+        statusSlotBottom.appendChild(statusBox);
+      }
+    }
+
+    // Credits (Delvee)
+    let creditsBalance = null;
+
+    function setCreditsUI(n) {
+      if (creditsPill) creditsPill.textContent = (typeof n === "number" && Number.isFinite(n)) ? `Credits: ${n}` : "Credits: —";
+      creditsBalance = (typeof n === "number" && Number.isFinite(n)) ? n : null;
+      refreshPulseImageEnabled();
+    }
+
+    async function loadCredits() {
+      if (!auth.currentUser) { setCreditsUI(null); return; }
+      try {
+        const call = functions.httpsCallable("getDelveeCreditsBalance");
+        const res = await call({});
+        const data = (res && res.data) ? res.data : {};
+        const bal = (typeof data.balance === "number") ? data.balance : (typeof data.credits === "number" ? data.credits : null);
+        setCreditsUI((typeof bal === "number") ? bal : null);
+      } catch (e) {
+        setCreditsUI(null);
+      }
+    }
+
+    btnClaimCredits.addEventListener("click", async () => {
+      if (!auth.currentUser) { setStatus("warn", "Sign-in required", "Sign in with Google to claim free credits."); return; }
+      try {
+        btnClaimCredits.disabled = true;
+        setStatus("good", "Claiming…", "Requesting starter credits…");
+        const call = functions.httpsCallable("claimDelveeStarterCredits");
+        await call({});
+        await loadCredits();
+        setStatus("good", "Credits updated", "Starter credits claimed (if eligible).");
+      } catch (e) {
+        console.warn("[claimDelveeStarterCredits] failed:", e);
+        setStatus("warn", "Couldn’t claim", "If you already claimed, this is expected. Otherwise deploy the credits function.");
+      } finally {
+        btnClaimCredits.disabled = false;
+      }
+    });
+
+    // Scheduling UI
+    let signedPresetTime = "13:00";
+    let signedMode = "preset";
+    const signedPresetChips = Array.from(document.querySelectorAll('#signed-preset-chips .chip[data-time]'));
+    const signedAdvBtns = Array.from(document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]'));
+
+    function updateSignedSendLabel() {
+      btnSignedSend.textContent = (signedMode === "pulse") ? "Encrypt & pulse" : "Encrypt and send";
+    }
+
+    function setSignedPresetHighlightVisible(visible) {
+      if (!visible) {
+        signedPresetChips.forEach(b => b.setAttribute("aria-pressed", "false"));
+        return;
+      }
+      signedPresetChips.forEach(b => {
+        const t = b.getAttribute("data-time") || "";
+        b.setAttribute("aria-pressed", (t === signedPresetTime) ? "true" : "false");
       });
+    }
+
+    function setSignedMode(nextMode) {
+      signedMode = nextMode || "preset";
+      signedAdvBtns.forEach(b => b.setAttribute("aria-pressed", "false"));
+      const btn = signedAdvBtns.find(b => (b.getAttribute("data-mode") || "") === signedMode);
+      if (btn) btn.setAttribute("aria-pressed", "true");
+
+      if (signedMode !== "preset") setSignedPresetHighlightVisible(false);
+      else setSignedPresetHighlightVisible(true);
+
+      if (pulseImageCard) pulseImageCard.classList.toggle("hidden", signedMode !== "pulse");
+
+      updateSignedSendLabel();
+      refreshPulseImageEnabled();
+    }
+
+    signedPresetChips.forEach(btn => btn.addEventListener("click", () => {
+      signedPresetTime = btn.getAttribute("data-time") || "13:00";
+      setSignedMode("preset");
+    }));
+    signedAdvBtns.forEach(btn => btn.addEventListener("click", () => {
+      const mode = btn.getAttribute("data-mode") || "preset";
+      setSignedMode(mode);
+    }));
+
+    let rollingPresetTime = "13:00";
+    document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(b => b.setAttribute("aria-pressed", "false"));
+        btn.setAttribute("aria-pressed", "true");
+        rollingPresetTime = btn.getAttribute("data-time") || "13:00";
+      });
+    });
+
+    // Image preview helpers
+    function setPreviewFile(file) {
+      if (!file) {
+        previewImg.src = "";
+        previewImg.classList.add("hidden");
+        previewEmpty.classList.remove("hidden");
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      previewImg.src = url;
+      previewImg.classList.remove("hidden");
+      previewEmpty.classList.add("hidden");
+    }
 
     function renderChosenImageName() {
       const f = (sfImageFile && sfImageFile.files && sfImageFile.files[0]) ? sfImageFile.files[0] : null;
@@ -645,155 +862,6 @@
       renderChosenImageName();
     }
 
-    // Clickable subhead -> Delvee
-    const delveeCta = document.getElementById("sf-delvee-cta");
-    if (delveeCta) {
-      const go = () => { window.location.href = "https://delvee.app"; };
-      delveeCta.addEventListener("click", go);
-      delveeCta.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") go(); });
-    }
-
-    // Status movement slots
-    const statusBox = document.getElementById("status-box");
-    const statusSlotTop = document.getElementById("status-slot-top");
-    const statusSlotBottom = document.getElementById("status-slot-bottom");
-
-    function updateSignedSendLabel() {
-      btnSignedSend.textContent = (signedMode === "pulse") ? "Encrypt & pulse" : "Encrypt and send";
-    }
-
-    function refreshSignedSendEnabled(isAuthed) {
-      const canSend = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
-      btnSignedSend.disabled = !canSend;
-      updateSignedSendLabel();
-    }
-
-    function refreshRollingSendEnabled() {
-      const canSend = rollingCodeInput.value.trim().length > 0 && rollingBodyInput.value.trim().length > 0;
-      btnRollingSend.disabled = !canSend;
-    }
-
-    function moveStatusToTop(isAuthed) {
-      if (!statusBox || !statusSlotTop || !statusSlotBottom) return;
-      if (isAuthed) {
-        statusSlotTop.classList.remove("hidden");
-        statusSlotBottom.classList.add("hidden");
-        statusSlotTop.appendChild(statusBox);
-      } else {
-        statusSlotTop.classList.add("hidden");
-        statusSlotBottom.classList.remove("hidden");
-        statusSlotBottom.appendChild(statusBox);
-      }
-    }
-
-    // -------------------------
-    // Credits (Delvee)
-    // -------------------------
-    let creditsBalance = null;
-
-    function setCreditsUI(n) {
-      if (creditsPill) creditsPill.textContent = (typeof n === "number" && Number.isFinite(n)) ? `Credits: ${n}` : "Credits: —";
-      creditsBalance = (typeof n === "number" && Number.isFinite(n)) ? n : null;
-      refreshPulseImageEnabled();
-    }
-
-    async function loadCredits() {
-      if (!auth.currentUser) { setCreditsUI(null); return; }
-      try {
-        const call = functions.httpsCallable("getDelveeCreditsBalance");
-        const res = await call({});
-        const data = (res && res.data) ? res.data : {};
-        const bal = (typeof data.balance === "number") ? data.balance : (typeof data.credits === "number" ? data.credits : null);
-        setCreditsUI((typeof bal === "number") ? bal : null);
-      } catch (e) {
-        setCreditsUI(null);
-      }
-    }
-
-    btnClaimCredits.addEventListener("click", async () => {
-      if (!auth.currentUser) { setStatus("warn", "Sign-in required", "Sign in with Google to claim free credits."); return; }
-      try {
-        btnClaimCredits.disabled = true;
-        setStatus("good", "Claiming…", "Requesting starter credits…");
-        const call = functions.httpsCallable("claimDelveeStarterCredits");
-        await call({});
-        await loadCredits();
-        setStatus("good", "Credits updated", "Starter credits claimed (if eligible).");
-      } catch (e) {
-        console.warn("[claimDelveeStarterCredits] failed:", e);
-        setStatus("warn", "Couldn’t claim", "If you already claimed, this is expected. Otherwise deploy the credits function.");
-      } finally {
-        btnClaimCredits.disabled = false;
-      }
-    });
-
-    // -------------------------
-    // Scheduling UI
-    // -------------------------
-    let signedPresetTime = "13:00";
-    let signedMode = "preset";
-    const signedPresetChips = Array.from(document.querySelectorAll('#signed-preset-chips .chip[data-time]'));
-    const signedAdvBtns = Array.from(document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]'));
-
-    function setSignedPresetHighlightVisible(visible) {
-      if (!visible) {
-        signedPresetChips.forEach(b => b.setAttribute("aria-pressed", "false"));
-        return;
-      }
-      signedPresetChips.forEach(b => {
-        const t = b.getAttribute("data-time") || "";
-        b.setAttribute("aria-pressed", (t === signedPresetTime) ? "true" : "false");
-      });
-    }
-
-    function setSignedMode(nextMode) {
-      signedMode = nextMode || "preset";
-      signedAdvBtns.forEach(b => b.setAttribute("aria-pressed", "false"));
-      const btn = signedAdvBtns.find(b => (b.getAttribute("data-mode") || "") === signedMode);
-      if (btn) btn.setAttribute("aria-pressed", "true");
-      if (signedMode !== "preset") setSignedPresetHighlightVisible(false);
-      else setSignedPresetHighlightVisible(true);
-
-      if (pulseImageCard) pulseImageCard.classList.toggle("hidden", signedMode !== "pulse");
-
-      updateSignedSendLabel();
-      refreshPulseImageEnabled();
-    }
-
-    signedPresetChips.forEach(btn => btn.addEventListener("click", () => {
-      signedPresetTime = btn.getAttribute("data-time") || "13:00";
-      setSignedMode("preset");
-    }));
-    signedAdvBtns.forEach(btn => btn.addEventListener("click", () => {
-      const mode = btn.getAttribute("data-mode") || "preset";
-      setSignedMode(mode);
-    }));
-
-    let rollingPresetTime = "13:00";
-    document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(b => b.setAttribute("aria-pressed", "false"));
-        btn.setAttribute("aria-pressed", "true");
-        rollingPresetTime = btn.getAttribute("data-time") || "13:00";
-      });
-    });
-
-    // -------------------------
-    // Image preview helpers
-    // -------------------------
-    function setPreviewFile(file) {
-      if (!file) {
-        previewImg.src = "";
-        previewImg.classList.add("hidden");
-        previewEmpty.classList.remove("hidden");
-        return;
-      }
-      const url = URL.createObjectURL(file);
-      previewImg.src = url;
-      previewImg.classList.remove("hidden");
-      previewEmpty.classList.add("hidden");
-    }
-
     function refreshPulseImageEnabled() {
       const isAuthed = !!auth.currentUser;
       const fileOk = !!(sfImageFile && sfImageFile.files && sfImageFile.files[0]);
@@ -821,9 +889,7 @@
       try { window.open(url, "_blank", "noopener"); } catch (_) { window.location.href = url; }
     });
 
-    // -------------------------
     // Guardrail: prevent receive codes in message body
-    // -------------------------
     function messageContainsSetfeedReceiveCode(text) {
       const s = String(text || "");
       const hasPrefixed =
@@ -929,11 +995,10 @@
     }
     function randomClientRequestId(prefix) { return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 
-    // Send handlers
-    signedCode.addEventListener("input", () => { refreshSignedSendEnabled(!!auth.currentUser); applyBodyGuardrails(); });
-    signedBody.addEventListener("input", () => { refreshSignedSendEnabled(!!auth.currentUser); applyBodyGuardrails(); });
-    rollingCodeInput.addEventListener("input", () => { refreshRollingSendEnabled(); applyBodyGuardrails(); });
-    rollingBodyInput.addEventListener("input", () => { refreshRollingSendEnabled(); applyBodyGuardrails(); });
+    signedCode.addEventListener("input", () => { applyBodyGuardrails(); refreshPulseImageEnabled(); });
+    signedBody.addEventListener("input", () => { applyBodyGuardrails(); refreshPulseImageEnabled(); });
+    rollingCodeInput.addEventListener("input", () => { applyBodyGuardrails(); });
+    rollingBodyInput.addEventListener("input", () => { applyBodyGuardrails(); });
 
     function renderAuthUI(user) {
       const isAuthed = !!user;
@@ -968,91 +1033,24 @@
 
       if (pulseImageCard) pulseImageCard.classList.toggle("hidden", signedMode !== "pulse");
 
-      refreshSignedSendEnabled(isAuthed);
-      refreshRollingSendEnabled();
       applyBodyGuardrails();
-
       loadCredits().catch(() => {});
       refreshPulseImageEnabled();
+      updateSignedSendLabel();
     }
 
     auth.onAuthStateChanged((user) => renderAuthUI(user));
 
-    // ✅ Google sign-in: redirect-first (matches index.html)
-    async function doGoogleSignIn() {
-      try {
-        setStatus("good", "Signing in…", "Opening Google sign-in…");
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: "select_account" });
-        await auth.signInWithRedirect(provider);
-      } catch (e) {
-        console.error(e);
-        setStatus("warn", "Couldn’t sign in", "Google sign-in failed. Check Firebase Auth settings.");
-      }
+    // Send handlers
+    function refreshSignedSendEnabled(isAuthed) {
+      const canSend = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
+      btnSignedSend.disabled = !canSend;
+      updateSignedSendLabel();
     }
-
-    btnGoogle.addEventListener("click", (e) => {
-      e.preventDefault();
-      doGoogleSignIn();
-    });
-
-    // Email link sign-in
-    const EMAIL_FOR_SIGNIN_KEY = "sf_email_for_signin";
-
-    btnSendLink.addEventListener("click", async () => {
-      const email = (signedEmail && signedEmail.value ? signedEmail.value.trim() : "");
-      if (!email) {
-        setStatus("warn", "Email needed", "Enter your email to request a sign-in link.");
-        return;
-      }
-      try {
-        setStatus("good", "Sending link…", "Check your inbox for the sign-in link.");
-        const actionCodeSettings = { url: `${SITE_ORIGIN}/send.html#finishSignIn`, handleCodeInApp: true };
-        await auth.sendSignInLinkToEmail(email, actionCodeSettings);
-        try { localStorage.setItem(EMAIL_FOR_SIGNIN_KEY, email); } catch (_) {}
-        setStatus("good", "Link sent", "Open the link from your email on this device to finish signing in.");
-      } catch (e) {
-        console.error(e);
-        setStatus("warn", "Couldn’t send link", "Email-link sign-in failed. Verify Auth is enabled and your domain is authorized.");
-      }
-    });
-
-    (async function finishEmailLinkIfPresent(){
-      try {
-        const href = window.location.href;
-        if (!auth.isSignInWithEmailLink(href)) return;
-
-        let email = "";
-        try { email = localStorage.getItem(EMAIL_FOR_SIGNIN_KEY) || ""; } catch (_) {}
-        if (!email) {
-          email = window.prompt("Confirm your email to finish sign-in:");
-          if (!email) {
-            setStatus("warn", "Sign-in not finished", "Email is required to finish sign-in.");
-            return;
-          }
-        }
-        setStatus("good", "Signing in…", "Finishing email-link sign-in…");
-        await auth.signInWithEmailLink(email, href);
-        try { localStorage.removeItem(EMAIL_FOR_SIGNIN_KEY); } catch (_) {}
-        setStatus("good", "Signed in", "Signed sending is available.");
-        history.replaceState(null, "", "./send.html#signin");
-      } catch (e) {
-        console.error(e);
-        setStatus("warn", "Sign-in failed", "Couldn’t finish email-link sign-in. Try sending a new link.");
-      }
-    })();
-
-    btnSignOut.addEventListener("click", async () => {
-      try {
-        await auth.signOut();
-        setStatus("warn", "Signed out", "Signed sending is unavailable until you sign in again.");
-      } catch (e) {
-        console.error(e);
-        setStatus("warn", "Couldn’t sign out", "Try again.");
-      }
-    });
-
-    btnGoInbox.addEventListener("click", () => { window.location.href = "./inbox.html"; });
+    function refreshRollingSendEnabled() {
+      const canSend = rollingCodeInput.value.trim().length > 0 && rollingBodyInput.value.trim().length > 0;
+      btnRollingSend.disabled = !canSend;
+    }
 
     btnSignedSend.addEventListener("click", async () => {
       const user = auth.currentUser;
@@ -1145,12 +1143,14 @@
 
     btnSignedClear.addEventListener("click", () => {
       signedCode.value = ""; signedBody.value = "";
-      refreshSignedSendEnabled(!!auth.currentUser); applyBodyGuardrails();
+      refreshSignedSendEnabled(!!auth.currentUser);
+      applyBodyGuardrails();
       setStatus("warn", "Cleared", "Signed fields cleared.");
     });
     btnRollingClear.addEventListener("click", () => {
       rollingCodeInput.value = ""; rollingBodyInput.value = "";
-      refreshRollingSendEnabled(); applyBodyGuardrails();
+      refreshRollingSendEnabled();
+      applyBodyGuardrails();
       setStatus("warn", "Cleared", "Rolling fields cleared.");
     });
 
@@ -1162,7 +1162,6 @@
     updateSignedSendLabel();
     setStatus("good", "Ready", "App Check is active. Encryption + sending are wired.");
 
-    // If user arrived with #signin, prefer signed
     if (window.location.hash && window.location.hash.toLowerCase().includes("signin")) {
       userChoseTab = true;
       setTab("signed");
