@@ -1,1452 +1,2076 @@
-<!-- setfeed/send.html (FULL FILE REPLACEMENT) -->
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Send — Setfeed</title>
-  <meta name="description" content="Send an end-to-end encrypted message to Setfeed." />
-  <meta name="theme-color" content="#0F1114" id="meta-theme-color" />
+delvee.ts:
 
-  <link rel="icon" href="./favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
-  <link rel="icon" type="image/png" href="./favicon-16.png" sizes="16x16">
-  <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180">
+// functions/src/delvee.ts (FULL FILE REPLACEMENT)
+//
+// Delvee: server-authoritative lobby + pulse game engine.
+// Writes happen only via callable functions.
+// Clients read realtime via Firestore rules (participant read-only).
+//
+// ✅ Update in this version:
+// - ✅ Credits are charged when the session STARTS (delveeStartSession), not when lobby is created.
+// - Subscriptions / entitlements (read from /users/{uid}) to provide:
+//    • unlimited lobby sessions
+//    • unlimited private sessions (enforced later when private sessions are implemented)
+// - Starter credits remain: 2 credits via Google sign-in, one-time.
+// - Sweeper remains (every 1 minute): LOBBY->CANCELLED, RUNNING->COOLDOWN, COOLDOWN->DONE (+summary).
+// - ✅ Admin bypass: if custom claim { admin: true }, credits are not charged.
+// - ⚠️ No refunds: if host starts session, the credit is spent even if nobody sends pulses.
+//
+// Note: Delivering the summary into Setfeed inbox is client-side (participants encrypt
+// using their own Setfeed receive code). The server never sees those codes.
 
-  <link rel="stylesheet" href="./styles.css" />
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import * as admin from "firebase-admin";
+import { getStorage } from "firebase-admin/storage";
 
-  <!-- FIREBASE -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+const db = admin.firestore();
+const REGION = "europe-west2";
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",
-      authDomain: "setfeed-fcd7a.firebaseapp.com",
-      projectId: "setfeed-fcd7a",
-      storageBucket: "setfeed-fcd7a.firebasestorage.app",
-      messagingSenderId: "553573263069",
-      appId: "1:553573263069:web:e5c9884101ca38eaee1d34"
+// ---------- Constants ----------
+const SESSIONS = "delvee_sessions";
+
+// Timings
+const LOBBY_TTL_MS = 20 * 60_000;
+const COOLDOWN_MS = 5 * 60_000;
+
+// Pulse constraints
+const MAX_PULSES_PER_USER = 250;
+const MIN_PULSE_INTERVAL_MS = 900;
+const MAX_TEXT_CHARS = 100;
+
+// Chat constraints
+const MAX_CHAT_CHARS = 300;
+const MAX_CHAT_PER_MINUTE = 30;
+
+// Image upload constraints
+const MAX_IMAGE_BYTES = 5_000_000;
+
+// Summary constraints
+const MAX_SUMMARY_CHARS = 6000;
+const MAX_PULSES_IN_SUMMARY = 140;
+
+// ---------- Credits (Delvee) ----------
+const USERS = "users";
+const STARTER_CREDITS = 2;
+
+// Charge credits per session (host only) unless subscription allows unlimited
+const LOBBY_SESSION_CREDIT_COST = 1;
+
+// If admin, return this as "balance" to keep UIs calm
+const ADMIN_BALANCE_SENTINEL = 1_000_000_000;
+
+type AnyMap = Record<string, unknown>;
+
+function userRef(uid: string) {
+  return db.collection(USERS).doc(uid);
+}
+
+function getCreditsFromDoc(d: AnyMap): number {
+  const n = d?.delveeCreditsBalance;
+  return typeof n === "number" && Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function requireGoogleProvider(request: any) {
+  const provider = request.auth?.token?.firebase?.sign_in_provider;
+  if (provider !== "google.com") {
+    throw new HttpsError("failed-precondition", "Google sign-in required to claim starter credits.", {
+      code: "GOOGLE_REQUIRED",
+      provider: provider ?? null,
+    });
+  }
+}
+
+function isAdminRequest(request: any): boolean {
+  return Boolean(request?.auth?.token?.admin);
+}
+
+// ---------- Subscriptions / entitlements ----------
+//
+// Stripe should write these fields onto /users/{uid} (server-trust only).
+//
+// users/{uid}:
+//   delveeEntitlements: {
+//     lobbyUnlimited: boolean,
+//     privateUnlimited: boolean,
+//     validUntilMillis?: number | null,
+//     plan?: "lobby"|"private"|"both"|null
+//   }
+//
+// If validUntilMillis is present and in the past, entitlements are treated as off.
+//
+type DelveeEntitlements = {
+  lobbyUnlimited: boolean;
+  privateUnlimited: boolean;
+  validUntilMillis: number | null;
+  plan: string | null;
+};
+
+function readEntitlementsFromUserDoc(d: AnyMap): DelveeEntitlements {
+  const raw = (d?.delveeEntitlements ?? {}) as AnyMap;
+
+  const lobbyUnlimited = Boolean(raw?.lobbyUnlimited);
+  const privateUnlimited = Boolean(raw?.privateUnlimited);
+
+  const validUntilMillis =
+    typeof raw?.validUntilMillis === "number" && Number.isFinite(raw.validUntilMillis) ? raw.validUntilMillis : null;
+
+  const plan = typeof raw?.plan === "string" && raw.plan.trim().length ? raw.plan.trim() : null;
+
+  if (validUntilMillis != null && Date.now() > validUntilMillis) {
+    return { lobbyUnlimited: false, privateUnlimited: false, validUntilMillis, plan };
+  }
+
+  return { lobbyUnlimited, privateUnlimited, validUntilMillis, plan };
+}
+
+// ---------- Helpers ----------
+function requireAuth(request: any): string {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign-in required.", { code: "AUTH_REQUIRED" });
+  return uid;
+}
+
+function requireStringField(data: AnyMap, key: string, maxLen?: number): string {
+  const v = data[key];
+  if (typeof v !== "string") throw new HttpsError("invalid-argument", `Missing ${key}`, { code: "INVALID_SCHEMA" });
+  const s = v.trim();
+  if (!s) throw new HttpsError("invalid-argument", `Missing ${key}`, { code: "INVALID_SCHEMA" });
+  if (typeof maxLen === "number" && s.length > maxLen) {
+    throw new HttpsError("invalid-argument", `${key} too long`, { code: "FIELD_TOO_LONG", key, maxLen });
+  }
+  return s;
+}
+
+function requireNumberField(data: AnyMap, key: string): number {
+  const v = data[key];
+  if (typeof v !== "number" || !Number.isFinite(v)) {
+    throw new HttpsError("invalid-argument", `Missing ${key}`, { code: "INVALID_SCHEMA" });
+  }
+  return v;
+}
+
+function asStringOrNull(v: unknown): string | null {
+  return typeof v === "string" && v.trim().length ? v.trim() : null;
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function lowerAlias(alias: string): string {
+  return alias.trim().toLowerCase();
+}
+
+function normalizeSessionId(raw: string): string {
+  const s = raw.trim().toUpperCase();
+  if (!/^[A-Z0-9-]{4,24}$/.test(s)) {
+    throw new HttpsError("invalid-argument", "Invalid sessionId format.", { code: "INVALID_SESSION_ID" });
+  }
+  return s;
+}
+
+const ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+function randChar(): string {
+  return ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+}
+function makeSessionId(): string {
+  const g1 = Array.from({ length: 4 }, randChar).join("");
+  const g2 = Array.from({ length: 4 }, randChar).join("");
+  return `DV-${g1}-${g2}`;
+}
+
+function sessionRef(sessionId: string) {
+  return db.collection(SESSIONS).doc(sessionId);
+}
+function participantsRef(sessionId: string) {
+  return sessionRef(sessionId).collection("participants");
+}
+function pulsesRef(sessionId: string) {
+  return sessionRef(sessionId).collection("pulses");
+}
+function chatRef(sessionId: string) {
+  return sessionRef(sessionId).collection("chat");
+}
+
+type SessionState = "LOBBY" | "RUNNING" | "COOLDOWN" | "DONE" | "CANCELLED";
+function assertStateAllowed(state: unknown): state is SessionState {
+  return state === "LOBBY" || state === "RUNNING" || state === "COOLDOWN" || state === "DONE" || state === "CANCELLED";
+}
+function assertDurationMinutes(n: number): 4 | 5 {
+  if (n !== 4 && n !== 5) {
+    throw new HttpsError("invalid-argument", "durationMinutes must be 4 or 5.", { code: "INVALID_DURATION" });
+  }
+  return n;
+}
+
+function allowChatRate(part: AnyMap, nowMs: number): boolean {
+  const lastWindowStart = typeof part.chatWindowStartMs === "number" ? part.chatWindowStartMs : 0;
+  const chatCountInWindow = typeof part.chatCountInWindow === "number" ? part.chatCountInWindow : 0;
+  if (!lastWindowStart || nowMs - lastWindowStart >= 60_000) return true;
+  return chatCountInWindow < MAX_CHAT_PER_MINUTE;
+}
+
+async function assertParticipantOrThrow(sessionId: string, uid: string) {
+  const pref = participantsRef(sessionId).doc(uid);
+  const snap = await pref.get();
+  if (!snap.exists) throw new HttpsError("permission-denied", "Join session first.", { code: "NOT_A_PARTICIPANT" });
+}
+
+// ---------- Summary generation ----------
+type SummaryStats = {
+  totalPulses: number;
+  textPulses: number;
+  imagePulses: number;
+  participants: number;
+  generatedAtUtc: string;
+};
+
+function clampText(s: string, maxChars: number): string {
+  const t = (s || "").trim();
+  if (t.length <= maxChars) return t;
+  return t.slice(0, Math.max(0, maxChars - 1)) + "…";
+}
+
+function safeLine(s: unknown): string {
+  const t = typeof s === "string" ? s : "";
+  return t.replace(/\s+/g, " ").trim();
+}
+
+async function generateAndStoreSummaryIfMissing(sessionId: string): Promise<void> {
+  const sref = sessionRef(sessionId);
+  const ssnap = await sref.get();
+  if (!ssnap.exists) return;
+
+  const sdoc = (ssnap.data() ?? {}) as AnyMap;
+
+  if (typeof sdoc.summaryText === "string" && sdoc.summaryText.trim().length > 0) return;
+  if (sdoc.state !== "DONE") return;
+
+  const pSnap = await participantsRef(sessionId).get();
+  const parts = pSnap.docs.map((d) => (d.data() as AnyMap) ?? {});
+  const participantCount = parts.length;
+
+  const pulseSnap = await pulsesRef(sessionId).orderBy("createdAtMillis", "asc").limit(MAX_PULSES_PER_USER * 4).get();
+  const pulses = pulseSnap.docs.map((d) => (d.data() as AnyMap) ?? {});
+
+  let textCount = 0;
+  let imageCount = 0;
+
+  const lines: string[] = [];
+  for (const p of pulses) {
+    const kind = asStringOrNull(p.kind) || "text";
+    if (kind === "image") imageCount++;
+    else textCount++;
+
+    if (lines.length >= MAX_PULSES_IN_SUMMARY) continue;
+
+    if (kind === "image") lines.push("• [image]");
+    else lines.push(`• ${clampText(safeLine(p.text) || "[empty]", 140)}`);
+  }
+
+  const startsAtUtc = asStringOrNull(sdoc.startsAtUtc);
+  const endAtUtc = asStringOrNull(sdoc.endAtUtc);
+  const durationMinutes = typeof sdoc.durationMinutes === "number" ? sdoc.durationMinutes : null;
+
+  const header: string[] = [];
+  header.push("Delvee — pulse summary");
+  header.push(`Session ${sessionId}`);
+  header.push(`Participants: ${participantCount}`);
+  header.push(`Pulses: ${pulses.length} (text ${textCount} · images ${imageCount})`);
+  if (durationMinutes) header.push(`Duration: ${durationMinutes} min`);
+  if (startsAtUtc) header.push(`Started: ${startsAtUtc}`);
+  if (endAtUtc) header.push(`Ended: ${endAtUtc}`);
+
+  const body = [header.join("\n"), "", "Timeline (anonymous):", ...(lines.length ? lines : ["• (no pulses)"])].join("\n");
+  const summaryText = clampText(body, MAX_SUMMARY_CHARS);
+
+  const stats: SummaryStats = {
+    totalPulses: pulses.length,
+    textPulses: textCount,
+    imagePulses: imageCount,
+    participants: participantCount,
+    generatedAtUtc: nowIso(),
+  };
+
+  await sref.set(
+    {
+      summaryText,
+      summaryStats: stats,
+      summaryReadyAtUtc: nowIso(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+// ------------------------------------------------------
+// ✅ Credits callables
+// ------------------------------------------------------
+export const getDelveeCreditsBalance = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+
+  if (isAdminRequest(request)) {
+    return { ok: true, balance: ADMIN_BALANCE_SENTINEL, isAdmin: true };
+  }
+
+  const snap = await userRef(uid).get();
+  const d = (snap.data() ?? {}) as AnyMap;
+  return { ok: true, balance: getCreditsFromDoc(d), isAdmin: false };
+});
+
+export const claimDelveeStarterCredits = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+  requireGoogleProvider(request);
+
+  const out = await db.runTransaction(async (tx) => {
+    const ref = userRef(uid);
+    const snap = await tx.get(ref);
+    const d = (snap.data() ?? {}) as AnyMap;
+
+    const already = Boolean(d.delveeClaimedStarterCredits);
+    const current = getCreditsFromDoc(d);
+
+    if (already) return { granted: false, balance: current };
+
+    const next = current + STARTER_CREDITS;
+
+    tx.set(
+      ref,
+      {
+        delveeCreditsBalance: next,
+        delveeClaimedStarterCredits: true,
+        delveeStarterCreditsGrantedAtUtc: nowIso(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: snap.exists ? (d.createdAt ?? admin.firestore.FieldValue.serverTimestamp()) : admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    return { granted: true, balance: next };
+  });
+
+  return { ok: true, ...out };
+});
+
+// ------------------------------------------------------
+// ✅ Manual summary generation callable
+// ------------------------------------------------------
+export const delveeGenerateSummaryOnDone = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as AnyMap;
+  const sessionId = normalizeSessionId(requireStringField(data, "sessionId"));
+
+  await assertParticipantOrThrow(sessionId, uid);
+
+  await generateAndStoreSummaryIfMissing(sessionId);
+  return { ok: true, sessionId };
+});
+
+// ---------- Callables ----------
+export const delveeCreateSession = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const alias = requireStringField(data, "alias", 18);
+  const aliasLower = lowerAlias(alias);
+
+  const adminBypass = isAdminRequest(request);
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const sessionId = makeSessionId();
+    const sref = sessionRef(sessionId);
+    const pref = participantsRef(sessionId).doc(uid);
+    const uref = userRef(uid);
+
+    const created = await db.runTransaction(async (tx) => {
+      const existing = await tx.get(sref);
+      if (existing.exists) return { created: false as const };
+
+      const uSnap = await tx.get(uref);
+      const uDoc = (uSnap.data() ?? {}) as AnyMap;
+      const ent = readEntitlementsFromUserDoc(uDoc);
+
+      const nowMs = Date.now();
+
+      // ✅ NO CHARGE HERE anymore (charge happens at delveeStartSession)
+      tx.set(sref, {
+        sessionId,
+        state: "LOBBY" satisfies SessionState,
+        hostUid: uid,
+
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAtUtc: nowIso(),
+        reservationExpiresAtMillis: nowMs + LOBBY_TTL_MS,
+
+        startsAtUtc: null,
+        endAtUtc: null,
+        endAtMillis: null,
+        durationMinutes: null,
+
+        cooldownEndsAtMillis: null,
+        summaryReadyAtUtc: null,
+        summaryText: null,
+        summaryStats: null,
+
+        // audit / gating metadata (charged at start)
+        lobbySessionCreditCharged: 0,
+        hostCreditsBalanceAfter: null,
+        hostLobbyUnlimited: ent.lobbyUnlimited,
+        hostAdminBypass: adminBypass,
+        lobbyCreditChargeTiming: "START_SESSION",
+
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      tx.set(pref, {
+        uid,
+        alias,
+        aliasLower,
+        joinedAt: admin.firestore.FieldValue.serverTimestamp(),
+        ready: false,
+
+        pulsesCount: 0,
+        lastPulseAtMillis: 0,
+        lastPulseClientId: null,
+
+        chatWindowStartMs: 0,
+        chatCountInWindow: 0,
+
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      return { created: true as const };
+    });
+
+    if (created.created) {
+      return { ok: true, sessionId, state: "LOBBY", adminBypass };
+    }
+  }
+
+  throw new HttpsError("internal", "Failed to create session. Try again.", { code: "SESSION_CREATE_FAILED" });
+});
+
+export const delveeJoinSession = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const sessionId = normalizeSessionId(requireStringField(data, "sessionId"));
+  const alias = requireStringField(data, "alias", 18);
+  const aliasLower = lowerAlias(alias);
+
+  const sref = sessionRef(sessionId);
+  const pref = participantsRef(sessionId).doc(uid);
+
+  const out = await db.runTransaction(async (tx) => {
+    const ssnap = await tx.get(sref);
+    if (!ssnap.exists) throw new HttpsError("not-found", "Session not found.", { code: "SESSION_NOT_FOUND" });
+
+    const sdoc = (ssnap.data() ?? {}) as AnyMap;
+    const state = sdoc.state;
+    if (!assertStateAllowed(state)) throw new HttpsError("failed-precondition", "Invalid session state.", { code: "INVALID_STATE" });
+
+    if (state !== "LOBBY") throw new HttpsError("failed-precondition", "Session already started.", { code: "SESSION_ALREADY_STARTED", state });
+
+    const nowMs = Date.now();
+    const exp = typeof sdoc.reservationExpiresAtMillis === "number" ? sdoc.reservationExpiresAtMillis : 0;
+    if (exp > 0 && nowMs > exp) throw new HttpsError("failed-precondition", "Session lobby expired.", { code: "SESSION_EXPIRED" });
+
+    const psnap = await tx.get(pref);
+    if (!psnap.exists) {
+      tx.set(pref, {
+        uid,
+        alias,
+        aliasLower,
+        joinedAt: admin.firestore.FieldValue.serverTimestamp(),
+        ready: false,
+
+        pulsesCount: 0,
+        lastPulseAtMillis: 0,
+        lastPulseClientId: null,
+
+        chatWindowStartMs: 0,
+        chatCountInWindow: 0,
+
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } else {
+      tx.set(pref, { alias, aliasLower, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    }
+
+    tx.set(sref, { updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    return { sessionId, state: sdoc.state, hostUid: sdoc.hostUid ?? null };
+  });
+
+  return { ok: true, ...out };
+});
+
+export const delveeSetReady = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const sessionId = normalizeSessionId(requireStringField(data, "sessionId"));
+  const ready = Boolean(data.ready);
+
+  const sref = sessionRef(sessionId);
+  const pref = participantsRef(sessionId).doc(uid);
+
+  await db.runTransaction(async (tx) => {
+    const ssnap = await tx.get(sref);
+    if (!ssnap.exists) throw new HttpsError("not-found", "Session not found.", { code: "SESSION_NOT_FOUND" });
+
+    const sdoc = (ssnap.data() ?? {}) as AnyMap;
+    if (sdoc.state !== "LOBBY") throw new HttpsError("failed-precondition", "Can only ready up in lobby.", { code: "NOT_IN_LOBBY" });
+
+    const psnap = await tx.get(pref);
+    if (!psnap.exists) throw new HttpsError("permission-denied", "Join session first.", { code: "NOT_A_PARTICIPANT" });
+
+    tx.set(pref, { ready, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    tx.set(sref, { updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  });
+
+  return { ok: true, sessionId, ready };
+});
+
+export const delveeStartSession = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const sessionId = normalizeSessionId(requireStringField(data, "sessionId"));
+  const durationMinutes = assertDurationMinutes(requireNumberField(data, "durationMinutes"));
+
+  const adminBypass = isAdminRequest(request);
+
+  const sref = sessionRef(sessionId);
+  const uref = userRef(uid);
+
+  const out = await db.runTransaction(async (tx) => {
+    const ssnap = await tx.get(sref);
+    if (!ssnap.exists) throw new HttpsError("not-found", "Session not found.", { code: "SESSION_NOT_FOUND" });
+
+    const sdoc = (ssnap.data() ?? {}) as AnyMap;
+
+    if (sdoc.hostUid !== uid) throw new HttpsError("permission-denied", "Only host can start.", { code: "HOST_ONLY" });
+    if (sdoc.state !== "LOBBY") throw new HttpsError("failed-precondition", "Session already started.", { code: "ALREADY_STARTED", state: sdoc.state });
+
+    const nowMs = Date.now();
+    const exp = typeof sdoc.reservationExpiresAtMillis === "number" ? sdoc.reservationExpiresAtMillis : 0;
+    if (exp > 0 && nowMs > exp) throw new HttpsError("failed-precondition", "Session lobby expired.", { code: "SESSION_EXPIRED" });
+
+    const pColl = participantsRef(sessionId);
+    const pSnap = await tx.get(pColl);
+    const parts = pSnap.docs.map((d) => (d.data() as AnyMap) ?? {});
+    if (parts.length < 1) throw new HttpsError("failed-precondition", "No participants.", { code: "NO_PARTICIPANTS" });
+
+    const notReady = parts.filter((p) => !Boolean(p.ready));
+    if (notReady.length > 0) {
+      throw new HttpsError("failed-precondition", "Everyone must click ready.", { code: "NOT_ALL_READY", notReadyCount: notReady.length });
+    }
+
+    // ✅ Charge here (exactly once) unless unlimited or admin
+    const alreadyCharged = typeof sdoc.lobbySessionCreditCharged === "number" ? sdoc.lobbySessionCreditCharged : 0;
+
+    let charged = alreadyCharged;
+    let nextBal: number | null = typeof sdoc.hostCreditsBalanceAfter === "number" ? (sdoc.hostCreditsBalanceAfter as number) : null;
+    let ent: DelveeEntitlements | null = null;
+
+    if (alreadyCharged <= 0) {
+      const uSnap = await tx.get(uref);
+      const uDoc = (uSnap.data() ?? {}) as AnyMap;
+
+      ent = readEntitlementsFromUserDoc(uDoc);
+
+      if (!adminBypass && !ent.lobbyUnlimited) {
+        const bal = getCreditsFromDoc(uDoc);
+        if (bal < LOBBY_SESSION_CREDIT_COST) {
+          throw new HttpsError("resource-exhausted", "No Delvee credits remaining.", {
+            code: "OUT_OF_CREDITS",
+            balance: bal,
+            required: LOBBY_SESSION_CREDIT_COST,
+            entitlements: ent,
+          });
+        }
+
+        nextBal = bal - LOBBY_SESSION_CREDIT_COST;
+        charged = LOBBY_SESSION_CREDIT_COST;
+
+        tx.set(
+          uref,
+          {
+            delveeCreditsBalance: nextBal,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } else {
+        // no charge
+        charged = 0;
+        nextBal = adminBypass ? ADMIN_BALANCE_SENTINEL : null;
+      }
+    }
+
+    const startsAt = new Date(nowMs);
+    const endAtMs = nowMs + durationMinutes * 60_000;
+    const endAt = new Date(endAtMs);
+
+    tx.set(
+      sref,
+      {
+        state: "RUNNING" satisfies SessionState,
+        startsAtUtc: startsAt.toISOString(),
+        endAtUtc: endAt.toISOString(),
+        endAtMillis: endAtMs,
+        durationMinutes,
+
+        // audit (write what happened at start)
+        lobbySessionCreditCharged: charged,
+        hostCreditsBalanceAfter: nextBal,
+        hostLobbyUnlimited: ent ? ent.lobbyUnlimited : Boolean(sdoc.hostLobbyUnlimited),
+        hostAdminBypass: adminBypass,
+
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    return {
+      startsAtUtc: startsAt.toISOString(),
+      endAtUtc: endAt.toISOString(),
+      endAtMillis: endAtMs,
+      durationMinutes,
+      lobbyCreditCharged: charged,
+      creditsBalanceAfter: adminBypass ? ADMIN_BALANCE_SENTINEL : nextBal,
+      adminBypass,
+    };
+  });
+
+  return { ok: true, sessionId, ...out };
+});
+
+export const delveePulseText = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const sessionId = normalizeSessionId(requireStringField(data, "sessionId"));
+  const clientPulseId = requireStringField(data, "clientPulseId", 64);
+  const text = requireStringField(data, "text", MAX_TEXT_CHARS);
+
+  const sref = sessionRef(sessionId);
+  const pref = participantsRef(sessionId).doc(uid);
+
+  const pulseId = `${uid}_${clientPulseId}`;
+  const pulseRef = pulsesRef(sessionId).doc(pulseId);
+
+  const out = await db.runTransaction(async (tx) => {
+    const ssnap = await tx.get(sref);
+    if (!ssnap.exists) throw new HttpsError("not-found", "Session not found.", { code: "SESSION_NOT_FOUND" });
+
+    const sdoc = (ssnap.data() ?? {}) as AnyMap;
+    if (sdoc.state !== "RUNNING") throw new HttpsError("failed-precondition", "Session is not running.", { code: "NOT_RUNNING", state: sdoc.state });
+
+    const endAtMs = typeof sdoc.endAtMillis === "number" ? sdoc.endAtMillis : 0;
+    const nowMs = Date.now();
+    if (endAtMs > 0 && nowMs > endAtMs) throw new HttpsError("failed-precondition", "Session window ended.", { code: "ENDED" });
+
+    const psnap = await tx.get(pref);
+    if (!psnap.exists) throw new HttpsError("permission-denied", "Join session first.", { code: "NOT_A_PARTICIPANT" });
+
+    const pdoc = (psnap.data() ?? {}) as AnyMap;
+    const pulsesCount = typeof pdoc.pulsesCount === "number" ? pdoc.pulsesCount : 0;
+    if (pulsesCount >= MAX_PULSES_PER_USER) throw new HttpsError("resource-exhausted", "Pulse limit reached.", { code: "PULSE_LIMIT" });
+
+    const lastPulseAt = typeof pdoc.lastPulseAtMillis === "number" ? pdoc.lastPulseAtMillis : 0;
+    if (lastPulseAt && nowMs - lastPulseAt < MIN_PULSE_INTERVAL_MS) throw new HttpsError("resource-exhausted", "Too fast. Slow down.", { code: "RATE_LIMIT" });
+
+    const pulseSnap = await tx.get(pulseRef);
+    if (pulseSnap.exists) return { pulseId, pulsesCount };
+
+    tx.set(pulseRef, {
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAtMillis: nowMs,
+      senderUid: uid,
+      kind: "text",
+      text,
+      clientPulseId,
+    });
+
+    const nextCount = pulsesCount + 1;
+    tx.set(
+      pref,
+      { pulsesCount: nextCount, lastPulseAtMillis: nowMs, lastPulseClientId: clientPulseId, updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+
+    tx.set(sref, { updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+
+    return { pulseId, pulsesCount: nextCount };
+  });
+
+  return { ok: true, sessionId, ...out };
+});
+
+export const delveeCreateImageUpload = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const sessionId = normalizeSessionId(requireStringField(data, "sessionId"));
+  const attachmentId = requireStringField(data, "attachmentId", 64);
+  const sizeBytes = requireNumberField(data, "sizeBytes");
+  const contentType = requireStringField(data, "contentType", 80);
+
+  if (!contentType.startsWith("image/")) throw new HttpsError("invalid-argument", "Only image uploads are supported.", { code: "UNSUPPORTED_TYPE" });
+  if (sizeBytes <= 0 || sizeBytes > MAX_IMAGE_BYTES) throw new HttpsError("invalid-argument", "Image too large.", { code: "IMAGE_TOO_LARGE", max: MAX_IMAGE_BYTES });
+
+  const sref = sessionRef(sessionId);
+  const ssnap = await sref.get();
+  if (!ssnap.exists) throw new HttpsError("not-found", "Session not found.", { code: "SESSION_NOT_FOUND" });
+
+  await assertParticipantOrThrow(sessionId, uid);
+
+  const storagePath = `delvee_attachments/${uid}/${sessionId}/${attachmentId}.bin`;
+
+  const bucket = getStorage().bucket();
+  const file = bucket.file(storagePath);
+
+  const expiresAtMillis = Date.now() + 10 * 60_000;
+  const [uploadUrl] = await file.getSignedUrl({
+    version: "v4",
+    action: "write",
+    expires: expiresAtMillis,
+    contentType: "application/octet-stream",
+  });
+
+  return { ok: true, storagePath, uploadUrl, expiresAtMillis };
+});
+
+export const delveePulseImageCommit = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const sessionId = normalizeSessionId(requireStringField(data, "sessionId"));
+  const clientPulseId = requireStringField(data, "clientPulseId", 64);
+
+  const a = (data.attachment ?? {}) as AnyMap;
+  const storagePath = requireStringField(a, "storagePath", 512);
+  const contentType = requireStringField(a, "contentType", 80);
+  const sizeBytes = requireNumberField(a, "sizeBytes");
+  const ivB64 = asStringOrNull(a["ivB64"]);
+  const saltB64 = asStringOrNull(a["saltB64"]);
+
+  if (!contentType.startsWith("image/")) throw new HttpsError("invalid-argument", "Only image pulses supported.", { code: "UNSUPPORTED_TYPE" });
+  if (sizeBytes <= 0 || sizeBytes > MAX_IMAGE_BYTES) throw new HttpsError("invalid-argument", "Image too large.", { code: "IMAGE_TOO_LARGE", max: MAX_IMAGE_BYTES });
+
+  const expectedPrefix = `delvee_attachments/${uid}/${sessionId}/`;
+  if (!storagePath.startsWith(expectedPrefix)) throw new HttpsError("permission-denied", "Invalid storagePath for uploader.", { code: "BAD_STORAGE_PATH" });
+
+  const sref = sessionRef(sessionId);
+  const pref = participantsRef(sessionId).doc(uid);
+
+  const pulseId = `${uid}_${clientPulseId}`;
+  const pulseRef = pulsesRef(sessionId).doc(pulseId);
+
+  const out = await db.runTransaction(async (tx) => {
+    const ssnap = await tx.get(sref);
+    if (!ssnap.exists) throw new HttpsError("not-found", "Session not found.", { code: "SESSION_NOT_FOUND" });
+
+    const sdoc = (ssnap.data() ?? {}) as AnyMap;
+    if (sdoc.state !== "RUNNING") throw new HttpsError("failed-precondition", "Session is not running.", { code: "NOT_RUNNING", state: sdoc.state });
+
+    const endAtMs = typeof sdoc.endAtMillis === "number" ? sdoc.endAtMillis : 0;
+    const nowMs = Date.now();
+    if (endAtMs > 0 && nowMs > endAtMs) throw new HttpsError("failed-precondition", "Session window ended.", { code: "ENDED" });
+
+    const psnap = await tx.get(pref);
+    if (!psnap.exists) throw new HttpsError("permission-denied", "Join session first.", { code: "NOT_A_PARTICIPANT" });
+
+    const pdoc = (psnap.data() ?? {}) as AnyMap;
+    const pulsesCount = typeof pdoc.pulsesCount === "number" ? pdoc.pulsesCount : 0;
+    if (pulsesCount >= MAX_PULSES_PER_USER) throw new HttpsError("resource-exhausted", "Pulse limit reached.", { code: "PULSE_LIMIT" });
+
+    const lastPulseAt = typeof pdoc.lastPulseAtMillis === "number" ? pdoc.lastPulseAtMillis : 0;
+    if (lastPulseAt && nowMs - lastPulseAt < MIN_PULSE_INTERVAL_MS) throw new HttpsError("resource-exhausted", "Too fast. Slow down.", { code: "RATE_LIMIT" });
+
+    const pulseSnap = await tx.get(pulseRef);
+    if (pulseSnap.exists) return { pulseId, pulsesCount };
+
+    tx.set(pulseRef, {
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAtMillis: nowMs,
+      senderUid: uid,
+      kind: "image",
+      clientPulseId,
+      attachment: { storagePath, contentType, sizeBytes, ivB64: ivB64 ?? null, saltB64: saltB64 ?? null },
+    });
+
+    const nextCount = pulsesCount + 1;
+    tx.set(
+      pref,
+      { pulsesCount: nextCount, lastPulseAtMillis: nowMs, lastPulseClientId: clientPulseId, updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+
+    tx.set(sref, { updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+
+    return { pulseId, pulsesCount: nextCount };
+  });
+
+  return { ok: true, sessionId, ...out };
+});
+
+export const delveeCreateImageDownloadUrl = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const sessionId = normalizeSessionId(requireStringField(data, "sessionId"));
+  const storagePath = requireStringField(data, "storagePath", 512);
+
+  await assertParticipantOrThrow(sessionId, uid);
+
+  if (!storagePath.startsWith("delvee_attachments/") || !storagePath.includes(`/${sessionId}/`)) {
+    throw new HttpsError("permission-denied", "Invalid storagePath.", { code: "BAD_STORAGE_PATH" });
+  }
+
+  const bucket = getStorage().bucket();
+  const file = bucket.file(storagePath);
+
+  const expiresAtMillis = Date.now() + 5 * 60_000;
+  const [downloadUrl] = await file.getSignedUrl({ version: "v4", action: "read", expires: expiresAtMillis });
+
+  return { ok: true, storagePath, downloadUrl, expiresAtMillis };
+});
+
+export const delveeChatSend = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const sessionId = normalizeSessionId(requireStringField(data, "sessionId"));
+  const text = requireStringField(data, "text", MAX_CHAT_CHARS);
+
+  const sref = sessionRef(sessionId);
+  const pref = participantsRef(sessionId).doc(uid);
+
+  const messageId = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const mref = chatRef(sessionId).doc(messageId);
+
+  await db.runTransaction(async (tx) => {
+    const ssnap = await tx.get(sref);
+    if (!ssnap.exists) throw new HttpsError("not-found", "Session not found.", { code: "SESSION_NOT_FOUND" });
+
+    const sdoc = (ssnap.data() ?? {}) as AnyMap;
+    const st = sdoc.state;
+    if (st !== "COOLDOWN" && st !== "DONE") {
+      throw new HttpsError("failed-precondition", "Chat opens during cooldown.", { code: "CHAT_NOT_AVAILABLE", state: st });
+    }
+
+    const psnap = await tx.get(pref);
+    if (!psnap.exists) throw new HttpsError("permission-denied", "Join session first.", { code: "NOT_A_PARTICIPANT" });
+
+    const pdoc = (psnap.data() ?? {}) as AnyMap;
+    const nowMs = Date.now();
+
+    if (!allowChatRate(pdoc, nowMs)) throw new HttpsError("resource-exhausted", "Chat rate limit.", { code: "CHAT_RATE_LIMIT" });
+
+    const lastWindowStart = typeof pdoc.chatWindowStartMs === "number" ? pdoc.chatWindowStartMs : 0;
+    const chatCountInWindow = typeof pdoc.chatCountInWindow === "number" ? pdoc.chatCountInWindow : 0;
+
+    const newWindowStart = !lastWindowStart || nowMs - lastWindowStart >= 60_000 ? nowMs : lastWindowStart;
+    const newCount = newWindowStart !== lastWindowStart ? 1 : chatCountInWindow + 1;
+
+    tx.set(mref, { createdAt: admin.firestore.FieldValue.serverTimestamp(), createdAtMillis: nowMs, senderUid: uid, text });
+
+    tx.set(pref, { chatWindowStartMs: newWindowStart, chatCountInWindow: newCount, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    tx.set(sref, { updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  });
+
+  return { ok: true, sessionId, messageId };
+});
+
+export const delveeLeaveSession = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as AnyMap;
+  const sessionId = normalizeSessionId(requireStringField(data, "sessionId"));
+  await participantsRef(sessionId).doc(uid).delete().catch(() => null);
+  return { ok: true, sessionId };
+});
+
+// ---------- Scheduled state machine ----------
+export const delveeSweepSessions = onSchedule({ region: REGION, schedule: "every 1 minutes", timeZone: "UTC" }, async () => {
+  const nowMs = Date.now();
+  const nowIsoStr = nowIso();
+
+  // LOBBY expired -> CANCELLED
+  {
+    const snap = await db.collection(SESSIONS).where("state", "==", "LOBBY").where("reservationExpiresAtMillis", "<=", nowMs).limit(200).get();
+    if (!snap.empty) {
+      const batch = db.batch();
+      for (const d of snap.docs) {
+        batch.set(
+          d.ref,
+          { state: "CANCELLED" satisfies SessionState, cancelledAtUtc: nowIsoStr, updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+          { merge: true }
+        );
+      }
+      await batch.commit();
+    }
+  }
+
+  // RUNNING ended -> COOLDOWN
+  {
+    const snap = await db.collection(SESSIONS).where("state", "==", "RUNNING").where("endAtUtc", "<=", nowIsoStr).limit(200).get();
+    if (!snap.empty) {
+      const batch = db.batch();
+      for (const d of snap.docs) {
+        batch.set(
+          d.ref,
+          {
+            state: "COOLDOWN" satisfies SessionState,
+            cooldownEndsAtMillis: nowMs + COOLDOWN_MS,
+            cooldownStartedAtUtc: nowIsoStr,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+      await batch.commit();
+    }
+  }
+
+  // COOLDOWN ended -> DONE + generate summary
+  {
+    const snap = await db.collection(SESSIONS).where("state", "==", "COOLDOWN").where("cooldownEndsAtMillis", "<=", nowMs).limit(200).get();
+    if (!snap.empty) {
+      const batch = db.batch();
+      const sessionIds: string[] = [];
+
+      for (const d of snap.docs) {
+        sessionIds.push(d.id);
+        batch.set(
+          d.ref,
+          { state: "DONE" satisfies SessionState, summaryReadyAtUtc: nowIsoStr, updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+          { merge: true }
+        );
+      }
+      await batch.commit();
+
+      for (const sid of sessionIds) {
+        try {
+          await generateAndStoreSummaryIfMissing(sid);
+        } catch (e) {
+          console.error("[delveeSweepSessions] summary generation failed for", sid, e);
+        }
+      }
+    }
+  }
+});
+
+index.ts:
+
+// functions/src/index.ts (FULL FILE REPLACEMENT)
+import * as admin from "firebase-admin";
+
+admin.initializeApp();
+
+// Rolling (unsigned)
+export {
+  provisionRollingEnvelope,
+  fetchRollingEnvelope,
+  fetchRollingEnvelopes,
+  markRollingCodeConsumed,
+  markEnvelopeConsumed,
+  sendRollingCiphertext,
+} from "./rolling";
+
+// Signed
+export {
+  createSignedAttachmentUpload,
+  createSignedAttachmentDownloadUrl,
+  sendSignedCiphertext,
+  fetchSignedEnvelopes,
+  markSignedEnvelopeConsumed,
+
+  // ✅ Private pulse-to-summary sessions (2 min, 1 credit)
+  createSignedPrivatePulseSession,
+  signedPrivatePulseText,
+  signedPrivateCreateImageUpload,
+  signedPrivatePulseImageCommit,
+  finalizeSignedPrivatePulseSession,
+  sweepSignedPrivatePulseSessions,
+} from "./signed";
+
+// Web receive codes
+export { getReceiveCodes, refreshRollingReceiveCode } from "./codes";
+
+// Delvee
+export {
+  delveeCreateSession,
+  delveeJoinSession,
+  delveeSetReady,
+  delveeStartSession,
+  delveePulseText,
+  delveeCreateImageUpload,
+  delveePulseImageCommit,
+  delveeCreateImageDownloadUrl,
+  delveeChatSend,
+  delveeLeaveSession,
+  delveeSweepSessions,
+  delveeGenerateSummaryOnDone,
+
+  // ✅ Credits
+  getDelveeCreditsBalance,
+  claimDelveeStarterCredits,
+} from "./delvee";
+
+// ✅ Admin tools (dev/testing)
+export { setDelveeEntitlementsAdmin } from "./admin";
+
+// ✅ Stripe (subscriptions)
+export {
+  createStripeCheckoutSession,
+  createStripeBillingPortalSession,
+  stripeWebhook,
+} from "./stripe";
+
+codes.ts:
+
+// functions/src/codes.ts (NEW FILE)
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as admin from "firebase-admin";
+
+const db = admin.firestore();
+const REGION = "europe-west2";
+const COLLECTION = "web_receive_codes";
+
+// Avoid ambiguous characters (0/O, 1/I, etc.)
+const ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+type AnyMap = Record<string, unknown>;
+
+function requireAuth(request: any): string {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Sign-in required.", { code: "AUTH_REQUIRED" });
+  }
+  return uid;
+}
+
+function randChar() {
+  const i = Math.floor(Math.random() * ALPHABET.length);
+  return ALPHABET[i];
+}
+
+function makeGroups(groupCount: number, groupLen: number) {
+  const groups: string[] = [];
+  for (let g = 0; g < groupCount; g++) {
+    let s = "";
+    for (let i = 0; i < groupLen; i++) s += randChar();
+    groups.push(s);
+  }
+  return groups.join("-");
+}
+
+function makeCode(prefix: "SF" | "SFS" | "SFR") {
+  // Personal: SF-XXXXXX-XXXXXX (12 chars)
+  // Secure:   SFS-XXXXXX-XXXXXX-XXXXXX (18 chars)
+  // Rolling:  SFR-XXXXXX-XXXXXX (12 chars)
+  if (prefix === "SFS") return `SFS-${makeGroups(3, 6)}`;
+  if (prefix === "SFR") return `SFR-${makeGroups(2, 6)}`;
+  return `SF-${makeGroups(2, 6)}`;
+}
+
+function toPayload(doc: AnyMap) {
+  return {
+    personal: { code: typeof doc.personalCode === "string" ? doc.personalCode : "—" },
+    secure: { code: typeof doc.secureCode === "string" ? doc.secureCode : "—" },
+    rolling: {
+      code: typeof doc.rollingCode === "string" ? doc.rollingCode : "—",
+      expiresAtMillis: typeof doc.rollingExpiresAtMillis === "number" ? doc.rollingExpiresAtMillis : null,
+    },
+  };
+}
+
+/**
+ * ✅ getReceiveCodes
+ * Creates (or returns) the signed-in user's web receive codes.
+ * Stored in Firestore so the user gets the same codes across devices.
+ */
+export const getReceiveCodes = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+
+  const ref = db.collection(COLLECTION).doc(uid);
+
+  const out = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+
+    if (!snap.exists) {
+      const now = Date.now();
+      const doc: AnyMap = {
+        uid,
+        personalCode: makeCode("SF"),
+        secureCode: makeCode("SFS"),
+        rollingCode: makeCode("SFR"),
+        rollingExpiresAtMillis: now + 7 * 24 * 60 * 60 * 1000, // 7 days
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      tx.set(ref, doc);
+      return doc;
+    }
+
+    const doc = (snap.data() ?? {}) as AnyMap;
+
+    // If any fields are missing, patch them deterministically.
+    const patch: AnyMap = {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    const RECAPTCHA_SITE_KEY = "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI";
-    const SITE_ORIGIN = window.location.origin;
-
-    if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
-
-    window.sfAuth = firebase.auth();
-    window.sfFunctions = firebase.app().functions("europe-west2");
-
-    // ✅ IMPORTANT: Set persistence as early as possible (before any sign-in attempt).
-    window.sfAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
-
-    function startAppCheck() {
-      try {
-        firebase.appCheck().activate(RECAPTCHA_SITE_KEY, true);
-        console.log("[AppCheck] activated");
-      } catch (e) {
-        console.warn("[AppCheck] init failed:", e);
-      }
+    if (typeof doc.personalCode !== "string" || doc.personalCode.trim().length < 6) {
+      patch.personalCode = makeCode("SF");
     }
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", startAppCheck, { once: true });
+    if (typeof doc.secureCode !== "string" || doc.secureCode.trim().length < 6) {
+      patch.secureCode = makeCode("SFS");
+    }
+    if (typeof doc.rollingCode !== "string" || doc.rollingCode.trim().length < 6) {
+      patch.rollingCode = makeCode("SFR");
+      patch.rollingExpiresAtMillis = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    }
+
+    // If rolling expired, rotate it.
+    const exp = typeof doc.rollingExpiresAtMillis === "number" ? doc.rollingExpiresAtMillis : 0;
+    if (exp > 0 && Date.now() > exp) {
+      patch.rollingCode = makeCode("SFR");
+      patch.rollingExpiresAtMillis = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    }
+
+    if (Object.keys(patch).length > 1) {
+      tx.set(ref, patch, { merge: true });
+      return { ...doc, ...patch };
+    }
+
+    return doc;
+  });
+
+  return toPayload(out as AnyMap);
+});
+
+/**
+ * ✅ refreshRollingReceiveCode
+ * Rotates only rolling.
+ */
+export const refreshRollingReceiveCode = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuth(request);
+
+  const ref = db.collection(COLLECTION).doc(uid);
+
+  const updated = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+
+    const now = Date.now();
+    const nextRolling = makeCode("SFR");
+    const nextExp = now + 7 * 24 * 60 * 60 * 1000;
+
+    if (!snap.exists) {
+      const doc: AnyMap = {
+        uid,
+        personalCode: makeCode("SF"),
+        secureCode: makeCode("SFS"),
+        rollingCode: nextRolling,
+        rollingExpiresAtMillis: nextExp,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      tx.set(ref, doc);
+      return doc;
+    }
+
+    const doc = (snap.data() ?? {}) as AnyMap;
+
+    tx.set(
+      ref,
+      {
+        rollingCode: nextRolling,
+        rollingExpiresAtMillis: nextExp,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    return { ...doc, rollingCode: nextRolling, rollingExpiresAtMillis: nextExp };
+  });
+
+  // Return either just rolling, or full payload — your receive.html supports both.
+  return {
+    code: typeof (updated as AnyMap).rollingCode === "string" ? (updated as AnyMap).rollingCode : null,
+    expiresAtMillis: typeof (updated as AnyMap).rollingExpiresAtMillis === "number" ? (updated as AnyMap).rollingExpiresAtMillis : null,
+  };
+});
+
+
+signed.ts:
+
+// functions/src/signed.ts (FULL FILE REPLACEMENT)
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import * as admin from "firebase-admin";
+import { getStorage } from "firebase-admin/storage";
+
+const db = admin.firestore();
+
+type AnyMap = Record<string, unknown>;
+
+const REGION = "europe-west2";
+const COLLECTION = "signed_envelopes";
+
+// ✅ New: private pulse sessions (server generates summary; client encrypts + sends one envelope)
+const PRIVATE_SESSIONS = "signed_private_sessions";
+const PRIVATE_SESSION_WINDOW_MS = 2 * 60_000;
+
+// Constraints (keep conservative; you can loosen later)
+const MAX_TEXT_CHARS = 180;
+const MAX_PULSES_PER_SESSION = 500;
+const MIN_PULSE_INTERVAL_MS = 350; // lightweight spam protection
+const MAX_IMAGE_BYTES = 5_000_000;
+const MAX_IMAGES_PER_SESSION = 30;
+
+// Credits are stored on the same user doc as Delvee credits (re-using your existing system)
+const USERS = "users";
+const PRIVATE_SESSION_CREDIT_COST = 1;
+
+// If admin, return this as "balance" to keep UIs calm
+const ADMIN_BALANCE_SENTINEL = 1_000_000_000;
+
+type SignedAttachment = {
+  attachmentId: string;
+  storagePath: string;
+  contentType: string;
+  sizeBytes: number;
+  ivB64: string;
+  saltB64: string;
+};
+
+// ---------- Shared helpers ----------
+function requireAuthUid(request: any): string {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign-in required.", { code: "AUTH_REQUIRED" });
+  return uid;
+}
+
+function isAdminRequest(request: any): boolean {
+  return Boolean(request?.auth?.token?.admin);
+}
+
+function requireStringField(data: AnyMap, key: string, maxLen?: number): string {
+  const v = data[key];
+  if (typeof v !== "string") throw new HttpsError("invalid-argument", `Missing ${key}`, { code: "INVALID_SCHEMA" });
+  const s = v.trim();
+  if (!s) throw new HttpsError("invalid-argument", `Missing ${key}`, { code: "INVALID_SCHEMA" });
+  if (typeof maxLen === "number" && s.length > maxLen) {
+    throw new HttpsError("invalid-argument", `${key} too long`, { code: "FIELD_TOO_LONG", key, maxLen });
+  }
+  return s;
+}
+
+function requireNumberField(data: AnyMap, key: string): number {
+  const v = data[key];
+  if (typeof v !== "number" || !Number.isFinite(v)) {
+    throw new HttpsError("invalid-argument", `Missing ${key}`, { code: "INVALID_SCHEMA" });
+  }
+  return v;
+}
+
+function asStringOrNull(v: unknown): string | null {
+  return typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
+}
+
+function asArray(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : [];
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+// ---------- Credits + entitlements helpers ----------
+function userRef(uid: string) {
+  return db.collection(USERS).doc(uid);
+}
+
+function getCreditsFromDoc(d: AnyMap): number {
+  const n = d?.delveeCreditsBalance;
+  return typeof n === "number" && Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+type DelveeEntitlements = {
+  lobbyUnlimited: boolean;
+  privateUnlimited: boolean;
+  validUntilMillis: number | null;
+  plan: string | null;
+};
+
+function readEntitlementsFromUserDoc(d: AnyMap): DelveeEntitlements {
+  const raw = (d?.delveeEntitlements ?? {}) as AnyMap;
+
+  const lobbyUnlimited = Boolean(raw?.lobbyUnlimited);
+  const privateUnlimited = Boolean(raw?.privateUnlimited);
+
+  const validUntilMillis =
+    typeof raw?.validUntilMillis === "number" && Number.isFinite(raw.validUntilMillis) ? raw.validUntilMillis : null;
+
+  const plan = typeof raw?.plan === "string" && raw.plan.trim().length ? raw.plan.trim() : null;
+
+  if (validUntilMillis != null && Date.now() > validUntilMillis) {
+    return { lobbyUnlimited: false, privateUnlimited: false, validUntilMillis, plan };
+  }
+
+  return { lobbyUnlimited, privateUnlimited, validUntilMillis, plan };
+}
+
+async function chargeCreditsOrThrow(tx: FirebaseFirestore.Transaction, uid: string, cost: number, requestForAdmin?: any) {
+  if (requestForAdmin && isAdminRequest(requestForAdmin)) {
+    return { before: ADMIN_BALANCE_SENTINEL, after: ADMIN_BALANCE_SENTINEL, adminBypass: true };
+  }
+
+  const ref = userRef(uid);
+  const snap = await tx.get(ref);
+  const d = (snap.data() ?? {}) as AnyMap;
+
+  const ent = readEntitlementsFromUserDoc(d);
+  if (ent.privateUnlimited) {
+    return { before: null, after: null, adminBypass: false, privateUnlimited: true };
+  }
+
+  const bal = getCreditsFromDoc(d);
+  if (bal < cost) {
+    throw new HttpsError("resource-exhausted", "No credits remaining.", { code: "OUT_OF_CREDITS", balance: bal });
+  }
+
+  const next = bal - cost;
+  tx.set(
+    ref,
+    {
+      delveeCreditsBalance: next,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: snap.exists ? (d.createdAt ?? admin.firestore.FieldValue.serverTimestamp()) : admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  return { before: bal, after: next, adminBypass: false, privateUnlimited: false };
+}
+
+// ---------- Existing signed helpers ----------
+function assertValidTimeZone(timeZone: string) {
+  try {
+    // eslint-disable-next-line no-new
+    new Intl.DateTimeFormat("en-US", { timeZone });
+  } catch {
+    throw new HttpsError("invalid-argument", "Invalid userTimezone.", { code: "INVALID_TIMEZONE" });
+  }
+}
+
+function parseIsoWithOffset(iso: string): Date {
+  const hasOffset = /([zZ]|[+\-]\d{2}:\d{2})$/.test(iso);
+  if (!hasOffset) {
+    throw new HttpsError("invalid-argument", "deliverAtLocalIso must include a timezone offset (e.g. +00:00).", {
+      code: "INVALID_SCHEDULE_FORMAT",
+    });
+  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    throw new HttpsError("invalid-argument", "Invalid deliverAtLocalIso.", { code: "INVALID_SCHEDULE_FORMAT" });
+  }
+  return d;
+}
+
+function validateSignedAttachments(raw: unknown, senderUid: string): SignedAttachment[] {
+  const list = asArray(raw);
+  if (list.length === 0) return [];
+
+  const MAX_ATTACHMENTS = 6;
+  const MAX_SIZE_BYTES = 5_000_000;
+
+  if (list.length > MAX_ATTACHMENTS) {
+    throw new HttpsError("invalid-argument", `Too many attachments (max ${MAX_ATTACHMENTS}).`, { code: "ATTACHMENT_LIMIT" });
+  }
+
+  const out: SignedAttachment[] = [];
+  const prefix = `signed_attachments/${senderUid}/`;
+
+  for (const item of list) {
+    const a = (item ?? {}) as AnyMap;
+
+    const attachmentId = requireStringField(a, "attachmentId", 64);
+    const storagePath = requireStringField(a, "storagePath", 768);
+    const contentType = requireStringField(a, "contentType", 80);
+    const sizeBytes = requireNumberField(a, "sizeBytes");
+    const ivB64 = requireStringField(a, "ivB64", 256);
+    const saltB64 = requireStringField(a, "saltB64", 256);
+
+    if (!storagePath.startsWith(prefix)) {
+      throw new HttpsError("permission-denied", "Invalid storagePath for sender.", { code: "ATTACHMENT_PATH_FORBIDDEN" });
+    }
+    if (!storagePath.endsWith(".bin")) {
+      throw new HttpsError("invalid-argument", "Encrypted attachments must end with .bin", { code: "ATTACHMENT_EXTENSION_REQUIRED" });
+    }
+    if (!contentType.startsWith("image/")) {
+      throw new HttpsError("invalid-argument", "Only image attachments are supported.", { code: "ATTACHMENT_UNSUPPORTED_TYPE" });
+    }
+    if (sizeBytes <= 0 || sizeBytes > MAX_SIZE_BYTES) {
+      throw new HttpsError("invalid-argument", `Attachment too large (max ${MAX_SIZE_BYTES} bytes).`, { code: "ATTACHMENT_TOO_LARGE" });
+    }
+
+    out.push({ attachmentId, storagePath, contentType, sizeBytes, ivB64, saltB64 });
+  }
+
+  return out;
+}
+
+function parseAttachmentsFromDoc(d: AnyMap): SignedAttachment[] {
+  const rawAttachments = asArray(d["attachments"]);
+  return rawAttachments
+    .map((x) => (x ?? {}) as AnyMap)
+    .map((a) => {
+      const attachmentId = asStringOrNull(a["attachmentId"]);
+      const storagePath = asStringOrNull(a["storagePath"]);
+      const contentType = asStringOrNull(a["contentType"]);
+      const sizeBytes = typeof a["sizeBytes"] === "number" ? a["sizeBytes"] : null;
+      const ivB64 = asStringOrNull(a["ivB64"]);
+      const saltB64 = asStringOrNull(a["saltB64"]);
+      if (!attachmentId || !storagePath || !contentType || sizeBytes == null || !ivB64 || !saltB64) return null;
+
+      return { attachmentId, storagePath, contentType, sizeBytes, ivB64, saltB64 };
+    })
+    .filter((x): x is SignedAttachment => x !== null);
+}
+
+function envelopeFromDoc(docId: string, d: AnyMap) {
+  const ciphertext = asStringOrNull(d["ciphertext"]) ?? asStringOrNull(d["ciphertextB64"]);
+  const iv = asStringOrNull(d["iv"]) ?? asStringOrNull(d["ivB64"]);
+  const salt = asStringOrNull(d["salt"]) ?? asStringOrNull(d["saltB64"]);
+  if (!ciphertext || !iv || !salt) return null;
+
+  const attachments = parseAttachmentsFromDoc(d);
+
+  return {
+    signedEnvelopeId: docId,
+    codeHash: asStringOrNull(d["codeHash"]),
+    ciphertext,
+    iv,
+    salt,
+    deliverAtUtc: asStringOrNull(d["deliverAtUtc"]),
+    deliverAtLocalIso: asStringOrNull(d["deliverAtLocalIso"]),
+    userTimezone: asStringOrNull(d["userTimezone"]),
+    consumed: Boolean(d["consumed"]),
+    senderUid: asStringOrNull(d["senderUid"]),
+    attachments,
+  };
+}
+
+// ======================================================
+// ✅ Signed-only: mint an upload URL for encrypted bytes
+// ======================================================
+export const createSignedAttachmentUpload = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuthUid(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const attachmentId = requireStringField(data, "attachmentId", 64);
+  const contentType = requireStringField(data, "contentType", 80);
+  const sizeBytes = requireNumberField(data, "sizeBytes");
+
+  if (!contentType.startsWith("image/")) {
+    throw new HttpsError("invalid-argument", "Only image uploads are supported.", { code: "UNSUPPORTED_TYPE" });
+  }
+  if (sizeBytes <= 0 || sizeBytes > MAX_IMAGE_BYTES) {
+    throw new HttpsError("invalid-argument", `Attachment too large (max ${MAX_IMAGE_BYTES} bytes).`, { code: "ATTACHMENT_TOO_LARGE" });
+  }
+
+  const storagePath = `signed_attachments/${uid}/${attachmentId}.bin`;
+
+  const bucket = getStorage().bucket();
+  const file = bucket.file(storagePath);
+
+  const expiresAtMillis = Date.now() + 10 * 60_000;
+  const [uploadUrl] = await file.getSignedUrl({
+    version: "v4",
+    action: "write",
+    expires: expiresAtMillis,
+    contentType: "application/octet-stream",
+  });
+
+  return { ok: true, storagePath, uploadUrl, expiresAtMillis };
+});
+
+// ======================================================
+// ✅ Signed: mint a short-lived download URL (recipient use)
+// IMPORTANT: intentionally NOT auth-gated currently.
+// ======================================================
+export const createSignedAttachmentDownloadUrl = onCall({ region: REGION }, async (request) => {
+  const data = (request.data ?? {}) as AnyMap;
+
+  const signedEnvelopeId = requireStringField(data, "signedEnvelopeId", 256);
+  const attachmentId = requireStringField(data, "attachmentId", 64);
+
+  const ref = db.collection(COLLECTION).doc(signedEnvelopeId);
+  const snap = await ref.get();
+
+  if (!snap.exists) throw new HttpsError("not-found", "Signed envelope not found.", { code: "ENVELOPE_NOT_FOUND" });
+
+  const doc = (snap.data() as AnyMap) ?? {};
+  const attachments = parseAttachmentsFromDoc(doc);
+
+  const match = attachments.find((a) => a.attachmentId === attachmentId);
+  if (!match) throw new HttpsError("not-found", "Attachment not found on this envelope.", { code: "ATTACHMENT_NOT_FOUND" });
+
+  if (!match.storagePath.startsWith("signed_attachments/") || !match.storagePath.endsWith(".bin")) {
+    throw new HttpsError("permission-denied", "Invalid attachment storagePath.", { code: "ATTACHMENT_PATH_INVALID" });
+  }
+
+  const bucket = getStorage().bucket();
+  const file = bucket.file(match.storagePath);
+
+  const expiresAtMillis = Date.now() + 5 * 60_000;
+  const [downloadUrl] = await file.getSignedUrl({
+    version: "v4",
+    action: "read",
+    expires: expiresAtMillis,
+  });
+
+  return { ok: true, attachmentId, storagePath: match.storagePath, downloadUrl, expiresAtMillis };
+});
+
+// ======================================================
+// ✅ Signed send entrypoint (ciphertext-only + attachments)
+// ======================================================
+export const sendSignedCiphertext = onCall({ region: REGION }, async (request) => {
+  const senderUid = requireAuthUid(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const codeHash = requireStringField(data, "codeHash", 256);
+  const ciphertext = requireStringField(data, "ciphertext", 200_000);
+  const iv = requireStringField(data, "iv", 4096);
+  const salt = requireStringField(data, "salt", 4096);
+
+  const deliverAtLocalIso = requireStringField(data, "deliverAtLocalIso", 64);
+  const userTimezone = requireStringField(data, "userTimezone", 64);
+  const clientRequestId = requireStringField(data, "clientRequestId", 128);
+
+  assertValidTimeZone(userTimezone);
+  const deliverAt = parseIsoWithOffset(deliverAtLocalIso);
+  const deliverAtUtc = deliverAt.toISOString();
+
+  const attachments = validateSignedAttachments(data["attachments"], senderUid);
+
+  const docId = `${codeHash}_${clientRequestId}`;
+  const ref = db.collection(COLLECTION).doc(docId);
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (snap.exists) return;
+
+    tx.set(ref, {
+      codeHash,
+      ciphertext,
+      iv,
+      salt,
+      deliverAtUtc,
+      deliverAtLocalIso,
+      userTimezone,
+      clientRequestId,
+      attachments,
+      consumed: false,
+      senderUid,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  return { ok: true, codeHash, deliverAtUtc, signedEnvelopeId: docId, attachmentCount: attachments.length };
+});
+
+// ======================================================
+// ✅ Fetch signed envelopes (includes attachments[])
+// ======================================================
+export const fetchSignedEnvelopes = onCall({ region: REGION }, async (request) => {
+  const data = (request.data ?? {}) as AnyMap;
+  const codeHash = requireStringField(data, "codeHash", 256);
+
+  const snap = await db
+    .collection(COLLECTION)
+    .where("codeHash", "==", codeHash)
+    .where("consumed", "==", false)
+    .orderBy("createdAt", "asc")
+    .limit(10)
+    .get();
+
+  const envelopes = snap.docs
+    .map((d) => envelopeFromDoc(d.id, (d.data() as AnyMap) ?? {}))
+    .filter((x): x is NonNullable<ReturnType<typeof envelopeFromDoc>> => x !== null);
+
+  return { envelopes };
+});
+
+export const markSignedEnvelopeConsumed = onCall({ region: REGION }, async (request) => {
+  const data = (request.data ?? {}) as AnyMap;
+  const signedEnvelopeId = requireStringField(data, "signedEnvelopeId", 256);
+
+  const ref = db.collection(COLLECTION).doc(signedEnvelopeId);
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError("not-found", "Signed envelope not found.", { code: "ENVELOPE_NOT_FOUND" });
+
+    const doc = (snap.data() as AnyMap) ?? {};
+    if (Boolean(doc["consumed"])) return;
+
+    tx.update(ref, {
+      consumed: true,
+      consumedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  return { success: true };
+});
+
+// ======================================================
+// ✅ Private pulse sessions (2 min / 1 credit / many pulses / one summary)
+// ======================================================
+function privateSessionRef(sessionId: string) {
+  return db.collection(PRIVATE_SESSIONS).doc(sessionId);
+}
+function privatePulsesRef(sessionId: string) {
+  return privateSessionRef(sessionId).collection("pulses");
+}
+
+function normalizePrivateSessionId(raw: string): string {
+  const s = raw.trim();
+  if (!/^[A-Za-z0-9_-]{10,220}$/.test(s)) {
+    throw new HttpsError("invalid-argument", "Invalid sessionId.", { code: "INVALID_SESSION_ID" });
+  }
+  return s;
+}
+
+function clampText(s: string, maxChars: number): string {
+  const t = (s || "").trim();
+  if (t.length <= maxChars) return t;
+  return t.slice(0, Math.max(0, maxChars - 1)) + "…";
+}
+
+function safeLine(s: unknown): string {
+  const t = typeof s === "string" ? s : "";
+  return t.replace(/\s+/g, " ").trim();
+}
+
+async function generatePrivateSessionSummary(sessionId: string): Promise<{ summaryText: string; attachments: SignedAttachment[] }> {
+  const sref = privateSessionRef(sessionId);
+  const ssnap = await sref.get();
+  if (!ssnap.exists) throw new HttpsError("not-found", "Session not found.", { code: "SESSION_NOT_FOUND" });
+
+  const sdoc = (ssnap.data() ?? {}) as AnyMap;
+
+  const snap = await privatePulsesRef(sessionId).orderBy("createdAtMillis", "asc").limit(MAX_PULSES_PER_SESSION).get();
+  const pulses = snap.docs.map((d) => (d.data() as AnyMap) ?? {});
+
+  let textCount = 0;
+  let imageCount = 0;
+
+  const lines: string[] = [];
+  const attachments: SignedAttachment[] = [];
+
+  for (const p of pulses) {
+    const kind = asStringOrNull(p.kind) === "image" ? "image" : "text";
+    if (kind === "image") imageCount++;
+    else textCount++;
+
+    if (kind === "image") {
+      lines.push("• [image]");
+      const a = (p.attachment ?? {}) as AnyMap;
+
+      const attachmentId = asStringOrNull(a.attachmentId);
+      const storagePath = asStringOrNull(a.storagePath);
+      const contentType = asStringOrNull(a.contentType);
+      const ivB64 = asStringOrNull(a.ivB64);
+      const saltB64 = asStringOrNull(a.saltB64);
+      const sizeBytes = typeof a.sizeBytes === "number" ? a.sizeBytes : null;
+
+      if (attachmentId && storagePath && contentType && ivB64 && saltB64 && sizeBytes != null) {
+        attachments.push({ attachmentId, storagePath, contentType, sizeBytes, ivB64, saltB64 });
+      }
     } else {
-      startAppCheck();
+      const txt = safeLine(p.text);
+      lines.push(`• ${clampText(txt || "[empty]", 160)}`);
     }
-  </script>
-
-  <!-- THEME -->
-  <script>
-    (function(){
-      const THEME_KEY = "sf_theme_mode";
-      const root = document.documentElement;
-
-      function applyTheme(){
-        let stored = "system";
-        try { stored = localStorage.getItem(THEME_KEY) || "system"; } catch (_) {}
-
-        if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
-        else root.removeAttribute("data-theme");
-
-        const effective =
-          root.getAttribute("data-theme") ||
-          (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-
-        const meta = document.getElementById("meta-theme-color");
-        if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
-      }
-
-      applyTheme();
-      window.addEventListener("storage", (e) => { if (e && e.key === THEME_KEY) applyTheme(); });
-    })();
-  </script>
-
-  <style>
-    .hidden{ display:none !important; }
-    .sf-status-slot{ margin-top: 10px; }
-
-    .chip, .sf-adv-btn{
-      min-height: 42px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      padding-top: 0;
-      padding-bottom: 0;
-    }
-
-    .sf-adv-row{
-      display:flex;
-      flex-wrap:wrap;
-      gap: var(--s-2, 10px);
-      margin-top: var(--s-3, 12px);
-    }
-    .sf-adv-row .sf-adv-btn{
-      font: inherit;
-      letter-spacing: inherit;
-    }
-    .sf-adv-row .sf-adv-btn:active{
-      transform: none;
-      filter: none;
-      opacity: 1;
-    }
-
-    html[data-theme="dark"] #signed-body,
-    html[data-theme="dark"] #rolling-body{
-      background: #ffffff !important;
-      color: #0b0c0f !important;
-      border-color: rgba(0,0,0,0.18) !important;
-    }
-    html[data-theme="light"] #signed-body,
-    html[data-theme="light"] #rolling-body{
-      background: #0b0c0f !important;
-      color: #ffffff !important;
-      border-color: rgba(255,255,255,0.18) !important;
-    }
-
-    .sf-credits-row{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      align-items:center;
-      justify-content: space-between;
-      margin-top: 10px;
-    }
-    .sf-credits-pill{
-      display:inline-flex;
-      gap:8px;
-      align-items:center;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
-      color: var(--text);
-      font-weight: var(--fw-medium);
-      font-size: 13.2px;
-      white-space: nowrap;
-    }
-
-    .sf-subhead{
-      cursor: pointer;
-      user-select: none;
-      text-align: center;
-    }
-    .sf-subhead:hover{ text-decoration: underline; }
-
-    .sf-file-input{ display:none !important; }
-
-    .sf-file-chip{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      padding: 10px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: color-mix(in srgb, var(--surface-variant) 12%, transparent);
-      color: var(--text);
-      font: inherit;
-      line-height: 1;
-      cursor: pointer;
-      user-select: none;
-      white-space: nowrap;
-    }
-    .sf-file-chip:active{
-      transform: translateY(1px);
-      opacity: 0.95;
-    }
-    .sf-file-dot{
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: color-mix(in srgb, var(--text) 55%, transparent);
-      flex: 0 0 auto;
-    }
-    .sf-file-name{
-      max-width: 260px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .sf-file-clear{
-      border: 0;
-      background: transparent;
-      color: color-mix(in srgb, var(--text) 75%, transparent);
-      padding: 0;
-      margin-left: 2px;
-      cursor: pointer;
-      font: inherit;
-      line-height: 1;
-    }
-    .sf-file-clear:hover{ color: var(--text); }
-
-    /* Pulse session UI */
-    .sf-pulse-panel{
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 16px;
-      border: 1px solid var(--line);
-      background: color-mix(in srgb, var(--surface-variant) 8%, transparent);
-    }
-    .sf-pulse-row{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      align-items:center;
-      justify-content: space-between;
-      margin-top: 10px;
-    }
-    .sf-pulse-timer{
-      font-weight: 600;
-      color: var(--text);
-      font-size: 14px;
-      white-space: nowrap;
-    }
-    .sf-pulse-note{
-      font-size: 12.5px;
-      opacity: 0.9;
-      color: var(--muted);
-      margin-top: 8px;
-      line-height: 1.35;
-    }
-  </style>
-</head>
-
-<body class="page-bg">
-  <header class="site-header">
-    <div class="header-inner">
-      <a class="brand-mark" href="./" aria-label="Setfeed home">
-        <img class="logo" src="./logo.png" alt="" aria-hidden="true" />
-      </a>
-      <a class="brand-title" href="./">Setfeed</a>
-
-      <nav class="nav" aria-label="Primary">
-        <a href="./">Home</a>
-        <a href="./send.html" aria-current="page">Send</a>
-        <a href="./receive.html">Receive</a>
-        <a class="auth-only hidden" href="./inbox.html">Inbox</a>
-        <a href="./security.html">Security</a>
-        <a href="./privacy.html">Privacy</a>
-
-        <a class="nav-cta" href="https://delvee.app" rel="noreferrer" aria-label="Open Delvee">Open Delvee</a>
-      </nav>
-    </div>
-  </header>
-
-  <div class="wrap">
-    <div class="card">
-      <h1>Schedule a message</h1>
-      <p class="lead">
-        Messages are encrypted in your browser before they reach Setfeed servers.
-        Delvee sessions may use credits depending on your plan.
-      </p>
-
-      <h2>Choose a send type</h2>
-      <div class="tabs" role="tablist" aria-label="Send type">
-        <button class="tab" id="tab-signed" role="tab" aria-selected="false" aria-controls="panel-signed" type="button">
-          Signed (Secure / Personal)
-        </button>
-        <button class="tab" id="tab-rolling" role="tab" aria-selected="true" aria-controls="panel-rolling" type="button">
-          Rolling (no sign-in)
-        </button>
-      </div>
-
-      <!-- Signed panel -->
-      <div id="panel-signed" role="tabpanel" aria-labelledby="tab-signed" class="hidden">
-        <div class="row">
-          <div class="col" id="signin">
-
-            <div class="sf-pulse-image-card hidden" id="sf-pulse-image-card">
-              <div class="sf-pulse-image-head">
-                <div>
-                  <div class="panel-title" style="margin:0;">Image preview</div>
-                  <div class="panel-sub" style="margin:6px 0 0 0;">
-                    Pulse image opens Delvee. Credits are checked inside Delvee when starting sessions.
-                  </div>
-                </div>
-              </div>
-
-              <div class="sf-preview" id="sf-preview">
-                <div class="sf-preview-empty" id="sf-preview-empty">No image selected.</div>
-                <img id="sf-preview-img" class="sf-preview-img hidden" alt="Selected image preview" />
-              </div>
-
-              <div class="actions" style="margin-top: 12px;">
-                <input id="sf-image-file" class="sf-file-input" type="file" accept="image/*" />
-
-                <button class="sf-file-chip" id="sf-btn-choose-image" type="button" aria-label="Choose image">
-                  <span class="sf-file-dot" aria-hidden="true"></span>
-                  <span id="sf-file-chip-label">Choose image</span>
-                </button>
-
-                <button class="btn btn-lg btn-primary" id="btn-pulse-image" type="button" disabled>Pulse image</button>
-              </div>
-
-              <div class="sf-credits-row">
-                <small class="help" id="sf-image-help" style="margin-top:0;">
-                  Sign in + choose Pulse to enable.
-                </small>
-                <span class="sf-credits-pill" id="sf-credits-pill">Credits: —</span>
-              </div>
-
-              <div class="actions" style="margin-top: 10px;">
-                <a class="btn btn-secondary" href="https://delvee.app" rel="noreferrer">Open Delvee</a>
-              </div>
-            </div>
-
-            <div class="field no-auth-only">
-              <label for="signed-email">Email</label>
-              <input id="signed-email" type="email" autocomplete="email" placeholder="you@example.com" />
-            </div>
-
-            <div class="actions no-auth-only" style="flex-direction: column; align-items: stretch;">
-              <!-- ✅ Popup-first, redirect fallback -->
-              <button class="btn btn-lg btn-primary" id="btn-google" type="button" aria-label="Continue with Google">
-                <span>Continue with Google</span>
-              </button>
-
-              <button class="btn btn-lg" id="btn-send-link" type="button">Send sign-in link</button>
-            </div>
-
-            <div class="sf-auth-banner hidden auth-only" id="sf-auth-banner">
-              <div class="sf-auth-left">
-                <span class="sf-auth-email" id="sf-auth-label">Signed in</span>
-              </div>
-
-              <div class="sf-auth-actions">
-                <button class="btn btn-secondary" id="btn-go-inbox" type="button">Go to Inbox</button>
-                <button class="btn btn-quiet" id="btn-sign-out" type="button" disabled>Sign out</button>
-              </div>
-            </div>
-
-            <div class="note">
-              <p style="margin:0;">
-                Signed send requires sign-in (Email link or Google). It is required for Secure and Personal codes.
-              </p>
-            </div>
-
-            <div id="status-slot-top" class="sf-status-slot hidden"></div>
-
-            <div class="video-card" id="video-signed" aria-label="Walkthrough">
-              <h2 style="margin-top:0;">Walkthrough</h2>
-              <p class="lead" style="margin-bottom: 0;">
-                A short demonstration of the web send flow. No autoplay. Controls only.
-              </p>
-
-              <div class="video-frame">
-                <video controls preload="metadata" playsinline poster="./poster.png">
-                  <source src="./walkthrough.mp4" type="video/mp4" />
-                  Sorry — your browser can’t play this video.
-                </video>
-              </div>
-
-              <small class="help">
-                Demonstration supports clarity. UI stays calm and predictable.
-              </small>
-            </div>
-          </div>
-
-          <div class="col">
-            <div class="sf-subhead" id="sf-delvee-cta" role="link" tabindex="0" aria-label="Create pulse lobby with Delvee">
-              Create pulse lobby with Delvee
-            </div>
-
-            <div class="field" style="margin-top: 10px;">
-              <label for="signed-code">Secure or Personal code</label>
-              <input id="signed-code" type="text" inputmode="text" placeholder="Paste a Secure (SFS-…) or Personal (SF-…) code" />
-            </div>
-
-            <div class="field">
-              <label for="signed-body">Add a message</label>
-              <textarea id="signed-body" maxlength="1200" placeholder="Add a message…"></textarea>
-            </div>
-
-            <div class="actions">
-              <!-- ✅ Keep standard button styling (matches index page) -->
-              <button class="btn btn-lg btn-primary" id="btn-signed-send" type="button" disabled>Encrypt and send</button>
-              <button class="btn btn-lg btn-quiet" id="btn-signed-clear" type="button">Clear</button>
-            </div>
-
-            <small class="help">
-              Only the recipient device can decrypt. If a code is invalid, you’ll be told explicitly.
-            </small>
-
-            <h2>Delivery</h2>
-            <div class="panel">
-              <p class="panel-sub" id="signed-delivery-sub" style="margin-bottom: var(--s-3);">
-                Sign in (Email link or Google) to send Signed (Secure / Personal).
-              </p>
-
-              <!-- Preset times (only for Tomorrow / In 1 day / In a week modes) -->
-              <div class="chips" aria-label="Preset times (signed)" id="signed-time-chips">
-                <button class="chip" type="button" aria-pressed="false" data-time="08:00">8am</button>
-                <button class="chip" type="button" aria-pressed="true"  data-time="13:00">1pm</button>
-                <button class="chip" type="button" aria-pressed="false" data-time="18:00">6pm</button>
-              </div>
-
-              <!-- Pulse controls (only for Pulse mode) -->
-              <div class="chips hidden" aria-label="Pulse durations (signed)" id="signed-pulse-minutes">
-                <button class="chip" type="button" aria-pressed="true"  data-min="2">2 minutes</button>
-                <button class="chip" type="button" aria-pressed="false" data-min="3">3 minutes</button>
-              </div>
-
-              <div class="chips hidden" aria-label="Pulse type (signed)" id="signed-pulse-type">
-                <button class="chip" type="button" aria-pressed="true"  data-type="single">Single-message</button>
-                <button class="chip" type="button" aria-pressed="false" data-type="multi">Multi-message</button>
-              </div>
-
-              <!-- ✅ Day options moved into this row (not a separate “tomorrow” section) -->
-              <div class="sf-adv-row hidden" id="signed-advanced-row" aria-label="Signed delivery modes">
-                <button class="chip sf-adv-btn" type="button" aria-pressed="true"  data-mode="pulse">Pulse</button>
-                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="tomorrow">Tomorrow</button>
-                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="in1day">In 1 day</button>
-                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="week">In a week</button>
-                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="10m">In 10 minutes</button>
-                <button class="chip sf-adv-btn" type="button" aria-pressed="false" data-mode="1h">In 1 hour</button>
-              </div>
-
-              <!-- Pulse session timer/controls (only visible in Pulse mode) -->
-              <div class="sf-pulse-panel hidden" id="sf-pulse-session-panel" aria-label="Pulse session">
-                <div class="sf-pulse-row">
-                  <div class="sf-pulse-timer" id="sf-pulse-timer">Not running.</div>
-                  <div class="actions" style="margin:0;">
-                    <button class="btn btn-secondary hidden" id="sf-pulse-add2" type="button">Add 2 minutes</button>
-                    <button class="btn btn-quiet hidden" id="sf-pulse-stop" type="button">Stop</button>
-                  </div>
-                </div>
-                <div class="sf-pulse-note" id="sf-pulse-note">
-                  Single-message pulse uses <b>no credits</b>. Multi-message uses <b>1 credit</b> for the session.
-                  “Add 2 minutes” uses <b>1 credit</b>. If you stop before any message is sent, credits are refunded.
-                </div>
-              </div>
-
-              <small class="help" id="signed-delivery-help" style="margin-top: 10px;">
-                Pulse opens Delvee. Credits (if required) are enforced when starting sessions in Delvee.
-              </small>
-            </div>
-
-            <div class="panel" style="margin-top: var(--s-6);">
-              <p class="panel-title" style="margin-top:0;">Delvee credits</p>
-              <p class="panel-sub">
-                You get <b>2 free credits</b> with Setfeed when you sign in with Google (one per user). More credits unlock more sessions.
-              </p>
-
-              <div class="actions" style="margin-top: 10px;">
-                <a class="btn btn-primary" href="https://delvee.app" rel="noreferrer">Open Delvee</a>
-                <button class="btn btn-secondary" id="btn-claim-credits" type="button">Claim free credits</button>
-              </div>
-
-              <small class="help" id="sf-credits-help">
-                Packages: 10 credits = £2 · 20 credits = £3 · unlimited session = £3.50
-              </small>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Rolling panel -->
-      <div id="panel-rolling" role="tabpanel" aria-labelledby="tab-rolling">
-        <div class="row">
-          <div class="col">
-            <div class="field">
-              <label for="rolling-code">Rolling code</label>
-              <input id="rolling-code" type="text" inputmode="text" placeholder="Paste a Rolling code (SFR-…)" />
-            </div>
-
-            <div class="video-card" id="video-rolling" aria-label="Walkthrough">
-              <h2 style="margin-top:0;">Walkthrough</h2>
-              <p class="lead" style="margin-bottom: 0;">
-                A short demonstration of the rolling send flow. No autoplay. Controls only.
-              </p>
-
-              <div class="video-frame">
-                <video controls preload="metadata" playsinline poster="./poster.png">
-                  <source src="./walkthrough.mp4" type="video/mp4" />
-                  Sorry — your browser can’t play this video.
-                </video>
-              </div>
-
-              <small class="help">
-                Rolling is constrained. Expect explicit errors if expired or over limits.
-              </small>
-            </div>
-          </div>
-
-          <div class="col">
-            <div class="field">
-              <label for="rolling-body">Add a message</label>
-              <textarea id="rolling-body" maxlength="1200" placeholder="Add a message…"></textarea>
-            </div>
-
-            <div class="actions">
-              <button class="btn btn-lg btn-primary" id="btn-rolling-send" type="button" disabled>Encrypt and send</button>
-              <button class="btn btn-lg btn-quiet" id="btn-rolling-clear" type="button">Clear</button>
-            </div>
-
-            <small class="help">
-              Rolling is meant for temporary sharing. It may expire or become invalid after use.
-            </small>
-
-            <h2>Delivery (rolling)</h2>
-            <div class="panel">
-              <p class="panel-sub" style="margin-bottom: var(--s-3);">
-                Rolling is constrained to tomorrow at 08:00, 13:00, or 18:00 (your local time).
-              </p>
-              <div class="chips" aria-label="Tomorrow preset times (rolling)" id="rolling-chips">
-                <button class="chip" type="button" aria-pressed="false" data-time="08:00">8am</button>
-                <button class="chip" type="button" aria-pressed="true"  data-time="13:00">1pm</button>
-                <button class="chip" type="button" aria-pressed="false" data-time="18:00">6pm</button>
-              </div>
-            </div>
-
-            <h2 style="margin-top: var(--s-6);">What to expect</h2>
-            <ul>
-              <li>No sign-in required.</li>
-              <li>Strict guardrails (validity, usage limits, rate limiting).</li>
-              <li>Clear errors when something can’t be sent.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <!-- Status container -->
-      <div id="status-slot-bottom">
-        <h2>Status</h2>
-        <div class="status" id="status-box" role="status" aria-live="polite">
-          <div class="status-title">
-            <span class="dot" id="status-dot"></span>
-            <span id="status-title">Not connected</span>
-          </div>
-          <p class="status-line" id="status-line">Ready.</p>
-        </div>
-      </div>
-
-      <footer>
-        <div>© <span id="y"></span> Setfeed</div>
-        <div>
-          <a href="./security.html">Security</a>
-          <span class="sep">·</span>
-          <a href="./privacy.html">Privacy</a>
-          <span class="sep">·</span>
-          <a href="mailto:security@setfeed.app">security@setfeed.app</a>
-        </div>
-      </footer>
-    </div>
-  </div>
-
-  <script>
-    document.getElementById("y").textContent = new Date().getFullYear();
-
-    const auth = window.sfAuth;
-    const functions = window.sfFunctions;
-
-    // Tabs
-    const tabSigned = document.getElementById("tab-signed");
-    const tabRolling = document.getElementById("tab-rolling");
-    const panelSigned = document.getElementById("panel-signed");
-    const panelRolling = document.getElementById("panel-rolling");
-
-    let userChoseTab = false;
-
-    function setTab(which) {
-      const signed = which === "signed";
-      tabSigned.setAttribute("aria-selected", signed ? "true" : "false");
-      tabRolling.setAttribute("aria-selected", signed ? "false" : "true");
-      panelSigned.classList.toggle("hidden", !signed);
-      panelRolling.classList.toggle("hidden", signed);
-    }
-    tabSigned.addEventListener("click", () => { userChoseTab = true; setTab("signed"); });
-    tabRolling.addEventListener("click", () => { userChoseTab = true; setTab("rolling"); });
-
-    // Status helper
-    const statusDot = document.getElementById("status-dot");
-    const statusTitle = document.getElementById("status-title");
-    const statusLine = document.getElementById("status-line");
-    function setStatus(kind, title, line) {
-      statusDot.className = "dot";
-      if (kind === "good") statusDot.classList.add("good");
-      if (kind === "warn") statusDot.classList.add("warn");
-      statusTitle.textContent = title;
-      statusLine.textContent = line;
-    }
-
-    // Elements
-    const signedEmail = document.getElementById("signed-email");
-    const signedCode = document.getElementById("signed-code");
-    const signedBody = document.getElementById("signed-body");
-    const btnSendLink = document.getElementById("btn-send-link");
-    const btnGoogle = document.getElementById("btn-google");
-    const btnSignOut = document.getElementById("btn-sign-out");
-    const btnGoInbox = document.getElementById("btn-go-inbox");
-    const btnSignedSend = document.getElementById("btn-signed-send");
-    const btnSignedClear = document.getElementById("btn-signed-clear");
-    const videoSigned = document.getElementById("video-signed");
-    const signedDeliverySub = document.getElementById("signed-delivery-sub");
-    const signedDeliveryHelp = document.getElementById("signed-delivery-help");
-    const signedAdvancedRow = document.getElementById("signed-advanced-row");
-    const authBanner = document.getElementById("sf-auth-banner");
-    const authLabel = document.getElementById("sf-auth-label");
-
-    const rollingCodeInput = document.getElementById("rolling-code");
-    const rollingBodyInput = document.getElementById("rolling-body");
-    const btnRollingSend = document.getElementById("btn-rolling-send");
-    const btnRollingClear = document.getElementById("btn-rolling-clear");
-    const videoRolling = document.getElementById("video-rolling");
-
-    // Image preview (signed, pulse mode only)
-    const pulseImageCard = document.getElementById("sf-pulse-image-card");
-    const sfImageFile = document.getElementById("sf-image-file");
-    const btnPulseImage = document.getElementById("btn-pulse-image");
-    const previewEmpty = document.getElementById("sf-preview-empty");
-    const previewImg = document.getElementById("sf-preview-img");
-    const sfImageHelp = document.getElementById("sf-image-help");
-    const creditsPill = document.getElementById("sf-credits-pill");
-    const btnClaimCredits = document.getElementById("btn-claim-credits");
-
-    const sfBtnChooseImage = document.getElementById("sf-btn-choose-image");
-    const sfFileChipLabel = document.getElementById("sf-file-chip-label");
-
-    // Delivery chips
-    const signedTimeChipsEl = document.getElementById("signed-time-chips");
-    const signedPulseMinutesEl = document.getElementById("signed-pulse-minutes");
-    const signedPulseTypeEl = document.getElementById("signed-pulse-type");
-
-    // Pulse session UI
-    const pulseSessionPanel = document.getElementById("sf-pulse-session-panel");
-    const pulseTimerEl = document.getElementById("sf-pulse-timer");
-    const btnPulseAdd2 = document.getElementById("sf-pulse-add2");
-    const btnPulseStop = document.getElementById("sf-pulse-stop");
-    const pulseNoteEl = document.getElementById("sf-pulse-note");
-
-    function setSignedAuthedFlag(isAuthed) {
-      document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
-      document.querySelectorAll(".no-auth-only").forEach(el => el.classList.toggle("hidden", isAuthed));
-    }
-
-    // ✅ Finalize redirect-based sign-in if fallback was used anywhere
-    auth.getRedirectResult().catch((e) => {
-      console.error(e);
-      const code = (e && e.code) ? String(e.code) : "";
-      if (code === "auth/unauthorized-domain") {
-        setStatus("warn", "Auth domain not authorized", "Add setfeed.app in Firebase Auth → Authorized domains.");
-      } else if (code) {
-        setStatus("warn", "Sign-in failed", code);
-      }
-    });
-
-    // ✅ Popup-first sign-in (fallback to redirect if blocked)
-    async function signInGooglePopupFirst() {
-      setStatus("good", "Signing in…", "Opening Google sign-in…");
-
-      try { await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch (_) {}
-
-      const provider = new firebase.auth.GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: "select_account" });
-
-      try {
-        await auth.signInWithPopup(provider);
-        setStatus("good", "Signed in", "Signed sending is available.");
-      } catch (e) {
-        console.warn("[popup] failed, falling back to redirect:", e);
-
-        const code = (e && e.code) ? String(e.code) : "";
-        const popupLikelyBlocked =
-          code === "auth/popup-blocked" ||
-          code === "auth/popup-closed-by-user" ||
-          code === "auth/cancelled-popup-request" ||
-          code === "auth/operation-not-supported-in-this-environment";
-
-        if (!popupLikelyBlocked && code === "auth/unauthorized-domain") {
-          setStatus("warn", "Domain not authorized", "Add setfeed.app in Firebase Auth → Authorized domains.");
-          return;
-        }
-
-        try {
-          await auth.signInWithRedirect(provider);
-        } catch (err) {
-          console.error(err);
-          setStatus("warn", "Couldn’t sign in", (err && err.code) ? String(err.code) : "Sign-in failed.");
-        }
-      }
-    }
-
-    btnGoogle.addEventListener("click", (e) => {
-      e.preventDefault();
-      signInGooglePopupFirst();
-    });
-
-    // Email link sign-in
-    const EMAIL_FOR_SIGNIN_KEY = "sf_email_for_signin";
-
-    btnSendLink.addEventListener("click", async () => {
-      const email = (signedEmail && signedEmail.value ? signedEmail.value.trim() : "");
-      if (!email) {
-        setStatus("warn", "Email needed", "Enter your email to request a sign-in link.");
-        return;
-      }
-      try {
-        setStatus("good", "Sending link…", "Check your inbox for the sign-in link.");
-        const actionCodeSettings = { url: `${SITE_ORIGIN}/send.html#finishSignIn`, handleCodeInApp: true };
-        await auth.sendSignInLinkToEmail(email, actionCodeSettings);
-        try { localStorage.setItem(EMAIL_FOR_SIGNIN_KEY, email); } catch (_) {}
-        setStatus("good", "Link sent", "Open the link from your email on this device to finish signing in.");
-      } catch (e) {
-        console.error(e);
-        setStatus("warn", "Couldn’t send link", "Email-link sign-in failed. Verify Auth is enabled and your domain is authorized.");
-      }
-    });
-
-    (async function finishEmailLinkIfPresent(){
-      try {
-        const href = window.location.href;
-        if (!auth.isSignInWithEmailLink(href)) return;
-
-        let email = "";
-        try { email = localStorage.getItem(EMAIL_FOR_SIGNIN_KEY) || ""; } catch (_) {}
-        if (!email) {
-          email = window.prompt("Confirm your email to finish sign-in:");
-          if (!email) {
-            setStatus("warn", "Sign-in not finished", "Email is required to finish sign-in.");
-            return;
-          }
-        }
-        setStatus("good", "Signing in…", "Finishing email-link sign-in…");
-        await auth.signInWithEmailLink(email, href);
-        try { localStorage.removeItem(EMAIL_FOR_SIGNIN_KEY); } catch (_) {}
-        setStatus("good", "Signed in", "Signed sending is available.");
-        history.replaceState(null, "", "./send.html#signin");
-      } catch (e) {
-        console.error(e);
-        setStatus("warn", "Sign-in failed", "Couldn’t finish email-link sign-in. Try sending a new link.");
-      }
-    })();
-
-    btnSignOut.addEventListener("click", async () => {
-      try {
-        await auth.signOut();
-        setStatus("warn", "Signed out", "Signed sending is unavailable until you sign in again.");
-      } catch (e) {
-        console.error(e);
-        setStatus("warn", "Couldn’t sign out", "Try again.");
-      }
-    });
-
-    btnGoInbox.addEventListener("click", () => { window.location.href = "./inbox.html"; });
-
-    // Clickable subhead -> Delvee
-    const delveeCta = document.getElementById("sf-delvee-cta");
-    if (delveeCta) {
-      const go = () => { window.location.href = "https://delvee.app"; };
-      delveeCta.addEventListener("click", go);
-      delveeCta.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") go(); });
-    }
-
-    // Status movement slots
-    const statusBox = document.getElementById("status-box");
-    const statusSlotTop = document.getElementById("status-slot-top");
-    const statusSlotBottom = document.getElementById("status-slot-bottom");
-
-    function moveStatusToTop(isAuthed) {
-      if (!statusBox || !statusSlotTop || !statusSlotBottom) return;
-      if (isAuthed) {
-        statusSlotTop.classList.remove("hidden");
-        statusSlotBottom.classList.add("hidden");
-        statusSlotTop.appendChild(statusBox);
-      } else {
-        statusSlotTop.classList.add("hidden");
-        statusSlotBottom.classList.remove("hidden");
-        statusSlotBottom.appendChild(statusBox);
-      }
-    }
-
-    // Credits (Delvee)
-    let creditsBalance = null;
-
-    function setCreditsUI(n) {
-      if (creditsPill) creditsPill.textContent = (typeof n === "number" && Number.isFinite(n)) ? `Credits: ${n}` : "Credits: —";
-      creditsBalance = (typeof n === "number" && Number.isFinite(n)) ? n : null;
-      refreshPulseImageEnabled();
-    }
-
-    async function loadCredits() {
-      if (!auth.currentUser) { setCreditsUI(null); return; }
-      try {
-        const call = functions.httpsCallable("getDelveeCreditsBalance");
-        const res = await call({});
-        const data = (res && res.data) ? res.data : {};
-        const bal = (typeof data.balance === "number") ? data.balance : (typeof data.credits === "number" ? data.credits : null);
-        setCreditsUI((typeof bal === "number") ? bal : null);
-      } catch (e) {
-        setCreditsUI(null);
-      }
-    }
-
-    btnClaimCredits.addEventListener("click", async () => {
-      if (!auth.currentUser) { setStatus("warn", "Sign-in required", "Sign in with Google to claim free credits."); return; }
-      try {
-        btnClaimCredits.disabled = true;
-        setStatus("good", "Claiming…", "Requesting starter credits…");
-        const call = functions.httpsCallable("claimDelveeStarterCredits");
-        await call({});
-        await loadCredits();
-        setStatus("good", "Credits updated", "Starter credits claimed (if eligible).");
-      } catch (e) {
-        console.warn("[claimDelveeStarterCredits] failed:", e);
-        setStatus("warn", "Couldn’t claim", "If you already claimed, this is expected. Otherwise deploy the credits function.");
-      } finally {
-        btnClaimCredits.disabled = false;
-      }
-    });
-
-    // ---------------------------
-    // Scheduling UI (Signed)
-    // ---------------------------
-    // Modes:
-    // - pulse: Delvee session (no message required on Setfeed)
-    // - tomorrow / in1day / week: scheduled message at preset time
-    // - 10m / 1h: scheduled message relative (no preset times shown)
-    let signedMode = "pulse"; // pulse | tomorrow | in1day | week | 10m | 1h
-    let signedPresetTime = "13:00";
-
-    let signedPulseMinutes = 2;
-    let signedPulseType = "single"; // single | multi
-
-    const signedTimeChips = Array.from(document.querySelectorAll('#signed-time-chips .chip[data-time]'));
-    const signedPulseMinuteChips = Array.from(document.querySelectorAll('#signed-pulse-minutes .chip[data-min]'));
-    const signedPulseTypeChips = Array.from(document.querySelectorAll('#signed-pulse-type .chip[data-type]'));
-    const signedAdvBtns = Array.from(document.querySelectorAll('#signed-advanced-row .sf-adv-btn[data-mode]'));
-
-    // Pulse session state (client-side UI timer)
-    let pulseRunning = false;
-    let pulseEndsAtMs = 0;
-    let pulseTick = null;
-
-    function fmtMmSs(ms) {
-      const s = Math.max(0, Math.ceil(ms / 1000));
-      const mm = String(Math.floor(s / 60)).padStart(2, "0");
-      const ss = String(s % 60).padStart(2, "0");
-      return `${mm}:${ss}`;
-    }
-
-    function setPulseNote() {
-      if (!pulseNoteEl) return;
-      if (signedPulseType === "multi") {
-        pulseNoteEl.innerHTML =
-          'Multi-message uses <b>1 credit</b> for the session. “Add 2 minutes” uses <b>1 credit</b>. If you stop before any message is sent, credits are refunded.';
-      } else {
-        pulseNoteEl.innerHTML =
-          'Single-message pulse uses <b>no credits</b>. “Add 2 minutes” uses <b>1 credit</b>. If you stop before any message is sent, credits are refunded.';
-      }
-    }
-
-    function stopPulseTimerUI(opts = { silent: false }) {
-      pulseRunning = false;
-      pulseEndsAtMs = 0;
-      if (pulseTick) { clearInterval(pulseTick); pulseTick = null; }
-
-      if (pulseTimerEl) pulseTimerEl.textContent = "Not running.";
-      if (btnPulseAdd2) btnPulseAdd2.classList.add("hidden");
-      if (btnPulseStop) btnPulseStop.classList.add("hidden");
-
-      btnSignedSend.disabled = true; // re-evaluated by applyBodyGuardrails()
-      if (!opts.silent) {
-        setStatus("warn", "Pulse stopped", "If no message was sent, credits are refunded automatically.");
-      }
-
-      applyBodyGuardrails();
-      refreshPulseImageEnabled();
-      updateSignedSendLabel();
-    }
-
-    function startPulseTimerUI(minutes) {
-      pulseRunning = true;
-      pulseEndsAtMs = Date.now() + (minutes * 60 * 1000);
-
-      if (btnPulseAdd2) btnPulseAdd2.classList.remove("hidden");
-      if (btnPulseStop) btnPulseStop.classList.remove("hidden");
-
-      btnSignedSend.disabled = true; // disabled while running (uses native disabled styling)
-      updateSignedSendLabel();
-
-      if (pulseTick) clearInterval(pulseTick);
-      pulseTick = setInterval(() => {
-        const remaining = pulseEndsAtMs - Date.now();
-        if (pulseTimerEl) pulseTimerEl.textContent = `Summary in ${fmtMmSs(remaining)}`;
-        if (remaining <= 0) {
-          clearInterval(pulseTick);
-          pulseTick = null;
-          pulseRunning = false;
-          if (pulseTimerEl) pulseTimerEl.textContent = "Summary should be sent now.";
-          setStatus("good", "Pulse complete", "Summary should be delivered shortly.");
-          applyBodyGuardrails();
-          updateSignedSendLabel();
-        }
-      }, 250);
-
-      if (pulseTimerEl) pulseTimerEl.textContent = `Summary in ${fmtMmSs(pulseEndsAtMs - Date.now())}`;
-    }
-
-    function openDelveePulse() {
-      const params = new URLSearchParams({
-        from: "setfeed",
-        pulse: "session",
-        minutes: String(signedPulseMinutes),
-        type: signedPulseType
-      });
-      const url = `https://delvee.app/index.html?${params.toString()}`;
-      try { window.open(url, "_blank", "noopener"); } catch (_) { window.location.href = url; }
-    }
-
-    function updateSignedSendLabel() {
-      if (signedMode === "pulse") {
-        btnSignedSend.textContent = pulseRunning ? "Pulse running…" : "Start pulse session";
-      } else {
-        btnSignedSend.textContent = "Encrypt and send";
-      }
-    }
-
-    function setSignedTimeHighlight() {
-      signedTimeChips.forEach(b => {
-        const t = b.getAttribute("data-time") || "";
-        b.setAttribute("aria-pressed", (t === signedPresetTime) ? "true" : "false");
-      });
-    }
-
-    function setPulseMinutesHighlight() {
-      signedPulseMinuteChips.forEach(b => {
-        const m = parseInt(b.getAttribute("data-min") || "2", 10);
-        b.setAttribute("aria-pressed", (m === signedPulseMinutes) ? "true" : "false");
-      });
-    }
-
-    function setPulseTypeHighlight() {
-      signedPulseTypeChips.forEach(b => {
-        const t = b.getAttribute("data-type") || "single";
-        b.setAttribute("aria-pressed", (t === signedPulseType) ? "true" : "false");
-      });
-    }
-
-    function applySignedModeUI() {
-      const isPulse = (signedMode === "pulse");
-      const isPresetDay = (signedMode === "tomorrow" || signedMode === "in1day" || signedMode === "week");
-
-      if (signedTimeChipsEl) signedTimeChipsEl.classList.toggle("hidden", !isPresetDay);
-      if (signedPulseMinutesEl) signedPulseMinutesEl.classList.toggle("hidden", !isPulse);
-      if (signedPulseTypeEl) signedPulseTypeEl.classList.toggle("hidden", !isPulse);
-
-      if (pulseImageCard) pulseImageCard.classList.toggle("hidden", !isPulse);
-      if (pulseSessionPanel) pulseSessionPanel.classList.toggle("hidden", !isPulse);
-
-      setPulseNote();
-      updateSignedSendLabel();
-      refreshPulseImageEnabled();
-    }
-
-    function setSignedMode(nextMode) {
-      signedMode = nextMode || "tomorrow";
-
-      signedAdvBtns.forEach(b => b.setAttribute("aria-pressed", "false"));
-      const btn = signedAdvBtns.find(b => (b.getAttribute("data-mode") || "") === signedMode);
-      if (btn) btn.setAttribute("aria-pressed", "true");
-
-      // Leaving pulse mode should stop the timer UI (avoid confusing background timer)
-      if (signedMode !== "pulse" && pulseRunning) stopPulseTimerUI({ silent: true });
-
-      applySignedModeUI();
-      applyBodyGuardrails();
-    }
-
-    signedAdvBtns.forEach(btn => btn.addEventListener("click", (e) => { e.preventDefault();
-      const mode = btn.getAttribute("data-mode") || "tomorrow";
-      const y = window.scrollY; setSignedMode(mode); window.scrollTo(0, y);
-    }));
-
-    signedTimeChips.forEach(btn => btn.addEventListener("click", () => {
-      signedPresetTime = btn.getAttribute("data-time") || "13:00";
-      setSignedTimeHighlight();
-      setSignedMode(signedMode); // keep current mode
-    }));
-
-    signedPulseMinuteChips.forEach(btn => btn.addEventListener("click", () => {
-      signedPulseMinutes = parseInt(btn.getAttribute("data-min") || "2", 10);
-      setPulseMinutesHighlight();
-      setSignedMode("pulse");
-    }));
-
-    signedPulseTypeChips.forEach(btn => btn.addEventListener("click", () => {
-      signedPulseType = (btn.getAttribute("data-type") || "single");
-      setPulseTypeHighlight();
-      setPulseNote();
-      setSignedMode("pulse");
-    }));
-
-    // Rolling chips
-    let rollingPresetTime = "13:00";
-    document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll('#rolling-chips .chip[data-time]').forEach(b => b.setAttribute("aria-pressed", "false"));
-        btn.setAttribute("aria-pressed", "true");
-        rollingPresetTime = btn.getAttribute("data-time") || "13:00";
-      });
-    });
-
-    // Image preview helpers
-    function setPreviewFile(file) {
-      if (!file) {
-        previewImg.src = "";
-        previewImg.classList.add("hidden");
-        previewEmpty.classList.remove("hidden");
-        return;
-      }
-      const url = URL.createObjectURL(file);
-      previewImg.src = url;
-      previewImg.classList.remove("hidden");
-      previewEmpty.classList.add("hidden");
-    }
-
-    function renderChosenImageName() {
-      const f = (sfImageFile && sfImageFile.files && sfImageFile.files[0]) ? sfImageFile.files[0] : null;
-      if (!sfFileChipLabel) return;
-
-      if (!f) { sfFileChipLabel.textContent = "Choose image"; return; }
-
-      sfFileChipLabel.innerHTML = "";
-      const name = document.createElement("span");
-      name.className = "sf-file-name";
-      name.textContent = f.name;
-
-      const clear = document.createElement("button");
-      clear.className = "sf-file-clear";
-      clear.type = "button";
-      clear.textContent = "×";
-      clear.setAttribute("aria-label", "Clear selected image");
-      clear.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        sfImageFile.value = "";
-        setPreviewFile(null);
-        renderChosenImageName();
-        refreshPulseImageEnabled();
-      });
-
-      sfFileChipLabel.appendChild(name);
-      sfFileChipLabel.appendChild(clear);
-    }
-
-    if (sfBtnChooseImage && sfImageFile) {
-      sfBtnChooseImage.addEventListener("click", () => sfImageFile.click());
-      sfImageFile.addEventListener("change", () => {
-        const f = sfImageFile.files && sfImageFile.files[0] ? sfImageFile.files[0] : null;
-        setPreviewFile(f);
-        renderChosenImageName();
-        refreshPulseImageEnabled();
-      });
-      renderChosenImageName();
-    }
-
-    function refreshPulseImageEnabled() {
-      const isAuthed = !!auth.currentUser;
-      const fileOk = !!(sfImageFile && sfImageFile.files && sfImageFile.files[0]);
-      const isPulseMode = (signedMode === "pulse");
-      btnPulseImage.disabled = !(isAuthed && fileOk && isPulseMode);
-
-      if (sfImageHelp) {
-        if (!isAuthed) sfImageHelp.textContent = "Sign in to open Delvee pulse image.";
-        else if (!isPulseMode) sfImageHelp.textContent = "Select “Pulse” to enable image preview + open Delvee.";
-        else if (!fileOk) sfImageHelp.textContent = "Choose an image to continue.";
-        else sfImageHelp.textContent = "Opens Delvee. Credits (if required) are handled inside Delvee when starting sessions.";
-      }
-    }
-
-    btnPulseImage.addEventListener("click", async () => {
-      const user = auth.currentUser;
-      const file = sfImageFile.files && sfImageFile.files[0] ? sfImageFile.files[0] : null;
-
-      if (!user) { setStatus("warn", "Sign-in required", "Sign in to open Delvee pulse image."); return; }
-      if (!file) { setStatus("warn", "No image", "Choose an image first."); return; }
-      if (signedMode !== "pulse") { setStatus("warn", "Choose Pulse", "Select Pulse to route images to Delvee."); return; }
-
-      setStatus("good", "Opening Delvee…", "Continuing image pulse in Delvee.");
-      const url = `https://delvee.app/index.html?from=setfeed&pulse=image`;
-      try { window.open(url, "_blank", "noopener"); } catch (_) { window.location.href = url; }
-    });
-
-    // Guardrail: prevent receive codes in message body
-    function messageContainsSetfeedReceiveCode(text) {
-      const s = String(text || "");
-      const hasPrefixed =
-        /\bSF\s*-\s*[A-Z0-9]{4}\s*-\s*[A-Z0-9]{4}\b/i.test(s) ||
-        /\bSFS\s*-\s*[A-Z0-9]{10,}\b/i.test(s) ||
-        /\bSFR\s*-\s*[A-Z0-9]{10,}\b/i.test(s);
-      if (hasPrefixed) return true;
-      const tokens = s.match(/[A-Za-z0-9]{4,}(?:\s*-\s*[A-Za-z0-9]{4,}){1,}/g) || [];
-      return tokens.some(t => {
-        const tok = t.replace(/\s+/g, "");
-        return /^(?:[A-Z0-9]{4,}-){1,}[A-Z0-9]{4,}$/i.test(tok) && tok.length >= 12;
-      });
-    }
-
-    function applyBodyGuardrails() {
-      const isAuthed = !!auth.currentUser;
-      const signedHas = messageContainsSetfeedReceiveCode(signedBody.value);
-      const rollingHas = messageContainsSetfeedReceiveCode(rollingBodyInput.value);
-
-      if (signedHas || rollingHas) {
-        setStatus("warn", "Not allowed in Setfeed", "That looks like a Setfeed receive code inside the message. Remove the code.");
-      }
-
-      // Signed:
-      // - pulse mode: allow starting session with auth only
-      // - other modes: require code + message
-      let signedBase = false;
-      if (signedMode === "pulse") signedBase = isAuthed && !pulseRunning;
-      else signedBase = isAuthed && signedCode.value.trim().length > 0 && signedBody.value.trim().length > 0;
-
-      btnSignedSend.disabled = !(signedBase && !signedHas);
-
-      // Rolling:
-      const rollingBase = rollingCodeInput.value.trim().length > 0 && rollingBodyInput.value.trim().length > 0;
-      btnRollingSend.disabled = !(rollingBase && !rollingHas);
-
-      updateSignedSendLabel();
-      return { signedOk: !signedHas, rollingOk: !rollingHas };
-    }
-
-    // Crypto helpers (WebCrypto)
-    function normalizeCodeAndroid(raw) { return raw.trim().toUpperCase().replace(/[\s-]/g, ""); }
-    function bytesToB64(bytes) {
-      let binary = "";
-      const chunk = 0x8000;
-      for (let i = 0; i < bytes.length; i += chunk) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-      }
-      return btoa(binary);
-    }
-    function abToB64(ab) { return bytesToB64(new Uint8Array(ab)); }
-    async function sha256Hex(str) {
-      const data = new TextEncoder().encode(str);
-      const hash = await crypto.subtle.digest("SHA-256", data);
-      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
-    }
-    async function deriveAesKeyFromPassphrase(passphrase, saltBytes) {
-      const passBytes = new TextEncoder().encode(passphrase);
-      const baseKey = await crypto.subtle.importKey("raw", passBytes, { name: "PBKDF2" }, false, ["deriveKey"]);
-      return await crypto.subtle.deriveKey(
-        { name: "PBKDF2", salt: saltBytes, iterations: 100000, hash: "SHA-256" },
-        baseKey,
-        { name: "AES-GCM", length: 256 },
-        false,
-        ["encrypt", "decrypt"]
-      );
-    }
-    async function encryptBodyForCode(rawCode, plaintext) {
-      const passphrase = normalizeCodeAndroid(rawCode);
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const key = await deriveAesKeyFromPassphrase(passphrase, salt);
-      const ptBytes = new TextEncoder().encode(plaintext);
-      const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, ptBytes);
+  }
+
+  const createdAtUtc = asStringOrNull(sdoc.createdAtUtc) ?? null;
+
+  const header: string[] = [];
+  header.push("Setfeed — private pulse summary");
+  if (createdAtUtc) header.push(`Created: ${createdAtUtc}`);
+  header.push(`Pulses: ${pulses.length} (text ${textCount} · images ${imageCount})`);
+  header.push("");
+
+  const body = [...header, ...(lines.length ? lines : ["• (no pulses)"])].join("\n");
+  const summaryText = clampText(body, 6000);
+
+  return { summaryText, attachments };
+}
+
+/**
+ * Start a 2-minute private pulse session.
+ * ✅ Charges 1 credit (idempotent via clientRequestId) unless admin/privateUnlimited.
+ * Input: { recipientCodeHash, clientRequestId }
+ * Output: { sessionId, expiresAtMillis, creditsBalanceAfter, adminBypass?, privateUnlimited? }
+ */
+export const createSignedPrivatePulseSession = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuthUid(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const recipientCodeHash = requireStringField(data, "recipientCodeHash", 256);
+  const clientRequestId = requireStringField(data, "clientRequestId", 128);
+
+  const sessionId = `PS_${uid}_${clientRequestId}`;
+  const sref = privateSessionRef(sessionId);
+
+  const out = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(sref);
+    const nowMs = Date.now();
+
+    if (snap.exists) {
+      const d = (snap.data() ?? {}) as AnyMap;
       return {
-        ciphertextB64: abToB64(ct),
-        ivB64: bytesToB64(iv),
-        saltB64: bytesToB64(salt),
-        normalizedPassphrase: passphrase
+        sessionId,
+        expiresAtMillis: typeof d.expiresAtMillis === "number" ? d.expiresAtMillis : nowMs,
+        creditsBalanceAfter: null as number | null,
+        alreadyExisted: true,
+        adminBypass: Boolean(d.adminBypass),
+        privateUnlimited: Boolean(d.privateUnlimited),
       };
     }
 
-    function getUserTimezone() { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; }
-    function pad2(n) { return String(n).padStart(2, "0"); }
-    function toLocalIsoWithOffset(date) {
-      const d = new Date(date.getTime());
-      d.setSeconds(0, 0);
-      const offMin = -d.getTimezoneOffset();
-      const sign = offMin >= 0 ? "+" : "-";
-      const abs = Math.abs(offMin);
-      const offH = pad2(Math.floor(abs / 60));
-      const offM = pad2(abs % 60);
-      const yyyy = d.getFullYear();
-      const mon = pad2(d.getMonth() + 1);
-      const day = pad2(d.getDate());
-      const hour = pad2(d.getHours());
-      const minute = pad2(d.getMinutes());
-      return `${yyyy}-${mon}-${day}T${hour}:${minute}:00${sign}${offH}:${offM}`;
-    }
+    const charged = await chargeCreditsOrThrow(tx, uid, PRIVATE_SESSION_CREDIT_COST, request);
 
-    function deliverAtLocalIsoInDaysAtPresetTime(daysFromToday, presetHHMM) {
-      const now = new Date();
-      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (daysFromToday || 1), 12, 0, 0, 0);
-      const parts = (presetHHMM || "13:00").split(":");
-      const hh = parseInt(parts[0] || "13", 10);
-      const mm = parseInt(parts[1] || "00", 10);
-      d.setHours(hh, mm, 0, 0);
-      return toLocalIsoWithOffset(d);
-    }
+    tx.set(sref, {
+      sessionId,
+      ownerUid: uid,
+      recipientCodeHash,
+      state: "OPEN",
+      createdAtUtc: nowIso(),
+      createdAtMillis: nowMs,
+      expiresAtMillis: nowMs + PRIVATE_SESSION_WINDOW_MS,
+      lastPulseAtMillis: 0,
+      pulsesCount: 0,
+      imagesCount: 0,
 
-    function deliverAtLocalIsoInMinutes(minutes) {
-      const d = new Date(Date.now() + minutes * 60 * 1000);
-      d.setSeconds(0, 0);
-      return toLocalIsoWithOffset(d);
-    }
+      // audit
+      creditCost: PRIVATE_SESSION_CREDIT_COST,
+      adminBypass: Boolean((charged as any).adminBypass),
+      privateUnlimited: Boolean((charged as any).privateUnlimited),
 
-    function randomClientRequestId(prefix) { return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
-
-    signedCode.addEventListener("input", () => { applyBodyGuardrails(); refreshPulseImageEnabled(); });
-    signedBody.addEventListener("input", () => { applyBodyGuardrails(); refreshPulseImageEnabled(); });
-    rollingCodeInput.addEventListener("input", () => { applyBodyGuardrails(); });
-    rollingBodyInput.addEventListener("input", () => { applyBodyGuardrails(); });
-
-    function renderAuthUI(user) {
-      const isAuthed = !!user;
-
-      if (!userChoseTab) setTab(isAuthed ? "signed" : "rolling");
-
-      setSignedAuthedFlag(isAuthed);
-
-      if (btnSignOut) btnSignOut.disabled = !isAuthed;
-
-      if (videoSigned) videoSigned.classList.toggle("hidden", isAuthed);
-      if (videoRolling) videoRolling.classList.toggle("hidden", isAuthed);
-
-      if (signedAdvancedRow) signedAdvancedRow.classList.toggle("hidden", !isAuthed);
-
-      if (authBanner && authLabel) {
-        authBanner.classList.toggle("hidden", !isAuthed);
-        if (isAuthed) authLabel.textContent = user.email || "Signed in";
-      }
-
-      moveStatusToTop(isAuthed);
-
-      if (signedDeliverySub && signedDeliveryHelp) {
-        if (isAuthed) {
-          signedDeliverySub.textContent = "Signed in: Pulse mode and advanced delivery available.";
-          signedDeliveryHelp.textContent = "Pulse opens Delvee. Credits (if required) are enforced when starting sessions in Delvee.";
-        } else {
-          signedDeliverySub.textContent = "Sign in (Email link or Google) to use Signed (Secure / Personal).";
-          signedDeliveryHelp.textContent = "Rolling is always available without signing in.";
-        }
-      }
-
-      // Default: Pulse first when authed
-      if (isAuthed) {
-        if (signedMode !== "pulse") setSignedMode("pulse");
-      } else {
-        if (signedMode === "pulse") setSignedMode("tomorrow");
-        if (pulseRunning) stopPulseTimerUI({ silent: true });
-      }
-
-      loadCredits().catch(() => {});
-      setSignedTimeHighlight();
-      setPulseMinutesHighlight();
-      setPulseTypeHighlight();
-      applySignedModeUI();
-      applyBodyGuardrails();
-      refreshPulseImageEnabled();
-      updateSignedSendLabel();
-    }
-
-    auth.onAuthStateChanged((user) => renderAuthUI(user));
-
-    // Pulse session buttons
-    if (btnPulseAdd2) {
-      btnPulseAdd2.addEventListener("click", async () => {
-        if (!pulseRunning) return;
-
-        pulseEndsAtMs += 2 * 60 * 1000;
-
-        try {
-          const call = functions.httpsCallable("extendDelveePulseSession");
-          await call({ minutes: 2 });
-        } catch (_) {
-          // No-op if function not deployed; Delvee is source of truth for credits.
-        }
-
-        if (typeof creditsBalance === "number" && Number.isFinite(creditsBalance)) {
-          setCreditsUI(Math.max(0, creditsBalance - 1));
-        }
-
-        setStatus("good", "Extended", "Added 2 minutes. (Uses 1 credit.)");
-      });
-    }
-
-    if (btnPulseStop) {
-      btnPulseStop.addEventListener("click", async () => {
-        if (!pulseRunning) return;
-
-        try {
-          const call = functions.httpsCallable("stopDelveePulseSession");
-          await call({});
-        } catch (_) {}
-
-        stopPulseTimerUI({ silent: false });
-      });
-    }
-
-    // Send handlers
-    function refreshRollingSendEnabled() {
-      const canSend = rollingCodeInput.value.trim().length > 0 && rollingBodyInput.value.trim().length > 0;
-      btnRollingSend.disabled = !canSend;
-    }
-
-    btnSignedSend.addEventListener("click", async () => {
-      const user = auth.currentUser;
-      const ok = applyBodyGuardrails().signedOk;
-      if (!ok) return;
-
-      if (!user) { setStatus("warn", "Sign-in required", "Sign in (Email link or Google) to use Signed."); return; }
-
-      // Pulse mode: start a pulse session (no message required here)
-      if (signedMode === "pulse") {
-        if (pulseRunning) return;
-        setStatus("good", "Starting pulse…", "Opening Delvee and starting the timer…");
-        openDelveePulse();
-        startPulseTimerUI(signedPulseMinutes);
-        applyBodyGuardrails();
-        return;
-      }
-
-      // Non-pulse: encrypted message scheduling
-      const code = signedCode.value.trim();
-      const body = signedBody.value.trim();
-      if (!code || !body) { setStatus("warn", "Missing details", "Add a code and a message, then try again."); return; }
-
-      try {
-        setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
-
-        const enc = await encryptBodyForCode(code, body);
-        const codeHash = await sha256Hex(enc.normalizedPassphrase);
-
-        let deliverAtLocalIso;
-
-        if (signedMode === "10m") deliverAtLocalIso = deliverAtLocalIsoInMinutes(10);
-        else if (signedMode === "1h") deliverAtLocalIso = deliverAtLocalIsoInMinutes(60);
-        else {
-          // tomorrow / in1day / week (preset time)
-          let days = 1;
-          if (signedMode === "in1day") days = 2;  // distinct from “tomorrow”
-          if (signedMode === "week") days = 7;
-          deliverAtLocalIso = deliverAtLocalIsoInDaysAtPresetTime(days, signedPresetTime);
-        }
-
-        const userTimezone = getUserTimezone();
-        const clientRequestId = randomClientRequestId("signed");
-
-        const callable = functions.httpsCallable("sendSignedCiphertext");
-        await callable({
-          codeHash,
-          ciphertext: enc.ciphertextB64,
-          iv: enc.ivB64,
-          salt: enc.saltB64,
-          deliverAtLocalIso,
-          userTimezone,
-          clientRequestId
-        });
-
-        setStatus("good", "Scheduled", "Redirecting to Inbox…");
-        window.location.href = "./inbox.html";
-      } catch (e) {
-        console.error(e);
-        const msg = (e && e.message) ? e.message : "Something went wrong while scheduling. Try again.";
-        setStatus("warn", "Couldn’t send", msg);
-      }
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    btnRollingSend.addEventListener("click", async () => {
-      const code = rollingCodeInput.value.trim();
-      const body = rollingBodyInput.value.trim();
-      const ok = applyBodyGuardrails().rollingOk;
-      if (!ok) return;
+    return {
+      sessionId,
+      expiresAtMillis: nowMs + PRIVATE_SESSION_WINDOW_MS,
+      creditsBalanceAfter: isAdminRequest(request) ? ADMIN_BALANCE_SENTINEL : ((charged as any).after ?? null),
+      alreadyExisted: false,
+      adminBypass: isAdminRequest(request),
+      privateUnlimited: Boolean((charged as any).privateUnlimited),
+    };
+  });
 
-      if (!code || !body) { setStatus("warn", "Missing details", "Add a rolling code and a message, then try again."); return; }
+  return { ok: true, ...out };
+});
 
-      try {
-        setStatus("good", "Sending…", "Encrypting in your browser and scheduling delivery…");
+export const signedPrivatePulseText = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuthUid(request);
+  const data = (request.data ?? {}) as AnyMap;
 
-        const enc = await encryptBodyForCode(code, body);
-        const codeHash = await sha256Hex(enc.normalizedPassphrase);
+  const sessionId = normalizePrivateSessionId(requireStringField(data, "sessionId", 240));
+  const clientPulseId = requireStringField(data, "clientPulseId", 64);
+  const text = requireStringField(data, "text", MAX_TEXT_CHARS);
 
-        const deliverAtLocalIso = deliverAtLocalIsoInDaysAtPresetTime(1, rollingPresetTime);
-        const userTimezone = getUserTimezone();
-        const clientRequestId = randomClientRequestId("rolling");
+  const sref = privateSessionRef(sessionId);
+  const pref = privatePulsesRef(sessionId).doc(`${uid}_${clientPulseId}`);
 
-        try {
-          const provision = functions.httpsCallable("provisionRollingEnvelope");
-          await provision({ codeHash });
-        } catch (e) { console.warn("[Rolling] provision failed (continuing):", e); }
+  const out = await db.runTransaction(async (tx) => {
+    const ssnap = await tx.get(sref);
+    if (!ssnap.exists) throw new HttpsError("not-found", "Session not found.", { code: "SESSION_NOT_FOUND" });
 
-        const callable = functions.httpsCallable("sendRollingCiphertext");
-        await callable({
-          codeHash,
-          ciphertext: enc.ciphertextB64,
-          iv: enc.ivB64,
-          salt: enc.saltB64,
-          deliverAtLocalIso,
-          userTimezone,
-          clientRequestId
-        });
+    const sdoc = (ssnap.data() ?? {}) as AnyMap;
+    if (sdoc.ownerUid !== uid) throw new HttpsError("permission-denied", "Owner only.", { code: "OWNER_ONLY" });
 
-        setStatus("good", "Scheduled", "Redirecting to Inbox…");
-        window.location.href = "./inbox.html";
-      } catch (e) {
-        console.error(e);
-        const c = e && e.code ? e.code : "";
-        const msg = (e && e.message) ? e.message : "Something went wrong while scheduling. Try again.";
-        setStatus("warn", "Couldn’t send", (c ? `${c}: ` : "") + msg);
-      }
-    });
+    const state = asStringOrNull(sdoc.state);
+    if (state !== "OPEN") throw new HttpsError("failed-precondition", "Session not open.", { code: "NOT_OPEN", state });
 
-    btnSignedClear.addEventListener("click", () => {
-      signedCode.value = ""; signedBody.value = "";
-      applyBodyGuardrails();
-      setStatus("warn", "Cleared", "Signed fields cleared.");
-    });
-    btnRollingClear.addEventListener("click", () => {
-      rollingCodeInput.value = ""; rollingBodyInput.value = "";
-      refreshRollingSendEnabled();
-      applyBodyGuardrails();
-      setStatus("warn", "Cleared", "Rolling fields cleared.");
-    });
+    const nowMs = Date.now();
+    const exp = typeof sdoc.expiresAtMillis === "number" ? sdoc.expiresAtMillis : 0;
+    if (exp && nowMs > exp) throw new HttpsError("failed-precondition", "Session expired.", { code: "SESSION_EXPIRED" });
 
-    // Init
-    refreshRollingSendEnabled();
+    const count = typeof sdoc.pulsesCount === "number" ? sdoc.pulsesCount : 0;
+    if (count >= MAX_PULSES_PER_SESSION) throw new HttpsError("resource-exhausted", "Pulse limit reached.", { code: "PULSE_LIMIT" });
 
-    // Default pulse settings
-    setSignedTimeHighlight();
-    setPulseMinutesHighlight();
-    setPulseTypeHighlight();
-    setPulseNote();
-
-    // Not authed yet -> keep UI calm and predictable
-    setSignedMode("tomorrow");
-
-    applyBodyGuardrails();
-    refreshPulseImageEnabled();
-    updateSignedSendLabel();
-    setStatus("good", "Ready", "App Check is active. Encryption + sending are wired.");
-
-    if (window.location.hash && window.location.hash.toLowerCase().includes("signin")) {
-      userChoseTab = true;
-      setTab("signed");
+    const lastPulseAt = typeof sdoc.lastPulseAtMillis === "number" ? sdoc.lastPulseAtMillis : 0;
+    if (lastPulseAt && nowMs - lastPulseAt < MIN_PULSE_INTERVAL_MS) {
+      throw new HttpsError("resource-exhausted", "Too fast. Slow down.", { code: "RATE_LIMIT" });
     }
-  </script>
-</body>
-</html>
+
+    const psnap = await tx.get(pref);
+    if (psnap.exists) return { pulseId: pref.id, pulsesCount: count, idempotent: true };
+
+    tx.set(pref, {
+      kind: "text",
+      text,
+      clientPulseId,
+      createdAtMillis: nowMs,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    tx.set(
+      sref,
+      {
+        pulsesCount: count + 1,
+        lastPulseAtMillis: nowMs,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    return { pulseId: pref.id, pulsesCount: count + 1, idempotent: false };
+  });
+
+  return { ok: true, sessionId, ...out };
+});
+
+export const signedPrivateCreateImageUpload = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuthUid(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const sessionId = normalizePrivateSessionId(requireStringField(data, "sessionId", 240));
+  const attachmentId = requireStringField(data, "attachmentId", 64);
+  const contentType = requireStringField(data, "contentType", 80);
+  const sizeBytes = requireNumberField(data, "sizeBytes");
+
+  if (!contentType.startsWith("image/")) throw new HttpsError("invalid-argument", "Only image uploads are supported.", { code: "UNSUPPORTED_TYPE" });
+  if (sizeBytes <= 0 || sizeBytes > MAX_IMAGE_BYTES) {
+    throw new HttpsError("invalid-argument", "Image too large.", { code: "IMAGE_TOO_LARGE", max: MAX_IMAGE_BYTES });
+  }
+
+  const sref = privateSessionRef(sessionId);
+  const ssnap = await sref.get();
+  if (!ssnap.exists) throw new HttpsError("not-found", "Session not found.", { code: "SESSION_NOT_FOUND" });
+
+  const sdoc = (ssnap.data() ?? {}) as AnyMap;
+  if (sdoc.ownerUid !== uid) throw new HttpsError("permission-denied", "Owner only.", { code: "OWNER_ONLY" });
+
+  const state = asStringOrNull(sdoc.state);
+  if (state !== "OPEN") throw new HttpsError("failed-precondition", "Session not open.", { code: "NOT_OPEN", state });
+
+  const nowMs = Date.now();
+  const exp = typeof sdoc.expiresAtMillis === "number" ? sdoc.expiresAtMillis : 0;
+  if (exp && nowMs > exp) throw new HttpsError("failed-precondition", "Session expired.", { code: "SESSION_EXPIRED" });
+
+  const imagesCount = typeof sdoc.imagesCount === "number" ? sdoc.imagesCount : 0;
+  if (imagesCount >= MAX_IMAGES_PER_SESSION) throw new HttpsError("resource-exhausted", "Image limit reached.", { code: "IMAGE_LIMIT" });
+
+  const storagePath = `signed_attachments/${uid}/private/${sessionId}/${attachmentId}.bin`;
+
+  const bucket = getStorage().bucket();
+  const file = bucket.file(storagePath);
+
+  const expiresAtMillis = Date.now() + 10 * 60_000;
+  const [uploadUrl] = await file.getSignedUrl({
+    version: "v4",
+    action: "write",
+    expires: expiresAtMillis,
+    contentType: "application/octet-stream",
+  });
+
+  return { ok: true, storagePath, uploadUrl, expiresAtMillis };
+});
+
+export const signedPrivatePulseImageCommit = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuthUid(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const sessionId = normalizePrivateSessionId(requireStringField(data, "sessionId", 240));
+  const clientPulseId = requireStringField(data, "clientPulseId", 64);
+
+  const a = (data.attachment ?? {}) as AnyMap;
+  const attachmentId = requireStringField(a, "attachmentId", 64);
+  const storagePath = requireStringField(a, "storagePath", 768);
+  const contentType = requireStringField(a, "contentType", 80);
+  const sizeBytes = requireNumberField(a, "sizeBytes");
+  const ivB64 = requireStringField(a, "ivB64", 256);
+  const saltB64 = requireStringField(a, "saltB64", 256);
+
+  if (!contentType.startsWith("image/")) throw new HttpsError("invalid-argument", "Only image pulses supported.", { code: "UNSUPPORTED_TYPE" });
+  if (sizeBytes <= 0 || sizeBytes > MAX_IMAGE_BYTES) {
+    throw new HttpsError("invalid-argument", "Image too large.", { code: "IMAGE_TOO_LARGE", max: MAX_IMAGE_BYTES });
+  }
+
+  const expectedPrefix = `signed_attachments/${uid}/private/${sessionId}/`;
+  if (!storagePath.startsWith(expectedPrefix) || !storagePath.endsWith(".bin")) {
+    throw new HttpsError("permission-denied", "Invalid storagePath.", { code: "BAD_STORAGE_PATH" });
+  }
+
+  const sref = privateSessionRef(sessionId);
+  const pref = privatePulsesRef(sessionId).doc(`${uid}_${clientPulseId}`);
+
+  const out = await db.runTransaction(async (tx) => {
+    const ssnap = await tx.get(sref);
+    if (!ssnap.exists) throw new HttpsError("not-found", "Session not found.", { code: "SESSION_NOT_FOUND" });
+
+    const sdoc = (ssnap.data() ?? {}) as AnyMap;
+    if (sdoc.ownerUid !== uid) throw new HttpsError("permission-denied", "Owner only.", { code: "OWNER_ONLY" });
+
+    const state = asStringOrNull(sdoc.state);
+    if (state !== "OPEN") throw new HttpsError("failed-precondition", "Session not open.", { code: "NOT_OPEN", state });
+
+    const nowMs = Date.now();
+    const exp = typeof sdoc.expiresAtMillis === "number" ? sdoc.expiresAtMillis : 0;
+    if (exp && nowMs > exp) throw new HttpsError("failed-precondition", "Session expired.", { code: "SESSION_EXPIRED" });
+
+    const pulsesCount = typeof sdoc.pulsesCount === "number" ? sdoc.pulsesCount : 0;
+    if (pulsesCount >= MAX_PULSES_PER_SESSION) throw new HttpsError("resource-exhausted", "Pulse limit reached.", { code: "PULSE_LIMIT" });
+
+    const imagesCount = typeof sdoc.imagesCount === "number" ? sdoc.imagesCount : 0;
+    if (imagesCount >= MAX_IMAGES_PER_SESSION) throw new HttpsError("resource-exhausted", "Image limit reached.", { code: "IMAGE_LIMIT" });
+
+    const lastPulseAt = typeof sdoc.lastPulseAtMillis === "number" ? sdoc.lastPulseAtMillis : 0;
+    if (lastPulseAt && nowMs - lastPulseAt < MIN_PULSE_INTERVAL_MS) {
+      throw new HttpsError("resource-exhausted", "Too fast. Slow down.", { code: "RATE_LIMIT" });
+    }
+
+    const psnap = await tx.get(pref);
+    if (psnap.exists) return { pulseId: pref.id, pulsesCount, imagesCount, idempotent: true };
+
+    tx.set(pref, {
+      kind: "image",
+      clientPulseId,
+      createdAtMillis: nowMs,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      attachment: { attachmentId, storagePath, contentType, sizeBytes, ivB64, saltB64 },
+    });
+
+    tx.set(
+      sref,
+      {
+        pulsesCount: pulsesCount + 1,
+        imagesCount: imagesCount + 1,
+        lastPulseAtMillis: nowMs,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    return { pulseId: pref.id, pulsesCount: pulsesCount + 1, imagesCount: imagesCount + 1, idempotent: false };
+  });
+
+  return { ok: true, sessionId, ...out };
+});
+
+export const finalizeSignedPrivatePulseSession = onCall({ region: REGION }, async (request) => {
+  const uid = requireAuthUid(request);
+  const data = (request.data ?? {}) as AnyMap;
+
+  const sessionId = normalizePrivateSessionId(requireStringField(data, "sessionId", 240));
+  const sref = privateSessionRef(sessionId);
+
+  const out = await db.runTransaction(async (tx) => {
+    const ssnap = await tx.get(sref);
+    if (!ssnap.exists) throw new HttpsError("not-found", "Session not found.", { code: "SESSION_NOT_FOUND" });
+
+    const sdoc = (ssnap.data() ?? {}) as AnyMap;
+    if (sdoc.ownerUid !== uid) throw new HttpsError("permission-denied", "Owner only.", { code: "OWNER_ONLY" });
+
+    const state = asStringOrNull(sdoc.state);
+    if (state === "FINALIZED") {
+      const summaryText = asStringOrNull(sdoc.summaryText);
+      const recipientCodeHash = asStringOrNull(sdoc.recipientCodeHash);
+      return {
+        alreadyFinalized: true,
+        recipientCodeHash,
+        summaryText,
+      };
+    }
+
+    tx.set(
+      sref,
+      {
+        state: "FINALIZED",
+        finalizedAtUtc: nowIso(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    return { alreadyFinalized: false };
+  });
+
+  const ssnap2 = await sref.get();
+  const sdoc2 = (ssnap2.data() ?? {}) as AnyMap;
+
+  if (asStringOrNull(sdoc2.summaryText)) {
+    return {
+      ok: true,
+      sessionId,
+      alreadyFinalized: true,
+      recipientCodeHash: asStringOrNull(sdoc2.recipientCodeHash),
+      summaryText: asStringOrNull(sdoc2.summaryText),
+      attachments: (asArray(sdoc2.summaryAttachments) as AnyMap[]).map((a) => a as any),
+    };
+  }
+
+  const { summaryText, attachments } = await generatePrivateSessionSummary(sessionId);
+
+  await sref.set(
+    {
+      summaryText,
+      summaryReadyAtUtc: nowIso(),
+      summaryAttachments: attachments,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  return {
+    ok: true,
+    sessionId,
+    alreadyFinalized: out.alreadyFinalized,
+    recipientCodeHash: asStringOrNull(sdoc2.recipientCodeHash),
+    summaryText,
+    attachments,
+  };
+});
+
+// ======================================================
+// ✅ Scheduled sweeper: expire OPEN sessions after window
+// ======================================================
+export const sweepSignedPrivatePulseSessions = onSchedule({ region: REGION, schedule: "every 1 minutes", timeZone: "UTC" }, async () => {
+  const nowMs = Date.now();
+
+  const snap = await db
+    .collection(PRIVATE_SESSIONS)
+    .where("state", "==", "OPEN")
+    .where("expiresAtMillis", "<=", nowMs)
+    .limit(200)
+    .get();
+
+  if (snap.empty) return;
+
+  const batch = db.batch();
+  for (const d of snap.docs) {
+    batch.set(
+      d.ref,
+      {
+        state: "EXPIRED",
+        expiredAtUtc: nowIso(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+  await batch.commit();
+});
+
