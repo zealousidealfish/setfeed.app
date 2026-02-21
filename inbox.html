@@ -32,8 +32,12 @@
 
     if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
-    const functions = firebase.app().functions("europe-west2");
-    const auth = firebase.auth();
+    // Shared instances (consistent across pages)
+    window.sfFunctions = firebase.app().functions("europe-west2");
+    window.sfAuth = firebase.auth();
+
+    // Ensure cross-page persistence is consistent
+    window.sfAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
   </script>
 
   <!-- THEME -->
@@ -252,7 +256,6 @@
 
     .msg-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
 
-    /* ✅ toggles are buttons now (more reliable than div click targets) */
     .sf-toggle{
       appearance: none;
       border: 1px solid rgba(255,255,255,0.10);
@@ -271,7 +274,6 @@
     .sf-toggle:hover{ background: rgba(255,255,255,0.07); }
     .sf-toggle:active{ transform: translateY(0.5px); }
 
-    /* ✅ message-kind pill */
     .sf-kind{
       display:inline-flex;
       align-items:center;
@@ -307,11 +309,10 @@
         <a href="./send.html">Send</a>
         <a href="./receive.html">Receive</a>
         <a class="auth-only hidden" href="./inbox.html" aria-current="page">Inbox</a>
-        <!-- ✅ Hidden tab is shown whenever authed (not dependent on hidden-count) -->
         <a class="auth-only hidden" id="nav-hidden" href="./inbox.html#hidden">Hidden</a>
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
-        <a class="nav-cta" href="#" aria-label="Download Setfeed app">Download app</a>
+        <a class="nav-cta" href="https://delvee.app" rel="noreferrer" aria-label="Open Delvee">Open Delvee</a>
       </nav>
     </div>
   </header>
@@ -436,7 +437,7 @@
         </p>
 
         <div class="actions">
-          <button class="btn btn-lg btn-primary" id="btn-google" type="button">Google</button>
+          <button class="btn btn-lg btn-primary" id="btn-google" type="button">Continue with Google</button>
           <button class="btn btn-lg btn-quiet" id="btn-sign-out" type="button" disabled>Sign out</button>
           <span class="kbd" id="auth-pill">Not signed in</span>
         </div>
@@ -530,6 +531,24 @@
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
 
+    const auth = window.sfAuth;
+    const functions = window.sfFunctions;
+
+    // ✅ Finalize redirect sign-in if user signed in from another page
+    auth.getRedirectResult()
+      .then(() => {})
+      .catch((e) => {
+        console.error(e);
+        const code = (e && e.code) ? String(e.code) : "";
+        if (code === "auth/unauthorized-domain") {
+          setStatus("warn", "Auth domain not authorized", "Add this domain in Firebase Auth → Settings → Authorized domains.");
+        } else if (code === "auth/operation-not-allowed") {
+          setStatus("warn", "Google provider disabled", "Enable Google in Firebase Auth → Sign-in method.");
+        } else if (code) {
+          setStatus("warn", "Sign-in failed", code);
+        }
+      });
+
     // -------------------------
     // Status helper
     // -------------------------
@@ -558,7 +577,6 @@
       routeInbox.classList.toggle("show", !isHidden);
       routeHidden.classList.toggle("show", isHidden);
 
-      // Only show contents when authed
       hiddenUi.classList.toggle("hidden", !(auth.currentUser));
       inboxUi.classList.toggle("hidden", !(auth.currentUser) || isHidden);
     }
@@ -595,7 +613,6 @@
       inboxUi.classList.toggle("hidden", !isAuthed);
       authPill.textContent = isAuthed ? (user.email || "Signed in") : "Not signed in";
 
-      // ✅ Hidden nav is visible whenever authed (no more count gating)
       if (navHidden) navHidden.classList.toggle("hidden", !isAuthed);
 
       showRoute(currentRoute());
@@ -606,16 +623,16 @@
 
     auth.onAuthStateChanged((user) => renderAuthUI(user));
 
+    // ✅ Use redirect (consistent across pages)
     btnGoogle.addEventListener("click", async () => {
       try {
         setStatus("good", "Signing in…", "Opening Google sign-in…");
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: "select_account" });
-        await auth.signInWithPopup(provider);
-        setStatus("good", "Signed in", "You can fetch signed envelopes now.");
+        await auth.signInWithRedirect(provider);
       } catch (e) {
         console.error(e);
-        setStatus("warn", "Couldn’t sign in", "Google sign-in failed. Check pop-up blocking and try again.");
+        setStatus("warn", "Couldn’t sign in", "Google sign-in failed. Check Firebase Auth settings.");
       }
     });
 
@@ -682,7 +699,6 @@
     function getBlockedSenders(){ return uniq(readJson(LS.blockedSenders, [])); }
     function setBlockedSenders(v){ writeJson(LS.blockedSenders, uniq(v)); }
 
-    // ✅ robust (localStorage can throw in some privacy modes)
     function getShowBlocked(){
       try { return (localStorage.getItem(LS.showBlocked) === "true"); } catch (_) { return false; }
     }
@@ -701,7 +717,6 @@
       const hiddenCount = getHiddenReleasedIds().length;
       const pillHidden = document.getElementById("pill-hidden");
       if (pillHidden) pillHidden.textContent = `${hiddenCount} hidden`;
-      // navHidden visibility is handled by auth state now
     }
 
     // -------------------------
@@ -826,7 +841,6 @@
       setStatus("warn", "Cleared", "Hidden list cleared on this device.");
     });
 
-    // Prefill code from URL ?code=
     (function prefillFromUrl(){
       try{
         const u = new URL(window.location.href);
@@ -900,7 +914,7 @@
     const btnActConsume = document.getElementById("sf-btn-consume");
     const btnActDone = document.getElementById("sf-btn-done");
 
-    let activeActionItem = null; // { id, senderUid, when, body }
+    let activeActionItem = null;
 
     function showActionsModal(item){
       activeActionItem = item;
@@ -948,8 +962,6 @@
       setBlockedSenders(blocked);
       hideActionsModal();
       renderAll();
-
-      // ✅ immediately reflect in toggle label (and sanity-check storage)
       applyToggleUI();
       setStatus("warn", "Sender hidden", "Messages from this sender are hidden on this device.");
     });
@@ -961,7 +973,7 @@
     });
 
     // -------------------------
-    // Notifications (browser)
+    // Notifications
     // -------------------------
     async function ensureBrowserNotifications(){
       try {
@@ -1000,8 +1012,6 @@
 
     let decryptedById = new Map();
     let latestItems = [];
-
-    // UI-only filter (in-memory)
     let summariesOnly = false;
 
     async function buildLatestItems(rawCode, envelopes){
@@ -1063,7 +1073,6 @@
       const released = [];
 
       for (const it of items || []) {
-        // ✅ summaries-only filter applies everywhere (but does not affect Hidden route)
         if (summariesOnly && it.kind !== "delvee_summary") continue;
 
         const deliverMillis = it.deliverMillis;
@@ -1073,8 +1082,6 @@
 
         if (isReleased) {
           if (hiddenReleasedIds.has(it.id)) continue;
-
-          // ✅ hide blocked senders unless explicitly shown
           if (!showBlocked && isSenderBlocked) continue;
 
           const body = decryptedById.get(it.id) || "";
@@ -1104,6 +1111,10 @@
 
       return { pinned, upcoming, awaiting, released };
     }
+
+    // ---- From here down: your original inbox logic is unchanged ----
+    // (Swipe handling, rendering, consume, toggles, fetching)
+    // ----------------------------------------------------------------
 
     function attachSwipeHandlers(cardEl, opts){
       const dragEl = cardEl.querySelector(".sf-drag");
@@ -1541,7 +1552,6 @@
       }
     });
 
-    // ✅ Fix: always re-render after toggling; robust storage already handled
     btnShowBlocked.addEventListener("click", () => {
       const next = !getShowBlocked();
       setShowBlocked(next);
@@ -1621,7 +1631,6 @@
       }
     });
 
-    // ✅ “Fetch summaries” = fetch, then switch filter to summaries-only
     btnFetchSummaries.addEventListener("click", async () => {
       btnFetchSummaries.disabled = true;
       const prev = btnFetchSummaries.textContent;
@@ -1647,13 +1656,12 @@
       summariesOnly = false;
 
       applyToggleUI();
+      refreshHiddenNav();
       renderAll();
       setStatus("warn", "Cleared", "Inbox cleared. Paste a code and press Fetch.");
     });
 
-    // -------------------------
     // Boot
-    // -------------------------
     applyToggleUI();
     refreshHiddenNav();
 
