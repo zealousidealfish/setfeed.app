@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Payment successful — Setfeed</title>
+  <meta name="theme-color" content="#FFFBFE" id="meta-theme-color" />
+  <link rel="stylesheet" href="/styles.css" />
+  <script>
+    (function(){
+      const themeKey = "sf_theme_mode";
+      const root = document.documentElement;
+      function applyTheme(){
+        const stored = localStorage.getItem(themeKey) || "system";
+        if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
+        else root.removeAttribute("data-theme");
+        const effective =
+          root.getAttribute("data-theme") ||
+          (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        const meta = document.getElementById("meta-theme-color");
+        if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
+      }
+      applyTheme();
+      window.addEventListener("storage", (e) => { if (e && e.key === themeKey) applyTheme(); });
+    })();
+  </script>
+</head>
+<body class="page-bg">
+  <div class="wrap">
+    <div class="card">
+      <h1>Payment successful</h1>
+      <p class="lead">Thanks — your subscription is active.</p>
+
+      <div class="actions" style="margin-top: var(--s-5);">
+        <a class="btn btn-lg btn-primary" href="/inbox.html">Go to Inbox</a>
+        <a class="btn btn-lg btn-quiet" href="/">Back to home</a>
+      </div>
+
+      <p class="help" style="margin-top: var(--s-5);">
+        If you don’t see your plan immediately, refresh Inbox in a few seconds.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
