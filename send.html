@@ -32,10 +32,16 @@
     };
 
     const RECAPTCHA_SITE_KEY = "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI";
-    const SITE_ORIGIN = "https://setfeed.app";
+
+    // IMPORTANT:
+    // Use the CURRENT origin for email-link finish URL (works on setfeed.app + web.app + localhost).
+    const SITE_ORIGIN = window.location.origin;
 
     if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
-    const functions = firebase.app().functions("europe-west2");
+
+    // Expose shared instances (same pattern as index.html)
+    window.sfAuth = firebase.auth();
+    window.sfFunctions = firebase.app().functions("europe-west2");
 
     function startAppCheck() {
       try {
@@ -221,7 +227,7 @@
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
 
-        <a class="nav-cta" href="https://delvee.app" rel="noreferrer" aria-label="Open Delvee">Download app</a>
+        <a class="nav-cta" href="https://delvee.app" rel="noreferrer" aria-label="Open Delvee">Open Delvee</a>
       </nav>
     </div>
   </header>
@@ -266,7 +272,6 @@
               </div>
 
               <div class="actions" style="margin-top: 12px;">
-                <!-- native input hidden; chip triggers it -->
                 <input id="sf-image-file" class="sf-file-input" type="file" accept="image/*" />
 
                 <button class="sf-file-chip" id="sf-btn-choose-image" type="button" aria-label="Choose image">
@@ -289,21 +294,22 @@
               </div>
             </div>
 
-            <div class="field">
+            <div class="field no-auth-only">
               <label for="signed-email">Email</label>
               <input id="signed-email" type="email" autocomplete="email" placeholder="you@example.com" />
             </div>
 
-            <div class="actions" style="flex-direction: column; align-items: stretch;">
+            <div class="actions no-auth-only" style="flex-direction: column; align-items: stretch;">
+              <!-- redirect-safe google sign-in (same behavior as index.html) -->
               <button class="btn btn-lg btn-primary" id="btn-google" type="button" aria-label="Continue with Google">
-                <span>Google</span>
+                <span>Continue with Google</span>
               </button>
 
               <button class="btn btn-lg" id="btn-send-link" type="button">Send sign-in link</button>
             </div>
 
             <!-- ✅ Polished signed-in banner -->
-            <div class="sf-auth-banner hidden" id="sf-auth-banner">
+            <div class="sf-auth-banner hidden auth-only" id="sf-auth-banner">
               <div class="sf-auth-left">
                 <span class="sf-auth-email" id="sf-auth-label">Signed in</span>
               </div>
@@ -320,7 +326,6 @@
               </p>
             </div>
 
-            <!-- Top slot for Status when signed in -->
             <div id="status-slot-top" class="sf-status-slot hidden"></div>
 
             <div class="video-card" id="video-signed" aria-label="Walkthrough">
@@ -502,6 +507,10 @@
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
 
+    // Use the shared instances (same pattern across pages)
+    const auth = window.sfAuth;
+    const functions = window.sfFunctions;
+
     // Tabs
     const tabSigned = document.getElementById("tab-signed");
     const tabRolling = document.getElementById("tab-rolling");
@@ -569,6 +578,30 @@
     const sfBtnChooseImage = document.getElementById("sf-btn-choose-image");
     const sfFileChipLabel = document.getElementById("sf-file-chip-label");
 
+    function setSignedAuthedFlag(isAuthed) {
+      document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
+      document.querySelectorAll(".no-auth-only").forEach(el => el.classList.toggle("hidden", isAuthed));
+    }
+
+    // Ensure this page persists auth the same way as index.html
+    // (this is what makes other pages consistently “see” the session)
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+
+    // Redirect completion handler (important when sign-in started on a different page)
+    auth.getRedirectResult()
+      .then(() => {})
+      .catch((e) => {
+        console.error(e);
+        const code = (e && e.code) ? String(e.code) : "";
+        if (code === "auth/unauthorized-domain") {
+          setStatus("warn", "Auth domain not authorized", "Add this domain in Firebase Auth → Settings → Authorized domains.");
+        } else if (code === "auth/operation-not-allowed") {
+          setStatus("warn", "Google provider disabled", "Enable Google in Firebase Auth → Sign-in method.");
+        } else if (code) {
+          setStatus("warn", "Sign-in failed", code);
+        }
+      });
+
     function renderChosenImageName() {
       const f = (sfImageFile && sfImageFile.files && sfImageFile.files[0]) ? sfImageFile.files[0] : null;
       if (!sfFileChipLabel) return;
@@ -625,18 +658,7 @@
     const statusSlotTop = document.getElementById("status-slot-top");
     const statusSlotBottom = document.getElementById("status-slot-bottom");
 
-    // Auth
-    const AUTH_KEY = "sf_signed_authed";
-    const EMAIL_FOR_SIGNIN_KEY = "sf_email_for_signin";
-    const auth = firebase.auth();
-
-    function setSignedAuthedFlag(isAuthed) {
-      try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
-      document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
-    }
-
     function updateSignedSendLabel() {
-      // Only show "Pulse" wording when Pulse mode selected; otherwise "Encrypt and send"
       btnSignedSend.textContent = (signedMode === "pulse") ? "Encrypt & pulse" : "Encrypt and send";
     }
 
@@ -667,12 +689,11 @@
     // -------------------------
     // Credits (Delvee)
     // -------------------------
-    let creditsBalance = null; // number | null
+    let creditsBalance = null;
 
     function setCreditsUI(n) {
       if (creditsPill) creditsPill.textContent = (typeof n === "number" && Number.isFinite(n)) ? `Credits: ${n}` : "Credits: —";
       creditsBalance = (typeof n === "number" && Number.isFinite(n)) ? n : null;
-      // ✅ IMPORTANT: credits do NOT gate the Pulse image button anymore
       refreshPulseImageEnabled();
     }
 
@@ -689,7 +710,6 @@
       }
     }
 
-    // Optional: claim starter credits once (server must enforce one-per-user)
     btnClaimCredits.addEventListener("click", async () => {
       if (!auth.currentUser) { setStatus("warn", "Sign-in required", "Sign in with Google to claim free credits."); return; }
       try {
@@ -734,7 +754,6 @@
       if (signedMode !== "preset") setSignedPresetHighlightVisible(false);
       else setSignedPresetHighlightVisible(true);
 
-      // ✅ Only show image preview when Pulse mode is selected
       if (pulseImageCard) pulseImageCard.classList.toggle("hidden", signedMode !== "pulse");
 
       updateSignedSendLabel();
@@ -779,8 +798,6 @@
       const isAuthed = !!auth.currentUser;
       const fileOk = !!(sfImageFile && sfImageFile.files && sfImageFile.files[0]);
       const isPulseMode = (signedMode === "pulse");
-
-      // ✅ CHANGE: credits do NOT gate the button anymore
       btnPulseImage.disabled = !(isAuthed && fileOk && isPulseMode);
 
       if (sfImageHelp) {
@@ -912,7 +929,7 @@
     }
     function randomClientRequestId(prefix) { return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 
-    // Send handlers (Setfeed)
+    // Send handlers
     signedCode.addEventListener("input", () => { refreshSignedSendEnabled(!!auth.currentUser); applyBodyGuardrails(); });
     signedBody.addEventListener("input", () => { refreshSignedSendEnabled(!!auth.currentUser); applyBodyGuardrails(); });
     rollingCodeInput.addEventListener("input", () => { refreshRollingSendEnabled(); applyBodyGuardrails(); });
@@ -921,19 +938,11 @@
     function renderAuthUI(user) {
       const isAuthed = !!user;
 
-      // default tab behavior (only if user hasn't manually chosen)
       if (!userChoseTab) setTab(isAuthed ? "signed" : "rolling");
 
-      const emailField = signedEmail ? signedEmail.closest(".field") : null;
-      if (emailField) emailField.classList.toggle("hidden", isAuthed);
-      if (btnSendLink) btnSendLink.classList.toggle("hidden", isAuthed);
-      if (btnGoogle) btnGoogle.classList.toggle("hidden", isAuthed);
-
-      if (btnSignOut) {
-        btnSignOut.disabled = !isAuthed;
-      }
-
       setSignedAuthedFlag(isAuthed);
+
+      if (btnSignOut) btnSignOut.disabled = !isAuthed;
 
       if (videoSigned) videoSigned.classList.toggle("hidden", isAuthed);
       if (videoRolling) videoRolling.classList.toggle("hidden", isAuthed);
@@ -957,36 +966,41 @@
         }
       }
 
-      // ensure pulse-image card visibility matches mode after auth render
       if (pulseImageCard) pulseImageCard.classList.toggle("hidden", signedMode !== "pulse");
 
       refreshSignedSendEnabled(isAuthed);
       refreshRollingSendEnabled();
       applyBodyGuardrails();
 
-      // Credits + image enable
       loadCredits().catch(() => {});
       refreshPulseImageEnabled();
     }
+
     auth.onAuthStateChanged((user) => renderAuthUI(user));
 
-    // Google popup
-    btnGoogle.addEventListener("click", async () => {
+    // ✅ Google sign-in: redirect-first (matches index.html)
+    async function doGoogleSignIn() {
       try {
         setStatus("good", "Signing in…", "Opening Google sign-in…");
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: "select_account" });
-        await auth.signInWithPopup(provider);
-        setStatus("good", "Signed in", "Signed sending is available.");
+        await auth.signInWithRedirect(provider);
       } catch (e) {
         console.error(e);
-        setStatus("warn", "Couldn’t sign in", "Google sign-in failed. Check pop-up blocking and try again.");
+        setStatus("warn", "Couldn’t sign in", "Google sign-in failed. Check Firebase Auth settings.");
       }
+    }
+
+    btnGoogle.addEventListener("click", (e) => {
+      e.preventDefault();
+      doGoogleSignIn();
     });
 
     // Email link sign-in
+    const EMAIL_FOR_SIGNIN_KEY = "sf_email_for_signin";
+
     btnSendLink.addEventListener("click", async () => {
-      const email = signedEmail.value.trim();
+      const email = (signedEmail && signedEmail.value ? signedEmail.value.trim() : "");
       if (!email) {
         setStatus("warn", "Email needed", "Enter your email to request a sign-in link.");
         return;
@@ -1142,13 +1156,13 @@
 
     // Init
     refreshRollingSendEnabled();
-    setSignedMode("preset");              // ensures image card starts hidden
+    setSignedMode("preset");
     applyBodyGuardrails();
     refreshPulseImageEnabled();
     updateSignedSendLabel();
     setStatus("good", "Ready", "App Check is active. Encryption + sending are wired.");
 
-    // If user arrived from sign-in flow, prefer signed
+    // If user arrived with #signin, prefer signed
     if (window.location.hash && window.location.hash.toLowerCase().includes("signin")) {
       userChoseTab = true;
       setTab("signed");
