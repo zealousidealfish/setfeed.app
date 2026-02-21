@@ -32,6 +32,7 @@
 
     if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
+    // Shared instances (consistent across pages)
     window.sfFunctions = firebase.app().functions("europe-west2");
     window.sfAuth = firebase.auth();
     window.sfAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
@@ -70,6 +71,31 @@
     /* Route container */
     .sf-route { display:none; }
     .sf-route.show { display:block; }
+
+    /* ✅ Inbox tip banner (what Consume means) */
+    .sf-tipbar{
+      margin-top: 12px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 12%, transparent);
+      padding: 10px 12px;
+      display:flex;
+      align-items:flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .sf-tipbar strong{ color: var(--text); }
+    .sf-tipbar p{
+      margin: 0;
+      color: var(--muted);
+      font-size: 13.6px;
+      line-height: 1.45;
+    }
+    .sf-tipbar .btn{
+      flex: 0 0 auto;
+      padding: 9px 12px;
+      font-size: 13.2px;
+    }
 
     /* ✅ Codebar alignment: input + buttons in one row */
     .sf-codebar{
@@ -112,9 +138,9 @@
 
     .sf-toggle{
       appearance: none;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.05);
-      color: rgba(233,238,246,0.90);
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
+      color: var(--text);
       border-radius: 14px;
       padding: 8px 10px;
       font-weight: 650;
@@ -126,7 +152,7 @@
       gap:10px;
       min-height: 40px;
     }
-    .sf-toggle:hover{ background: rgba(255,255,255,0.07); }
+    .sf-toggle:hover{ background: color-mix(in srgb, var(--surface-variant) 16%, transparent); }
     .sf-toggle:active{ transform: translateY(0.5px); }
 
     /* ✅ Top-right toggle placement */
@@ -138,61 +164,6 @@
       margin-bottom: -6px;
     }
 
-    /* ✅ Tip bar */
-    .sf-tipbar{
-      margin-top: 10px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.04);
-      padding: 10px 12px;
-      color: rgba(233,238,246,0.86);
-      font-size: 13px;
-      line-height: 1.35;
-      display:flex;
-      align-items:flex-start;
-      justify-content: space-between;
-      gap: 10px;
-    }
-    .sf-tipbar strong{ color: rgba(233,238,246,0.95); }
-    .sf-tipbar .sf-tip-close{
-      border: 0;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.06);
-      color: rgba(233,238,246,0.90);
-      font-weight: 800;
-      padding: 6px 10px;
-      cursor:pointer;
-      white-space: nowrap;
-    }
-    .sf-tipbar .sf-tip-close:hover{ background: rgba(255,255,255,0.08); }
-
-    /* ✅ Compact empty panels */
-    .sf-empty-panel{
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.035);
-      padding: 10px 12px;
-      margin-bottom: 10px;
-    }
-    .sf-empty-title{
-      margin: 0 0 4px 0;
-      font-weight: 800;
-      letter-spacing: -0.01em;
-      font-size: 13px;
-      color: rgba(233,238,246,0.92);
-    }
-    .sf-empty-sub{
-      margin: 0;
-      font-size: 13px;
-      color: rgba(233,238,246,0.78);
-      line-height: 1.35;
-    }
-    .sf-empty-tip{
-      margin-top: 6px;
-      font-size: 12px;
-      color: rgba(233,238,246,0.68);
-    }
-
     /* Section header */
     .sf-section-head{
       display:flex;
@@ -202,26 +173,26 @@
       margin-top: var(--s-5);
       margin-bottom: var(--s-3);
     }
-    .sf-section-head h2{ margin:0; }
+    .sf-section-head h2{ margin:0; color: var(--text); }
     .sf-pill{
       display:inline-flex;
       align-items:center;
       gap:8px;
       border-radius: 999px;
       padding: 6px 10px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.06);
-      color: rgba(233,238,246,0.92);
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
+      color: var(--text);
       font-weight: 650;
       font-size: 12px;
       white-space: nowrap;
     }
 
-    /* Cards */
+    /* Cards (theme-variable based — fixes light mode invisibility) */
     .sf-msg-card{
       border-radius: 18px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 9%, transparent);
       padding: 12px;
       margin-bottom: 10px;
       position: relative;
@@ -243,6 +214,7 @@
       gap:8px;
       flex-wrap:wrap;
       min-width: 0;
+      color: var(--text);
     }
     .sf-msg-title-text{
       min-width: 0;
@@ -257,11 +229,11 @@
       gap: 2px;
       text-align:right;
       font-size: 12px;
-      color: rgba(233,238,246,0.75);
+      color: var(--soft);
     }
     .sf-msg-body{
       margin-top: 8px;
-      color: rgba(233,238,246,0.90);
+      color: var(--muted);
       line-height: 1.35;
       font-size: 14px;
       white-space: pre-wrap;
@@ -273,6 +245,22 @@
       gap:10px;
       flex-wrap: wrap;
       align-items:center;
+    }
+
+    /* ✅ Surprise rule: NO thumbnails in the list */
+    .sf-attach-count{
+      margin-top: 10px;
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      color: var(--soft);
+      font-size: 12.5px;
+    }
+    .sf-attach-count .dot{
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--primary) 55%, var(--soft));
     }
 
     /* Swipe affordance */
@@ -294,12 +282,14 @@
       letter-spacing: 0.02em;
       padding: 8px 10px;
       border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06);
-      color: rgba(233,238,246,0.92);
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 14%, transparent);
+      color: var(--text);
     }
-    .sf-swipe-right{ border-color: rgba(59,130,246,0.40); box-shadow: 0 0 0 4px rgba(59,130,246,0.10); }
-    .sf-swipe-left{ border-color: rgba(255,255,255,0.18); }
+    .sf-swipe-right{
+      border-color: color-mix(in srgb, var(--primary) 30%, var(--line));
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
+    }
     .sf-drag{
       position: relative;
       transform: translateX(0);
@@ -314,20 +304,20 @@
       gap:6px;
       border-radius: 999px;
       padding: 4px 8px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06);
-      color: rgba(233,238,246,0.92);
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 12%, transparent);
+      color: var(--text);
       font-weight: 800;
       font-size: 11px;
       letter-spacing: 0.02em;
       text-transform: uppercase;
     }
     .sf-kind.delvee{
-      border-color: rgba(59,130,246,0.40);
-      box-shadow: 0 0 0 4px rgba(59,130,246,0.10);
+      border-color: color-mix(in srgb, var(--primary) 30%, var(--line));
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 10%, transparent);
     }
 
-    /* ✅ Modals */
+    /* ✅ Modals hidden by default */
     .delvee-backdrop,
     .sf-modal-backdrop{
       position: fixed;
@@ -337,7 +327,7 @@
       align-items: center;
       justify-content: center;
       padding: 16px;
-      z-index: 999999; /* ✅ ensure always on top */
+      z-index: 9999;
     }
     .delvee-backdrop.show,
     .sf-modal-backdrop.show{ display:flex; }
@@ -345,10 +335,10 @@
     .delvee-modal{
       width: min(560px, 100%);
       border-radius: 18px;
-      background: var(--card, #14171c);
-      color: var(--text, #e9eef6);
+      background: color-mix(in srgb, var(--surface-2) 92%, transparent);
+      color: var(--text);
       box-shadow: 0 18px 60px rgba(0,0,0,0.45);
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 1px solid var(--line);
       overflow: hidden;
     }
     .delvee-head{
@@ -364,13 +354,7 @@
       gap:10px;
       font-weight: 800;
       letter-spacing: -0.01em;
-      min-width: 0;
-    }
-    .delvee-title span:last-child{
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      color: var(--text);
     }
     .delvee-badge{
       display:inline-flex;
@@ -378,208 +362,145 @@
       justify-content:center;
       border-radius: 999px;
       padding: 4px 8px;
-      border: 1px solid rgba(59,130,246,0.40);
-      box-shadow: 0 0 0 4px rgba(59,130,246,0.10);
-      background: rgba(59,130,246,0.12);
+      border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--line));
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 10%, transparent);
+      background: color-mix(in srgb, var(--primary) 10%, transparent);
       font-size: 12px;
       font-weight: 850;
+      color: var(--text);
     }
     .delvee-body{ padding: 0 14px 12px 14px; }
     .delvee-stage{
       border-radius: 16px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
       padding: 14px;
       position: relative;
       overflow:hidden;
       min-height: 160px;
     }
+
+    /* ✅ Opening animation (blue lightning sweep) */
+    .sf-vault-overlay{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+    .delvee-stage.is-playing .sf-vault-overlay{ opacity: 1; }
+
+    .sf-vault-bolt{
+      position:absolute;
+      top: -30%;
+      left: -60%;
+      width: 70%;
+      height: 160%;
+      transform: rotate(12deg);
+      background: linear-gradient(90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--primary) 0%, transparent) 35%,
+        color-mix(in srgb, var(--primary) 95%, white) 50%,
+        color-mix(in srgb, var(--primary) 0%, transparent) 65%,
+        transparent 100%);
+      filter: blur(1px);
+      opacity: 0.95;
+      animation: sfBoltSweep 920ms ease-in-out infinite;
+      mix-blend-mode: screen;
+    }
+    .sf-vault-noise{
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(900px 420px at 30% 10%,
+          color-mix(in srgb, var(--primary) 10%, transparent) 0%,
+          transparent 60%),
+        radial-gradient(700px 420px at 80% 30%,
+          rgba(255,255,255,0.06) 0%,
+          transparent 62%),
+        linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.00));
+      opacity: 0.8;
+    }
+    @keyframes sfBoltSweep{
+      0%   { transform: translateX(0) rotate(12deg); opacity: 0.0; }
+      10%  { opacity: 0.95; }
+      50%  { transform: translateX(220%) rotate(12deg); opacity: 0.95; }
+      100% { transform: translateX(260%) rotate(12deg); opacity: 0.0; }
+    }
+
     .delvee-reveal{ display:none; }
     .delvee-stage.is-revealed .delvee-reveal{ display:block; }
+    .delvee-stage.is-revealed .sf-vault-overlay{ opacity: 0; }
 
-    /* ✅ Lightning opening layer */
-    .delvee-play{
-      position:absolute;
-      inset: 0;
-      display:none;
-      align-items:center;
-      justify-content:center;
-      pointer-events:none;
-    }
-    .delvee-stage.is-playing .delvee-play{ display:flex; }
-
-    .sf-bolt{
-      position:absolute;
-      left: -30%;
-      top: -20%;
-      width: 22%;
-      height: 140%;
-      transform: rotate(18deg);
-      background: linear-gradient(90deg, rgba(59,130,246,0.00), rgba(59,130,246,0.35), rgba(59,130,246,0.00));
-      opacity: 0.95;
-      animation: sf-bolt-sweep 700ms ease-in-out infinite;
-    }
-    .sf-bolt:nth-child(2){
-      top: -30%;
-      width: 14%;
-      opacity: 0.65;
-      animation-duration: 520ms;
-      animation-delay: 80ms;
-    }
-    .sf-bolt:nth-child(3){
-      top: -10%;
-      width: 10%;
-      opacity: 0.45;
-      animation-duration: 480ms;
-      animation-delay: 140ms;
-    }
-    @keyframes sf-bolt-sweep{
-      0%   { transform: translateX(-40%) rotate(18deg); opacity: 0.0; }
-      10%  { opacity: 0.85; }
-      55%  { opacity: 0.95; }
-      100% { transform: translateX(650%) rotate(18deg); opacity: 0.0; }
-    }
-
-    .sf-opening-text{
-      position: relative;
-      font-weight: 850;
-      letter-spacing: -0.02em;
-      color: rgba(233,238,246,0.92);
-      text-align:center;
-      padding: 14px 12px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(0,0,0,0.18);
-      box-shadow: 0 18px 50px rgba(0,0,0,0.35);
-      backdrop-filter: blur(10px);
-    }
-    .sf-opening-sub{
-      margin-top: 6px;
-      font-size: 13px;
-      font-weight: 650;
-      color: rgba(233,238,246,0.70);
-    }
-
-    /* Attachments list in modal (buttons only, no previews) */
+    /* Attachments in modal (OK after opening — surprise preserved) */
     .delvee-attachments{
       margin-top: 12px;
       padding-top: 12px;
-      border-top: 1px solid rgba(255,255,255,0.08);
+      border-top: 1px solid var(--line);
     }
     .delvee-attachments h4{
       margin: 0 0 10px 0;
       font-size: 13px;
-      color: rgba(233,238,246,0.85);
+      color: var(--text);
       letter-spacing: -0.01em;
     }
-    .delvee-attach-list{
+    .delvee-thumb-grid{
       display:flex;
-      flex-direction: column;
+      flex-wrap: wrap;
       gap: 10px;
+      align-items:center;
     }
-    .delvee-attach-row{
+    .sf-thumb{
+      width: 84px;
+      height: 84px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
+      object-fit: cover;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+    }
+    .sf-thumb:active{ transform: translateY(0.5px); }
+    .sf-thumb-skel{
+      width: 84px;
+      height: 84px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
       display:flex;
       align-items:center;
-      justify-content: space-between;
-      gap:10px;
-      padding: 10px 10px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.04);
-    }
-    .delvee-attach-meta{
-      display:flex;
-      flex-direction: column;
-      gap: 2px;
-      min-width: 0;
-    }
-    .delvee-attach-meta .t1{
-      font-weight: 800;
-      font-size: 13px;
-      color: rgba(233,238,246,0.92);
-    }
-    .delvee-attach-meta .t2{
+      justify-content:center;
+      color: var(--soft);
       font-size: 12px;
-      color: rgba(233,238,246,0.70);
-      overflow:hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 44ch;
     }
+
     .delvee-actions{
       display:flex;
       justify-content:flex-end;
       gap:10px;
       padding: 12px 14px 14px 14px;
-      border-top: 1px solid rgba(255,255,255,0.08);
-    }
-
-    /* Fullscreen image viewer */
-    .sf-imgview{
-      position: fixed;
-      inset: 0;
-      display:none;
-      align-items:center;
-      justify-content:center;
-      padding: 16px;
-      background: rgba(0,0,0,0.80);
-      z-index: 1000000;
-    }
-    .sf-imgview.show{ display:flex; }
-    .sf-imgview-card{
-      width: min(980px, 100%);
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(20,23,28,0.92);
-      overflow:hidden;
-      box-shadow: 0 18px 70px rgba(0,0,0,0.55);
-    }
-    .sf-imgview-head{
-      display:flex;
-      align-items:center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 12px 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-    }
-    .sf-imgview-title{
-      font-weight: 850;
-      color: rgba(233,238,246,0.92);
-      font-size: 13px;
-    }
-    .sf-imgview-body{
-      padding: 10px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background: rgba(0,0,0,0.22);
-    }
-    .sf-imgview-body img{
-      max-width: 100%;
-      max-height: 76vh;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.10);
-      box-shadow: 0 14px 50px rgba(0,0,0,0.40);
+      border-top: 1px solid var(--line);
     }
 
     /* Actions modal */
     .sf-modal{
       width: min(520px, 100%);
       border-radius: 16px;
-      background: var(--card, #14171c);
-      color: var(--text, #e9eef6);
+      background: color-mix(in srgb, var(--surface-2) 92%, transparent);
+      color: var(--text);
       box-shadow: 0 18px 60px rgba(0,0,0,0.45);
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 1px solid var(--line);
       overflow: hidden;
     }
     .sf-modal-header{
       padding: 16px 16px 10px 16px;
       font-weight: 800;
       font-size: 16px;
+      color: var(--text);
     }
     .sf-modal-body{
       padding: 0 16px 16px 16px;
-      color: rgba(233,238,246,0.86);
+      color: var(--muted);
       line-height: 1.35;
       font-size: 14px;
       word-break: break-word;
@@ -590,83 +511,37 @@
       justify-content: flex-end;
       gap: 10px;
       padding: 12px 16px 16px 16px;
-      border-top: 1px solid rgba(255,255,255,0.08);
+      border-top: 1px solid var(--line);
     }
     .sf-modal-btn{
-      border: 0;
+      border: 1px solid var(--line);
       border-radius: 12px;
       padding: 10px 14px;
       font-weight: 750;
       cursor:pointer;
-      background: rgba(255,255,255,0.08);
-      color: rgba(233,238,246,0.92);
+      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
+      color: var(--text);
     }
-    .sf-modal-btn-primary{ background:#3b82f6; color:#fff; }
-    .sf-modal-btn-danger{ background: rgba(255,85,85,0.18); color: rgba(255,220,220,0.95); border: 1px solid rgba(255,85,85,0.28); }
-    .sf-modal-btn-quiet{ background: rgba(255,255,255,0.06); color: rgba(233,238,246,0.85); }
+    .sf-modal-btn-primary{ background: var(--primary); color: var(--on-primary); border-color: color-mix(in srgb, var(--primary) 58%, var(--line)); }
+    .sf-modal-btn-danger{ background: color-mix(in srgb, #ff5555 16%, transparent); color: color-mix(in srgb, var(--text) 92%, #ffcccc); border-color: color-mix(in srgb, #ff5555 28%, var(--line)); }
+    .sf-modal-btn-quiet{ background: color-mix(in srgb, var(--surface-variant) 8%, transparent); color: var(--text); }
 
-    /* =========================
-       ✅ LIGHT MODE READABILITY
-       Applies only when effective theme is LIGHT
-       - Explicit: data-theme="light"
-       - System light: prefers-color-scheme: light AND not explicitly dark
-       ========================= */
-
-    html[data-theme="light"] .sf-tipbar,
-    html[data-theme="light"] .sf-empty-panel,
-    html[data-theme="light"] .sf-msg-card{
-      border-color: rgba(15,17,20,0.12);
-      background: rgba(15,17,20,0.03);
+    /* ✅ Make empty Upcoming/Awaiting vertically smaller (so Released shows without scroll when empty) */
+    #list-upcoming .panel,
+    #list-awaiting .panel{
+      padding: 14px;
     }
-    html[data-theme="light"] .sf-tipbar,
-    html[data-theme="light"] .sf-empty-title,
-    html[data-theme="light"] .sf-msg-body{
-      color: rgba(15,17,20,0.88);
+    #list-upcoming .panel-sub,
+    #list-awaiting .panel-sub{
+      margin-bottom: 10px;
     }
-    html[data-theme="light"] .sf-empty-sub,
-    html[data-theme="light"] .sf-empty-tip,
-    html[data-theme="light"] .sf-msg-meta{
-      color: rgba(15,17,20,0.62);
+    #list-upcoming small.help,
+    #list-awaiting small.help{
+      margin-top: 6px;
+      font-size: 12.8px;
     }
-    html[data-theme="light"] .sf-toggle{
-      border-color: rgba(15,17,20,0.12);
-      background: rgba(15,17,20,0.03);
-      color: rgba(15,17,20,0.85);
-    }
-    html[data-theme="light"] .sf-pill{
-      border-color: rgba(15,17,20,0.12);
-      background: rgba(15,17,20,0.03);
-      color: rgba(15,17,20,0.78);
-    }
-
-    @media (prefers-color-scheme: light){
-      html:not([data-theme="dark"]) .sf-tipbar,
-      html:not([data-theme="dark"]) .sf-empty-panel,
-      html:not([data-theme="dark"]) .sf-msg-card{
-        border-color: rgba(15,17,20,0.12);
-        background: rgba(15,17,20,0.03);
-      }
-      html:not([data-theme="dark"]) .sf-tipbar,
-      html:not([data-theme="dark"]) .sf-empty-title,
-      html:not([data-theme="dark"]) .sf-msg-body{
-        color: rgba(15,17,20,0.88);
-      }
-      html:not([data-theme="dark"]) .sf-empty-sub,
-      html:not([data-theme="dark"]) .sf-empty-tip,
-      html:not([data-theme="dark"]) .sf-msg-meta{
-        color: rgba(15,17,20,0.62);
-      }
-      html:not([data-theme="dark"]) .sf-toggle{
-        border-color: rgba(15,17,20,0.12);
-        background: rgba(15,17,20,0.03);
-        color: rgba(15,17,20,0.85);
-      }
-      html:not([data-theme="dark"]) .sf-pill{
-        border-color: rgba(15,17,20,0.12);
-        background: rgba(15,17,20,0.03);
-        color: rgba(15,17,20,0.78);
-      }
-    }
+    /* Also reduce section head spacing a touch */
+    #pill-upcoming, #pill-awaiting { transform: translateY(-1px); }
   </style>
 </head>
 
@@ -704,17 +579,18 @@
         <p class="status-line" id="status-line">Sign in to fetch signed inbox messages.</p>
       </div>
 
+      <!-- ✅ Tip about Consume -->
+      <div class="sf-tipbar hidden" id="consume-tip" role="note" aria-live="polite">
+        <p>
+          <strong>Consume</strong> permanently marks a message as used on the server — it will stop appearing on future fetches
+          (and is removed from this device’s lists too).
+        </p>
+        <button class="btn btn-quiet" id="consume-tip-dismiss" type="button">Got it</button>
+      </div>
+
       <!-- ROUTES -->
       <div id="route-inbox" class="sf-route show">
         <div id="inbox-ui" class="hidden">
-
-          <div class="sf-tipbar" id="consume-tip">
-            <div>
-              <strong>Tip:</strong> <strong>Consume</strong> permanently marks a message as used on the server.
-              It will stop appearing on future fetches (and clears it from this device too).
-            </div>
-            <button class="sf-tip-close" id="tip-close" type="button">Got it</button>
-          </div>
 
           <div class="sf-inbox-topbar">
             <button class="sf-toggle" id="btn-show-blocked" type="button">
@@ -748,24 +624,28 @@
             </button>
           </div>
 
+          <!-- PINNED -->
           <div class="sf-section-head" id="head-pinned" style="display:none;">
             <h2>Pinned</h2>
             <span class="sf-pill" id="pill-pinned">0</span>
           </div>
           <div id="list-pinned"></div>
 
+          <!-- UPCOMING -->
           <div class="sf-section-head">
             <h2>Upcoming</h2>
             <span class="sf-pill" id="pill-upcoming">0</span>
           </div>
           <div id="list-upcoming"></div>
 
+          <!-- AWAITING -->
           <div class="sf-section-head">
             <h2>Awaiting</h2>
             <span class="sf-pill" id="pill-awaiting">0</span>
           </div>
           <div id="list-awaiting"></div>
 
+          <!-- RELEASED -->
           <div class="sf-section-head">
             <h2>Released</h2>
             <span class="sf-pill" id="pill-released">0</span>
@@ -779,7 +659,6 @@
               Swipe left on <strong>Upcoming</strong> → hide it until release.<br/>
               Long-press a <strong>Released</strong> message → pin / hide sender / hide message.
             </p>
-
             <small class="help">
               Hidden senders filter applies everywhere (Pinned/Upcoming/Awaiting/Released).
             </small>
@@ -837,7 +716,7 @@
     <div class="delvee-modal">
       <div class="delvee-head">
         <div class="delvee-title" id="delvee-title">
-          <span class="delvee-badge">Delvee</span>
+          <span class="delvee-badge">Setfeed</span>
           <span id="delvee-who">Opening…</span>
         </div>
         <button class="btn btn-quiet" id="delvee-close" type="button">Close</button>
@@ -845,23 +724,20 @@
 
       <div class="delvee-body">
         <div class="delvee-stage" id="delvee-stage">
-          <div class="delvee-play" id="delvee-play" aria-hidden="true">
-            <div class="sf-bolt"></div>
-            <div class="sf-bolt"></div>
-            <div class="sf-bolt"></div>
-            <div class="sf-opening-text">
-              Opening…
-              <div class="sf-opening-sub">A surprise is arriving</div>
-            </div>
+          <!-- overlay used during animation -->
+          <div class="sf-vault-overlay" aria-hidden="true">
+            <div class="sf-vault-noise"></div>
+            <div class="sf-vault-bolt"></div>
           </div>
 
           <div class="delvee-reveal" id="delvee-reveal">
-            <h3 style="margin-top:0;" id="delvee-heading">Message</h3>
-            <p id="delvee-text"></p>
+            <h3 style="margin-top:0; color: var(--text);" id="delvee-heading">Message</h3>
+            <p id="delvee-text" style="color: var(--muted); white-space: pre-wrap; margin: 0;"></p>
 
             <div class="delvee-attachments hidden" id="delvee-attachments">
               <h4 id="delvee-attachments-title">Images</h4>
-              <div class="delvee-attach-list" id="delvee-attach-list"></div>
+              <div class="delvee-thumb-grid" id="delvee-thumb-grid"></div>
+              <div class="actions" id="delvee-attach-actions" style="margin-top: 10px; justify-content:flex-start;"></div>
             </div>
 
             <small class="help" style="margin-top:10px;">Decryption is local in your browser.</small>
@@ -870,32 +746,19 @@
       </div>
 
       <div class="delvee-actions">
-        <button class="btn btn-quiet" id="delvee-consume" type="button" title="Mark consumed so it never appears again">Consume</button>
+        <button class="btn btn-secondary" id="delvee-consume" type="button">Consume</button>
         <button class="btn btn-primary" id="delvee-ok" type="button">Done</button>
       </div>
     </div>
   </div>
 
-  <!-- Fullscreen image viewer -->
-  <div class="sf-imgview" id="sf-imgview" role="dialog" aria-modal="true" aria-label="Image viewer">
-    <div class="sf-imgview-card">
-      <div class="sf-imgview-head">
-        <div class="sf-imgview-title" id="sf-imgview-title">Image</div>
-        <button class="btn btn-quiet" id="sf-imgview-close" type="button">Close</button>
-      </div>
-      <div class="sf-imgview-body">
-        <img id="sf-imgview-img" alt="Image" />
-      </div>
-    </div>
-  </div>
-
-  <!-- Context menu modal -->
+  <!-- Context menu modal (Released only) -->
   <div class="sf-modal-backdrop" id="sf-actions-modal" role="dialog" aria-modal="true" aria-labelledby="sf-actions-title" aria-describedby="sf-actions-body">
     <div class="sf-modal">
       <div class="sf-modal-header" id="sf-actions-title">Message options</div>
       <div class="sf-modal-body" id="sf-actions-body">
-        <div id="sf-actions-meta" style="font-size:12px; color: rgba(233,238,246,0.72); margin-bottom: 10px;"></div>
-        <div id="sf-actions-preview" style="white-space: pre-wrap;"></div>
+        <div id="sf-actions-meta" style="font-size:12px; color: var(--soft); margin-bottom: 10px;"></div>
+        <div id="sf-actions-preview" style="white-space: pre-wrap; color: var(--muted);"></div>
       </div>
       <div class="sf-modal-actions">
         <button class="sf-modal-btn" id="sf-btn-pin" type="button">Pin</button>
@@ -913,23 +776,6 @@
     const auth = window.sfAuth;
     const functions = window.sfFunctions;
 
-    // -------------------------
-    // Status helper
-    // -------------------------
-    const statusDot = document.getElementById("status-dot");
-    const statusTitle = document.getElementById("status-title");
-    const statusLine = document.getElementById("status-line");
-
-    function setStatus(kind, title, line) {
-      if (statusDot) {
-        statusDot.className = "dot";
-        if (kind === "good") statusDot.classList.add("good");
-        if (kind === "warn") statusDot.classList.add("warn");
-      }
-      if (statusTitle) statusTitle.textContent = title;
-      if (statusLine) statusLine.textContent = line;
-    }
-
     // ✅ Redirect completion handler
     auth.getRedirectResult().catch((e) => {
       console.error(e);
@@ -942,6 +788,40 @@
     });
 
     // -------------------------
+    // Status helper
+    // -------------------------
+    const statusDot = document.getElementById("status-dot");
+    const statusTitle = document.getElementById("status-title");
+    const statusLine = document.getElementById("status-line");
+
+    function setStatus(kind, title, line) {
+      statusDot.className = "dot";
+      if (kind === "good") statusDot.classList.add("good");
+      if (kind === "warn") statusDot.classList.add("warn");
+      statusTitle.textContent = title;
+      statusLine.textContent = line;
+    }
+
+    // -------------------------
+    // Consume tip
+    // -------------------------
+    const consumeTip = document.getElementById("consume-tip");
+    const consumeTipDismiss = document.getElementById("consume-tip-dismiss");
+    const LS_TIP = "sf_inbox_consume_tip_dismissed";
+
+    function showConsumeTipIfNeeded(){
+      let dismissed = false;
+      try { dismissed = localStorage.getItem(LS_TIP) === "true"; } catch (_) {}
+      if (!dismissed && consumeTip) consumeTip.classList.remove("hidden");
+    }
+    if (consumeTipDismiss) {
+      consumeTipDismiss.addEventListener("click", () => {
+        try { localStorage.setItem(LS_TIP, "true"); } catch (_) {}
+        if (consumeTip) consumeTip.classList.add("hidden");
+      });
+    }
+
+    // -------------------------
     // Routes
     // -------------------------
     const routeInbox = document.getElementById("route-inbox");
@@ -952,11 +832,11 @@
 
     function showRoute(which){
       const isHidden = which === "hidden";
-      if (routeInbox) routeInbox.classList.toggle("show", !isHidden);
-      if (routeHidden) routeHidden.classList.toggle("show", isHidden);
+      routeInbox.classList.toggle("show", !isHidden);
+      routeHidden.classList.toggle("show", isHidden);
 
-      if (hiddenUi) hiddenUi.classList.toggle("hidden", !(auth.currentUser));
-      if (inboxUi) inboxUi.classList.toggle("hidden", !(auth.currentUser) || isHidden);
+      hiddenUi.classList.toggle("hidden", !(auth.currentUser));
+      inboxUi.classList.toggle("hidden", !(auth.currentUser) || isHidden);
     }
     function currentRoute(){
       return (window.location.hash || "").toLowerCase().includes("hidden") ? "hidden" : "inbox";
@@ -964,14 +844,16 @@
     window.addEventListener("hashchange", () => showRoute(currentRoute()));
 
     // -------------------------
-    // Auth UI
+    // Auth
     // -------------------------
+    const AUTH_KEY = "sf_signed_authed";
+
     const btnGoogle = document.getElementById("btn-google");
     const btnSignOut = document.getElementById("btn-sign-out");
     const authPill = document.getElementById("auth-pill");
 
     function setSignedAuthedFlag(isAuthed) {
-      try { localStorage.setItem("sf_signed_authed", isAuthed ? "true" : "false"); } catch (_) {}
+      try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
       document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
     }
 
@@ -979,21 +861,26 @@
       const isAuthed = !!user;
       setSignedAuthedFlag(isAuthed);
 
-      if (btnGoogle) btnGoogle.classList.toggle("hidden", isAuthed);
-      if (btnSignOut) btnSignOut.disabled = !isAuthed;
-      if (authPill) authPill.textContent = isAuthed ? (user.email || "Signed in") : "Not signed in";
+      btnGoogle.classList.toggle("hidden", isAuthed);
+      btnSignOut.disabled = !isAuthed;
+      authPill.textContent = isAuthed ? (user.email || "Signed in") : "Not signed in";
 
       if (navHidden) navHidden.classList.toggle("hidden", !isAuthed);
 
       showRoute(currentRoute());
 
-      if (isAuthed) setStatus("good", "Signed in", "Paste a Secure/Personal code and press Fetch.");
-      else setStatus("warn", "Not signed in", "Sign in to fetch signed inbox messages.");
+      if (isAuthed) {
+        setStatus("good", "Signed in", "Paste a Secure/Personal code and press Fetch.");
+        showConsumeTipIfNeeded();
+      } else {
+        setStatus("warn", "Not signed in", "Sign in to fetch signed inbox messages.");
+        if (consumeTip) consumeTip.classList.add("hidden");
+      }
     }
 
     auth.onAuthStateChanged((user) => renderAuthUI(user));
 
-    if (btnGoogle) btnGoogle.addEventListener("click", async () => {
+    btnGoogle.addEventListener("click", async () => {
       try {
         setStatus("good", "Signing in…", "Opening Google sign-in…");
         const provider = new firebase.auth.GoogleAuthProvider();
@@ -1005,7 +892,7 @@
       }
     });
 
-    if (btnSignOut) btnSignOut.addEventListener("click", async () => {
+    btnSignOut.addEventListener("click", async () => {
       try {
         await auth.signOut();
         setStatus("warn", "Signed out", "Sign in again to fetch signed inbox messages.");
@@ -1025,8 +912,7 @@
       pinnedIds: "sf_inbox_pinned_ids",
       blockedSenders: "sf_inbox_blocked_senders",
       showBlocked: "sf_inbox_show_blocked",
-      autoPolling: "sf_inbox_auto_polling",
-      consumeTipDismissed: "sf_inbox_tip_consume_dismissed"
+      autoPolling: "sf_inbox_auto_polling"
     };
 
     function readJson(key, fallback){
@@ -1034,11 +920,14 @@
         const raw = localStorage.getItem(key);
         if (!raw) return fallback;
         return JSON.parse(raw);
-      } catch (_) { return fallback; }
+      } catch (_) {
+        return fallback;
+      }
     }
     function writeJson(key, value){
       try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
     }
+
     function uniq(arr){
       const out = [];
       const seen = new Set();
@@ -1086,20 +975,6 @@
       if (pillHidden) pillHidden.textContent = `${hiddenCount} hidden`;
     }
 
-    // Tip dismiss
-    const tipEl = document.getElementById("consume-tip");
-    const tipClose = document.getElementById("tip-close");
-    function renderTip(){
-      let dismissed = false;
-      try { dismissed = (localStorage.getItem(LS.consumeTipDismissed) === "true"); } catch(_) {}
-      if (tipEl) tipEl.classList.toggle("hidden", dismissed);
-    }
-    if (tipClose) tipClose.addEventListener("click", () => {
-      try { localStorage.setItem(LS.consumeTipDismissed, "true"); } catch(_) {}
-      renderTip();
-    });
-    renderTip();
-
     // -------------------------
     // Message kind detection
     // -------------------------
@@ -1112,7 +987,7 @@
     }
 
     // -------------------------
-    // Crypto helpers (WebCrypto) — unchanged scheme
+    // Crypto helpers (WebCrypto)
     // -------------------------
     function normalizeCodeAndroid(raw) { return raw.trim().toUpperCase().replace(/[\s-]/g, ""); }
 
@@ -1150,7 +1025,9 @@
         const key = await deriveAesKeyFromPassphrase(passphrase, salt);
         const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
         return new TextDecoder().decode(pt);
-      } catch (_) { return null; }
+      } catch (_) {
+        return null;
+      }
     }
 
     async function decryptAttachmentBytesForCode(rawCode, encryptedBytes, ivB64, saltB64) {
@@ -1188,16 +1065,6 @@
       return v.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
     }
 
-    function formatBytes(n){
-      const v = Number(n);
-      if (!Number.isFinite(v) || v <= 0) return "";
-      const kb = 1024;
-      const mb = kb * 1024;
-      if (v >= mb) return `${(v / mb).toFixed(1)} MB`;
-      if (v >= kb) return `${Math.round(v / kb)} KB`;
-      return `${Math.round(v)} B`;
-    }
-
     // -------------------------
     // UI elements
     // -------------------------
@@ -1231,8 +1098,8 @@
     const btnHiddenBack = document.getElementById("btn-hidden-back");
     const btnHiddenClearAll = document.getElementById("btn-hidden-clearall");
 
-    if (btnHiddenBack) btnHiddenBack.addEventListener("click", () => { window.location.hash = ""; });
-    if (btnHiddenClearAll) btnHiddenClearAll.addEventListener("click", () => {
+    btnHiddenBack.addEventListener("click", () => { window.location.hash = ""; });
+    btnHiddenClearAll.addEventListener("click", () => {
       setHiddenReleasedIds([]);
       refreshHiddenNav();
       renderHidden();
@@ -1248,11 +1115,11 @@
     })();
 
     // -------------------------
-    // Attachments (download + decrypt)
+    // Attachments (signed URLs + decrypt + caching)
     // -------------------------
     let lastFetchedCode = "";
-    const attachmentUrlCache = new Map();
-    const attachmentBusy = new Set();
+    const attachmentUrlCache = new Map(); // key -> objectUrl
+    const attachmentBusy = new Set(); // key
 
     function cacheKey(envelopeId, attachmentId){ return `${envelopeId}::${attachmentId}`; }
 
@@ -1292,18 +1159,22 @@
 
       attachmentBusy.add(k);
       try {
+        // mint short-lived download URL
         const callable = functions.httpsCallable("createSignedAttachmentDownloadUrl");
         const res = await callable({ signedEnvelopeId, attachmentId: attachment.attachmentId });
         const payload = (res && res.data) ? res.data : {};
         const downloadUrl = payload.downloadUrl;
         if (!downloadUrl) throw new Error("No downloadUrl");
 
+        // fetch encrypted bytes
         const r = await fetch(downloadUrl);
         if (!r.ok) throw new Error(`Download failed (${r.status})`);
         const encBuf = await r.arrayBuffer();
 
+        // decrypt bytes using existing scheme (PBKDF2 + AES-GCM) with per-attachment iv/salt
         const plainBytes = await decryptAttachmentBytesForCode(rawCode, encBuf, attachment.ivB64, attachment.saltB64);
 
+        // object URL
         const blob = new Blob([plainBytes], { type: attachment.contentType || "application/octet-stream" });
         const url = URL.createObjectURL(blob);
 
@@ -1315,7 +1186,7 @@
     }
 
     // -------------------------
-    // Modal + image viewer
+    // Modal (Open flow)
     // -------------------------
     const delveeModal = document.getElementById("delvee-modal");
     const delveeClose = document.getElementById("delvee-close");
@@ -1325,40 +1196,22 @@
     const delveeWho = document.getElementById("delvee-who");
     const delveeConsume = document.getElementById("delvee-consume");
     const delveeHeading = document.getElementById("delvee-heading");
+
     const delveeAttachments = document.getElementById("delvee-attachments");
     const delveeAttachmentsTitle = document.getElementById("delvee-attachments-title");
-    const delveeAttachList = document.getElementById("delvee-attach-list");
-
-    const imgview = document.getElementById("sf-imgview");
-    const imgviewClose = document.getElementById("sf-imgview-close");
-    const imgviewImg = document.getElementById("sf-imgview-img");
-    const imgviewTitle = document.getElementById("sf-imgview-title");
+    const delveeThumbGrid = document.getElementById("delvee-thumb-grid");
+    const delveeAttachActions = document.getElementById("delvee-attach-actions");
 
     let delveeActiveEnvelopeId = null;
 
-    function imgviewHide(){
-      if (!imgview) return;
-      imgview.classList.remove("show");
-      if (imgviewImg) imgviewImg.src = "";
-      if (imgviewTitle) imgviewTitle.textContent = "Image";
-    }
-    function imgviewShow({ title, src }){
-      if (!imgview) return;
-      if (imgviewTitle) imgviewTitle.textContent = title || "Image";
-      if (imgviewImg) imgviewImg.src = src || "";
-      imgview.classList.add("show");
-    }
-    if (imgviewClose) imgviewClose.addEventListener("click", imgviewHide);
-    if (imgview) imgview.addEventListener("click", (e) => { if (e.target === imgview) imgviewHide(); });
-
-    function clearDelveeAttachmentsUI(){
-      if (delveeAttachList) delveeAttachList.innerHTML = "";
+    function clearModalAttachmentsUI(){
+      if (delveeThumbGrid) delveeThumbGrid.innerHTML = "";
+      if (delveeAttachActions) delveeAttachActions.innerHTML = "";
       if (delveeAttachments) delveeAttachments.classList.add("hidden");
-      if (delveeAttachmentsTitle) delveeAttachmentsTitle.textContent = "Images";
     }
 
-    function delveeHide(){
-      if (delveeModal) delveeModal.classList.remove("show");
+    function modalHide(){
+      delveeModal.classList.remove("show");
       if (delveeStage) {
         delveeStage.classList.remove("is-playing");
         delveeStage.classList.remove("is-revealed");
@@ -1371,108 +1224,100 @@
       }
       delveeActiveEnvelopeId = null;
       if (delveeHeading) delveeHeading.textContent = "Message";
-      clearDelveeAttachmentsUI();
-      imgviewHide();
+      clearModalAttachmentsUI();
     }
 
-    async function renderDelveeAttachmentsForEnvelope(envelopeId){
-      clearDelveeAttachmentsUI();
+    async function renderModalAttachmentsForEnvelope(envelopeId){
+      clearModalAttachmentsUI();
       const item = findItemById(envelopeId);
       if (!item || !Array.isArray(item.attachments) || item.attachments.length === 0) return;
 
       const rawCode = (lastFetchedCode || (codeInput && codeInput.value) || "").trim();
       if (!rawCode) return;
 
-      const imagesOnly = item.attachments.filter(a => (a.contentType || "").startsWith("image/")).length;
-      if (delveeAttachmentsTitle) {
-        delveeAttachmentsTitle.textContent = imagesOnly > 0 ? `Images (${imagesOnly})` : `Attachments (${item.attachments.length})`;
-      }
+      if (delveeAttachmentsTitle) delveeAttachmentsTitle.textContent = `Images (${item.attachments.length})`;
       if (delveeAttachments) delveeAttachments.classList.remove("hidden");
 
+      // skeletons
+      for (let i = 0; i < item.attachments.length; i++) {
+        const sk = document.createElement("div");
+        sk.className = "sf-thumb-skel";
+        sk.textContent = "…";
+        delveeThumbGrid.appendChild(sk);
+      }
+
+      // thumbs
       for (let i = 0; i < item.attachments.length; i++) {
         const a = item.attachments[i];
-        const isImage = (a.contentType || "").startsWith("image/");
+        const skel = delveeThumbGrid.children[i];
 
-        const row = document.createElement("div");
-        row.className = "delvee-attach-row";
+        try {
+          const url = await openSignedAttachmentAsObjectUrl({ rawCode, signedEnvelopeId: item.id, attachment: a });
+          const img = document.createElement("img");
+          img.className = "sf-thumb";
+          img.alt = "Image";
+          img.src = url;
+          img.title = "Open image";
+          img.addEventListener("click", () => window.open(url, "_blank", "noopener"));
+          delveeThumbGrid.replaceChild(img, skel);
+        } catch (e) {
+          console.error(e);
+          skel.textContent = "x";
+        }
+      }
 
-        const meta = document.createElement("div");
-        meta.className = "delvee-attach-meta";
-
-        const t1 = document.createElement("div");
-        t1.className = "t1";
-        t1.textContent = isImage ? `Image ${i + 1}` : `Attachment ${i + 1}`;
-
-        const t2 = document.createElement("div");
-        t2.className = "t2";
-        const size = formatBytes(a.sizeBytes);
-        t2.textContent = `${a.contentType || "application/octet-stream"}${size ? " · " + size : ""}`;
-
-        meta.appendChild(t1);
-        meta.appendChild(t2);
-
-        const btn = document.createElement("button");
-        btn.className = "btn btn-secondary";
-        btn.type = "button";
-        btn.textContent = isImage ? "Open" : "Download";
-
-        btn.addEventListener("click", async () => {
-          btn.disabled = true;
-          const prev = btn.textContent;
-          btn.textContent = "Opening…";
-          try {
-            const url = await openSignedAttachmentAsObjectUrl({ rawCode, signedEnvelopeId: item.id, attachment: a });
-            if (isImage) imgviewShow({ title: `Image ${i + 1}`, src: url });
-            else window.open(url, "_blank", "noopener");
-          } catch (e) {
-            console.error(e);
-            setStatus("warn", "Couldn’t open attachment", (e && e.message) ? e.message : "Try again.");
-          } finally {
-            btn.disabled = false;
-            btn.textContent = prev;
+      // quick action: open all
+      if (delveeAttachActions) {
+        const btnOpenAll = document.createElement("button");
+        btnOpenAll.className = "btn btn-secondary";
+        btnOpenAll.type = "button";
+        btnOpenAll.textContent = "Open all images";
+        btnOpenAll.addEventListener("click", async () => {
+          for (const a of item.attachments) {
+            try {
+              const url = await openSignedAttachmentAsObjectUrl({ rawCode, signedEnvelopeId: item.id, attachment: a });
+              window.open(url, "_blank", "noopener");
+            } catch (_) {}
           }
         });
-
-        row.appendChild(meta);
-        row.appendChild(btn);
-        if (delveeAttachList) delveeAttachList.appendChild(row);
+        delveeAttachActions.appendChild(btnOpenAll);
       }
     }
 
-    // ✅ This is the “always show” modal open sequence.
-    function delveeShow({ envelopeId, body, senderUid, kindLabel }){
+    function modalShow({ envelopeId, body, senderUid, kindLabel }){
       delveeActiveEnvelopeId = envelopeId;
 
       if (delveeWho) delveeWho.textContent = senderUid ? `From ${senderUid}` : "A surprise drop";
       if (delveeHeading) delveeHeading.textContent = kindLabel || "Message";
       if (delveeText) delveeText.textContent = "";
 
-      clearDelveeAttachmentsUI();
+      clearModalAttachmentsUI();
 
-      // Force show
-      if (delveeModal) delveeModal.classList.add("show");
+      // show modal
+      delveeModal.classList.add("show");
 
-      // Reset + start playing
+      // reset stage
       if (delveeStage) {
         delveeStage.classList.remove("is-revealed");
-        delveeStage.classList.remove("is-playing");
-        // Force reflow so the animation reliably restarts
-        void delveeStage.offsetHeight;
         delveeStage.classList.add("is-playing");
       }
 
-      const REVEAL_MS = 1150;
+      // reveal after animation window
+      const REVEAL_MS = 950;
       setTimeout(async () => {
-        if (delveeStage) delveeStage.classList.remove("is-playing");
+        if (!delveeActiveEnvelopeId) return; // closed
         if (delveeText) delveeText.textContent = body || "";
-        if (delveeStage) delveeStage.classList.add("is-revealed");
-        await renderDelveeAttachmentsForEnvelope(envelopeId);
+        if (delveeStage) {
+          delveeStage.classList.remove("is-playing");
+          delveeStage.classList.add("is-revealed");
+        }
+        await renderModalAttachmentsForEnvelope(envelopeId);
       }, REVEAL_MS);
     }
 
-    if (delveeClose) delveeClose.addEventListener("click", delveeHide);
-    if (delveeOk) delveeOk.addEventListener("click", delveeHide);
-    if (delveeModal) delveeModal.addEventListener("click", (e) => { if (e.target === delveeModal) delveeHide(); });
+    delveeClose.addEventListener("click", modalHide);
+    delveeOk.addEventListener("click", modalHide);
+    delveeModal.addEventListener("click", (e) => { if (e.target === delveeModal) modalHide(); });
 
     // -------------------------
     // Released actions modal
@@ -1491,25 +1336,18 @@
 
     function showActionsModal(item){
       activeActionItem = item;
-      if (actionsMeta) actionsMeta.textContent = `${item.when || "—"}${item.senderUid ? " · " + item.senderUid : ""}`;
-      if (actionsPreview) actionsPreview.textContent = item.body ? item.body : "Hidden — press Open to reveal";
-      if (actionsModal) actionsModal.classList.add("show");
+      actionsMeta.textContent = `${item.when || "—"}${item.senderUid ? " · " + item.senderUid : ""}`;
+      actionsPreview.textContent = item.body ? item.body : "Hidden — press Open to reveal";
+      actionsModal.classList.add("show");
     }
     function hideActionsModal(){
-      if (actionsModal) actionsModal.classList.remove("show");
+      actionsModal.classList.remove("show");
       activeActionItem = null;
     }
 
-    if (actionsModal) actionsModal.addEventListener("click", (e) => { if (e.target === actionsModal) hideActionsModal(); });
-    if (btnActDone) btnActDone.addEventListener("click", hideActionsModal);
-
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        imgviewHide();
-        delveeHide();
-        hideActionsModal();
-      }
-    });
+    actionsModal.addEventListener("click", (e) => { if (e.target === actionsModal) hideActionsModal(); });
+    btnActDone.addEventListener("click", hideActionsModal);
+    window.addEventListener("keydown", (e) => { if (e.key === "Escape") { modalHide(); hideActionsModal(); } });
 
     // -------------------------
     // Notifications
@@ -1521,7 +1359,9 @@
         if (Notification.permission === "denied") return false;
         const p = await Notification.requestPermission();
         return p === "granted";
-      } catch (_) { return false; }
+      } catch (_) {
+        return false;
+      }
     }
 
     function notifyReleased(title, body){
@@ -1619,14 +1459,17 @@
 
         if (isReleased) {
           if (hiddenReleasedIds.has(it.id)) continue;
+
           const body = decryptedById.get(it.id) || "";
           const entry = { ...it, body };
+
           if (pinnedIds.has(it.id)) pinned.push(entry);
           else released.push(entry);
           continue;
         }
 
         const entry = { ...it, body: "" };
+
         if (awaitingIds.has(it.id)) awaiting.push(entry);
         else {
           if (hiddenUpcomingIds.has(it.id)) continue;
@@ -1646,25 +1489,33 @@
     }
 
     // -------------------------
-    // Swipe helpers
+    // Swipe + rendering
     // -------------------------
     function attachSwipeHandlers(cardEl, opts){
       const dragEl = cardEl.querySelector(".sf-drag");
       const bgEl = cardEl.querySelector(".sf-swipe-bg");
 
-      let startX = 0, startY = 0, dx = 0, active = false;
-      let longPressTimer = null, longPressFired = false;
+      let startX = 0;
+      let startY = 0;
+      let dx = 0;
+      let active = false;
+
+      let longPressTimer = null;
+      let longPressFired = false;
+
       const SWIPE_THRESHOLD = 72;
 
       function clearLongPress(){
         if (longPressTimer) clearTimeout(longPressTimer);
         longPressTimer = null;
       }
+
       function setDrag(x){
         dragEl.style.transition = "none";
         dragEl.style.transform = `translateX(${x}px)`;
         if (bgEl) bgEl.classList.toggle("show", Math.abs(x) > 8);
       }
+
       function settle(){
         dragEl.style.transition = "transform 140ms ease";
         dragEl.style.transform = "translateX(0px)";
@@ -1710,7 +1561,7 @@
         if (opts.onSwipeLeft || opts.onSwipeRight) setDrag(dx);
       }
 
-      function onUp(){
+      async function onUp(){
         if (!active) return;
         active = false;
         clearLongPress();
@@ -1746,9 +1597,6 @@
       cardEl.addEventListener("lostpointercapture", onUp);
     }
 
-    // -------------------------
-    // Rendering (NO previews)
-    // -------------------------
     function messageCardHTML(item, mode){
       const isAwaiting = mode === "awaiting";
       const isReleased = (mode === "released" || mode === "pinned");
@@ -1757,11 +1605,8 @@
       const sender = item.senderUid ? `Sender: ${item.senderUid}` : "Sender: —";
       const when = item.when || "—";
 
-      const attachmentCount = Array.isArray(item.attachments) ? item.attachments.length : 0;
-      const attachHint = (isReleased && attachmentCount > 0) ? ` · ${attachmentCount} image${attachmentCount === 1 ? "" : "s"}` : "";
-
       const bodyText =
-        isReleased ? `Hidden — press Open${attachHint}` :
+        isReleased ? "Hidden — press Open" :
         isAwaiting ? "Awaiting — notify me when ready" :
         isHidden ? "Hidden" :
         "Upcoming";
@@ -1772,7 +1617,7 @@
       const btns = [];
       if (isReleased) {
         btns.push(`<button class="btn btn-secondary" type="button" data-open="${safeText(item.id)}">Open</button>`);
-        btns.push(`<button class="btn btn-quiet" type="button" data-consume="${safeText(item.id)}" title="Mark consumed so it never appears again">Consume</button>`);
+        btns.push(`<button class="btn btn-quiet" type="button" data-consume="${safeText(item.id)}">Consume</button>`);
         btns.push(`<button class="btn btn-quiet" type="button" data-more="${safeText(item.id)}">•••</button>`);
       } else if (isHidden) {
         btns.push(`<button class="btn btn-secondary" type="button" data-restore="${safeText(item.id)}">Restore</button>`);
@@ -1781,11 +1626,17 @@
         if (!isAwaiting) btns.push(`<button class="btn btn-secondary" type="button" data-make-awaiting="${safeText(item.id)}">Mark awaiting</button>`);
       }
 
-      const titleText = item.kindLabel || (mode === "pinned" ? "Pinned message" : "Message");
+      const titleText = (item && item.kindLabel) ? item.kindLabel : (mode === "pinned" ? "Pinned message" : "Message");
       const pill =
-        (item.kind === "delvee_summary")
+        (item && item.kind === "delvee_summary")
           ? `<span class="sf-kind delvee">${safeText(item.kindPillText || "Delvee")}</span>`
           : ``;
+
+      const attachmentCount = Array.isArray(item.attachments) ? item.attachments.length : 0;
+
+      const attachCountLine = (isReleased && attachmentCount > 0)
+        ? `<div class="sf-attach-count"><span class="dot"></span><span>Images: ${attachmentCount}</span></div>`
+        : ``;
 
       return `
         <div class="sf-msg-card" data-id="${safeText(item.id)}" data-mode="${safeText(mode)}">
@@ -1808,6 +1659,8 @@
 
             <div class="sf-msg-body">${safeText(bodyText)}</div>
 
+            ${attachCountLine}
+
             <div class="sf-msg-actions">
               ${btns.join("")}
             </div>
@@ -1818,8 +1671,11 @@
 
     async function consumeEnvelope(id){
       if (!id) return;
+
       try {
         setStatus("good", "Consuming…", "Marking envelope consumed…");
+
+        // ✅ IMPORTANT: callable name must match backend export
         const callable = functions.httpsCallable("markSignedEnvelopeConsumed");
         await callable({ signedEnvelopeId: id });
 
@@ -1833,36 +1689,21 @@
 
         refreshHiddenNav();
         renderAll();
-        setStatus("good", "Consumed", "Message consumed (won’t appear again).");
+        setStatus("good", "Consumed", "Message consumed (won’t return on future fetches).");
       } catch (e) {
         console.error(e);
-        setStatus("warn", "Couldn’t consume", "Try again. Session may have expired.");
+        setStatus("warn", "Couldn’t consume", "If this keeps happening, confirm the callable is deployed as markSignedEnvelopeConsumed.");
       }
     }
 
-    function renderEmpty(el, title, subtitle, { compact = false } = {}){
-      if (!el) return;
-      if (!compact) {
-        el.innerHTML = `
-          <div class="panel">
-            <p class="panel-title">${safeText(title)}</p>
-            <p class="panel-sub">${safeText(subtitle)}</p>
-            <small class="help">Tip: press Fetch after sending a message.</small>
-          </div>
-        `;
-        return;
-      }
+    function renderEmpty(el, title, subtitle){
       el.innerHTML = `
-        <div class="sf-empty-panel">
-          <div class="sf-empty-title">${safeText(title)}</div>
-          <p class="sf-empty-sub">${safeText(subtitle)}</p>
-          <div class="sf-empty-tip">Tip: press Fetch after sending a message.</div>
+        <div class="panel">
+          <p class="panel-title">${safeText(title)}</p>
+          <p class="panel-sub">${safeText(subtitle)}</p>
+          <small class="help">Tip: press Fetch after sending a message.</small>
         </div>
       `;
-    }
-
-    function findItemById(id){
-      return (latestItems || []).find(x => x.id === id) || null;
     }
 
     function renderHidden(){
@@ -1880,6 +1721,17 @@
       }
 
       listHidden.innerHTML = hiddenItems.map(it => messageCardHTML(it, "hidden")).join("");
+
+      listHidden.querySelectorAll("button[data-restore]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-restore");
+          if (!id) return;
+          setHiddenReleasedIds(getHiddenReleasedIds().filter(x => x !== id));
+          refreshHiddenNav();
+          renderAll();
+          setStatus("good", "Restored", "Message restored to Released.");
+        });
+      });
     }
 
     function renderAll(){
@@ -1887,40 +1739,31 @@
 
       const { pinned, upcoming, awaiting, released } = categorize(latestItems);
 
-      if (pillPinned) pillPinned.textContent = String(pinned.length);
-      if (pillUpcoming) pillUpcoming.textContent = String(upcoming.length);
-      if (pillAwaiting) pillAwaiting.textContent = String(awaiting.length);
-      if (pillReleased) pillReleased.textContent = String(released.length);
+      pillPinned.textContent = String(pinned.length);
+      pillUpcoming.textContent = String(upcoming.length);
+      pillAwaiting.textContent = String(awaiting.length);
+      pillReleased.textContent = String(released.length);
 
       const total = pinned.length + upcoming.length + awaiting.length + released.length;
-      if (countPill) countPill.textContent = `${total} message${total === 1 ? "" : "s"}`;
+      countPill.textContent = `${total} message${total === 1 ? "" : "s"}`;
 
-      if (headPinned && listPinned) {
-        if (pinned.length > 0) {
-          headPinned.style.display = "flex";
-          listPinned.innerHTML = pinned.map(it => messageCardHTML(it, "pinned")).join("");
-        } else {
-          headPinned.style.display = "none";
-          listPinned.innerHTML = "";
-        }
+      if (pinned.length > 0) {
+        headPinned.style.display = "flex";
+        listPinned.innerHTML = pinned.map(it => messageCardHTML(it, "pinned")).join("");
+      } else {
+        headPinned.style.display = "none";
+        listPinned.innerHTML = "";
       }
 
-      if (listUpcoming) {
-        if (upcoming.length === 0) renderEmpty(listUpcoming, summariesOnly ? "No upcoming summaries" : "No upcoming messages", "Upcoming messages appear here until delivery time.", { compact: true });
-        else listUpcoming.innerHTML = upcoming.map(it => messageCardHTML(it, "upcoming")).join("");
-      }
+      if (upcoming.length === 0) renderEmpty(listUpcoming, summariesOnly ? "No upcoming summaries" : "No upcoming messages", "Upcoming messages appear here until delivery time.");
+      else listUpcoming.innerHTML = upcoming.map(it => messageCardHTML(it, "upcoming")).join("");
 
-      if (listAwaiting) {
-        if (awaiting.length === 0) renderEmpty(listAwaiting, summariesOnly ? "No awaiting summaries" : "No awaiting messages", "Swipe right on an upcoming message to mark it Awaiting.", { compact: true });
-        else listAwaiting.innerHTML = awaiting.map(it => messageCardHTML(it, "awaiting")).join("");
-      }
+      if (awaiting.length === 0) renderEmpty(listAwaiting, summariesOnly ? "No awaiting summaries" : "No awaiting messages", "Swipe right on an upcoming message to mark it Awaiting.");
+      else listAwaiting.innerHTML = awaiting.map(it => messageCardHTML(it, "awaiting")).join("");
 
-      if (listReleased) {
-        if (released.length === 0) renderEmpty(listReleased, summariesOnly ? "No released summaries" : "No released messages", "When delivery time arrives, messages appear here.");
-        else listReleased.innerHTML = released.map(it => messageCardHTML(it, "released")).join("");
-      }
+      if (released.length === 0) renderEmpty(listReleased, summariesOnly ? "No released summaries" : "No released messages", "When delivery time arrives, messages appear here.");
+      else listReleased.innerHTML = released.map(it => messageCardHTML(it, "released")).join("");
 
-      // Swipe wiring
       wireUpcoming(listUpcoming);
       wireAwaiting(listAwaiting);
       wireReleased(listPinned);
@@ -1929,8 +1772,22 @@
       if (currentRoute() === "hidden") renderHidden();
     }
 
+    function findItemById(id){
+      return (latestItems || []).find(x => x.id === id) || null;
+    }
+
+    /*
+      ✅ Deep root-cause fix (why Open/Consume did nothing before):
+      You were querying buttons like:
+        card.querySelector(`button[data-open="${CSS.escape(id)}"]`)
+      That *does not match* because CSS.escape inserts backslashes into the value.
+      Result: no listeners attached => Open/Consume “do nothing”.
+
+      This version wires buttons by selecting the button and reading its dataset,
+      so it works for all ids (no escaping problems).
+    */
+
     function wireUpcoming(container){
-      if (!container) return;
       container.querySelectorAll(".sf-msg-card").forEach(card => {
         const id = card.getAttribute("data-id");
         if (!id) return;
@@ -1956,18 +1813,53 @@
           },
           enableLongPress: false
         });
+
+        const btnHide = card.querySelector("button[data-hide-upcoming]");
+        if (btnHide) btnHide.addEventListener("click", () => {
+          const hidden = getHiddenUpcomingIds();
+          if (!hidden.includes(id)) hidden.push(id);
+          setHiddenUpcomingIds(hidden);
+          setStatus("warn", "Hidden (upcoming)", "Hidden until release time (device-only).");
+          renderAll();
+        });
+
+        const btnAwait = card.querySelector("button[data-make-awaiting]");
+        if (btnAwait) btnAwait.addEventListener("click", async () => {
+          const awaiting = getAwaitingIds();
+          if (!awaiting.includes(id)) awaiting.push(id);
+          setAwaitingIds(awaiting);
+
+          const ok = await ensureBrowserNotifications();
+          if (ok) setStatus("good", "Awaiting", "Browser notifications enabled for awaiting items.");
+          else setStatus("warn", "Awaiting", "Awaiting set. Enable browser notifications if you want alerts.");
+
+          renderAll();
+        });
       });
     }
 
     function wireAwaiting(container){
-      if (!container) return;
       container.querySelectorAll(".sf-msg-card").forEach(card => {
+        const id = card.getAttribute("data-id");
+        if (!id) return;
+
         attachSwipeHandlers(card, { enableLongPress: false });
+
+        const btnHide = card.querySelector("button[data-hide-upcoming]");
+        if (btnHide) btnHide.addEventListener("click", () => {
+          const hidden = getHiddenUpcomingIds();
+          if (!hidden.includes(id)) hidden.push(id);
+          setHiddenUpcomingIds(hidden);
+
+          setAwaitingIds(getAwaitingIds().filter(x => x !== id));
+
+          setStatus("warn", "Hidden (upcoming)", "Hidden until release time (device-only).");
+          renderAll();
+        });
       });
     }
 
     function wireReleased(container){
-      if (!container) return;
       container.querySelectorAll(".sf-msg-card").forEach(card => {
         const id = card.getAttribute("data-id");
         if (!id) return;
@@ -1982,81 +1874,31 @@
             showActionsModal({ id, senderUid: item.senderUid || null, when: item.when, body });
           }
         });
+
+        const btnOpen = card.querySelector("button[data-open]");
+        if (btnOpen) btnOpen.addEventListener("click", () => {
+          const full = findItemById(id);
+          const body = decryptedById.get(id) || "";
+          const kindLabel = full && full.kindLabel ? full.kindLabel : "Message";
+          modalShow({ envelopeId: id, body, senderUid: full ? (full.senderUid || null) : null, kindLabel });
+        });
+
+        const btnConsume = card.querySelector("button[data-consume]");
+        if (btnConsume) btnConsume.addEventListener("click", async () => {
+          btnConsume.disabled = true;
+          btnConsume.textContent = "Consuming…";
+          await consumeEnvelope(id);
+        });
+
+        const btnMore = card.querySelector("button[data-more]");
+        if (btnMore) btnMore.addEventListener("click", () => {
+          const body = decryptedById.get(id) || "";
+          showActionsModal({ id, senderUid: item.senderUid || null, when: item.when, body });
+        });
       });
     }
 
-    // -------------------------
-    // ✅ Delegated click handler (Open/Consume/More/etc.) — cannot break
-    // -------------------------
-    document.addEventListener("click", (e) => {
-      const btn = e.target && e.target.closest ? e.target.closest("button[data-open],button[data-consume],button[data-more],button[data-restore],button[data-hide-upcoming],button[data-make-awaiting]") : null;
-      if (!btn) return;
-
-      const openId = btn.getAttribute("data-open");
-      const consumeId = btn.getAttribute("data-consume");
-      const moreId = btn.getAttribute("data-more");
-      const restoreId = btn.getAttribute("data-restore");
-      const hideUpcomingId = btn.getAttribute("data-hide-upcoming");
-      const makeAwaitingId = btn.getAttribute("data-make-awaiting");
-
-      if (openId) {
-        const full = findItemById(openId);
-        const body = decryptedById.get(openId) || "";
-        const kindLabel = full && full.kindLabel ? full.kindLabel : "Message";
-        delveeShow({ envelopeId: openId, body, senderUid: full ? (full.senderUid || null) : null, kindLabel });
-        return;
-      }
-
-      if (consumeId) {
-        btn.disabled = true;
-        const prev = btn.textContent;
-        btn.textContent = "Consuming…";
-        consumeEnvelope(consumeId).finally(() => {
-          btn.disabled = false;
-          btn.textContent = prev;
-        });
-        return;
-      }
-
-      if (moreId) {
-        const full = findItemById(moreId);
-        if (!full) return;
-        const body = decryptedById.get(moreId) || "";
-        showActionsModal({ id: moreId, senderUid: full.senderUid || null, when: full.when, body });
-        return;
-      }
-
-      if (restoreId) {
-        setHiddenReleasedIds(getHiddenReleasedIds().filter(x => x !== restoreId));
-        refreshHiddenNav();
-        renderAll();
-        setStatus("good", "Restored", "Message restored to Released.");
-        return;
-      }
-
-      if (hideUpcomingId) {
-        const hidden = getHiddenUpcomingIds();
-        if (!hidden.includes(hideUpcomingId)) hidden.push(hideUpcomingId);
-        setHiddenUpcomingIds(hidden);
-
-        setAwaitingIds(getAwaitingIds().filter(x => x !== hideUpcomingId));
-        setStatus("warn", "Hidden (upcoming)", "Hidden until release time (device-only).");
-        renderAll();
-        return;
-      }
-
-      if (makeAwaitingId) {
-        const awaiting = getAwaitingIds();
-        if (!awaiting.includes(makeAwaitingId)) awaiting.push(makeAwaitingId);
-        setAwaitingIds(awaiting);
-        ensureBrowserNotifications().catch(() => {});
-        setStatus("good", "Awaiting", "Awaiting set.");
-        renderAll();
-      }
-    }, true);
-
-    // Actions modal buttons
-    if (btnActPin) btnActPin.addEventListener("click", () => {
+    btnActPin.addEventListener("click", () => {
       if (!activeActionItem) return;
       const pinned = getPinnedIds();
       if (!pinned.includes(activeActionItem.id)) pinned.push(activeActionItem.id);
@@ -2066,7 +1908,7 @@
       setStatus("good", "Pinned", "Message pinned on this device.");
     });
 
-    if (btnActHideMsg) btnActHideMsg.addEventListener("click", () => {
+    btnActHideMsg.addEventListener("click", () => {
       if (!activeActionItem) return;
       const hidden = getHiddenReleasedIds();
       if (!hidden.includes(activeActionItem.id)) hidden.push(activeActionItem.id);
@@ -2077,7 +1919,7 @@
       setStatus("warn", "Hidden", "Message hidden on this device.");
     });
 
-    if (btnActBlockSender) btnActBlockSender.addEventListener("click", () => {
+    btnActBlockSender.addEventListener("click", () => {
       if (!activeActionItem) return;
       if (!activeActionItem.senderUid) {
         setStatus("warn", "No sender", "This message has no sender id to hide.");
@@ -2092,18 +1934,18 @@
       setStatus("warn", "Sender hidden", "Messages from this sender are hidden on this device.");
     });
 
-    if (btnActConsume) btnActConsume.addEventListener("click", async () => {
+    btnActConsume.addEventListener("click", async () => {
       if (!activeActionItem) return;
       await consumeEnvelope(activeActionItem.id);
       hideActionsModal();
     });
 
-    if (delveeConsume) delveeConsume.addEventListener("click", async () => {
+    delveeConsume.addEventListener("click", async () => {
       if (!delveeActiveEnvelopeId) return;
       delveeConsume.disabled = true;
       delveeConsume.textContent = "Consuming…";
       await consumeEnvelope(delveeActiveEnvelopeId);
-      delveeHide();
+      modalHide();
     });
 
     // -------------------------
@@ -2112,9 +1954,9 @@
     let autoTimer = null;
 
     function applyToggleUI(){
-      if (autoLabel) autoLabel.textContent = `Auto polling: ${getAutoPolling() ? "On" : "Off"}`;
-      if (blockedLabel) blockedLabel.textContent = `Hidden senders: ${getShowBlocked() ? "Shown" : "Hidden"}`;
-      if (summariesLabel) summariesLabel.textContent = `Show: ${summariesOnly ? "Summaries" : "All"}`;
+      autoLabel.textContent = `Auto polling: ${getAutoPolling() ? "On" : "Off"}`;
+      blockedLabel.textContent = `Hidden senders: ${getShowBlocked() ? "Shown" : "Hidden"}`;
+      summariesLabel.textContent = `Show: ${summariesOnly ? "Summaries" : "All"}`;
     }
 
     function stopAuto(){
@@ -2132,7 +1974,7 @@
       }, 15000);
     }
 
-    if (btnAuto) btnAuto.addEventListener("click", () => {
+    btnAuto.addEventListener("click", async () => {
       const next = !getAutoPolling();
       setAutoPolling(next);
       applyToggleUI();
@@ -2145,7 +1987,7 @@
       }
     });
 
-    if (btnShowBlocked) btnShowBlocked.addEventListener("click", () => {
+    btnShowBlocked.addEventListener("click", () => {
       const next = !getShowBlocked();
       setShowBlocked(next);
       applyToggleUI();
@@ -2153,7 +1995,7 @@
       setStatus("good", "Updated", next ? "Hidden senders are now shown everywhere." : "Hidden senders are now hidden everywhere.");
     });
 
-    if (btnSummariesOnly) btnSummariesOnly.addEventListener("click", () => {
+    btnSummariesOnly.addEventListener("click", () => {
       summariesOnly = !summariesOnly;
       applyToggleUI();
       renderAll();
@@ -2179,6 +2021,7 @@
         const envelopes = await fetchSignedEnvelopesForCode(code);
         const items = await buildLatestItems(code, envelopes);
 
+        // If the code changed, clear cached attachment URLs
         if (lastFetchedCode && normalizeCodeAndroid(lastFetchedCode) !== normalizeCodeAndroid(code)) {
           revokeAllAttachmentUrls();
         }
@@ -2217,20 +2060,24 @@
       }
     }
 
-    if (btnFetch) btnFetch.addEventListener("click", async () => {
+    btnFetch.addEventListener("click", async () => {
       btnFetch.disabled = true;
       const prev = btnFetch.textContent;
       btnFetch.textContent = "Fetching…";
-      try { await doFetch(codeInput ? codeInput.value : "", { quiet:false }); }
-      finally { btnFetch.disabled = false; btnFetch.textContent = prev; }
+      try {
+        await doFetch(codeInput.value, { quiet:false });
+      } finally {
+        btnFetch.disabled = false;
+        btnFetch.textContent = prev;
+      }
     });
 
-    if (btnFetchSummaries) btnFetchSummaries.addEventListener("click", async () => {
+    btnFetchSummaries.addEventListener("click", async () => {
       btnFetchSummaries.disabled = true;
       const prev = btnFetchSummaries.textContent;
       btnFetchSummaries.textContent = "Fetching…";
       try {
-        await doFetch(codeInput ? codeInput.value : "", { quiet:false });
+        await doFetch(codeInput.value, { quiet:false });
         summariesOnly = true;
         applyToggleUI();
         renderAll();
@@ -2241,8 +2088,8 @@
       }
     });
 
-    if (btnClear) btnClear.addEventListener("click", () => {
-      if (codeInput) codeInput.value = "";
+    btnClear.addEventListener("click", () => {
+      codeInput.value = "";
       setAwaitingIds([]);
 
       decryptedById = new Map();
@@ -2258,13 +2105,14 @@
       setStatus("warn", "Cleared", "Inbox cleared. Paste a code and press Fetch.");
     });
 
-    // -------------------------
     // Boot
-    // -------------------------
     applyToggleUI();
     refreshHiddenNav();
+
     if (getAutoPolling()) startAuto();
+
     showRoute(currentRoute());
+
     latestItems = [];
     renderAll();
     setStatus("good", "Ready", "Sign in to fetch signed inbox messages.");
