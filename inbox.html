@@ -68,13 +68,69 @@
 
   <style>
     .hidden{ display:none !important; }
+    body{ overflow-x:hidden; }
 
     /* Route container */
     .sf-route { display:none; }
     .sf-route.show { display:block; }
 
-    /* Make inbox content start “at the top” of the card */
-    .sf-inbox-top { margin-top: var(--s-3); }
+    /* ✅ Codebar alignment: input + buttons in one row */
+    .sf-codebar{
+      display:flex;
+      gap: 10px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-top: var(--s-4);
+    }
+    .sf-codebar .sf-codecol{
+      flex: 1 1 360px;
+      min-width: 240px;
+    }
+    .sf-codebar .sf-btncol{
+      display:flex;
+      gap: 10px;
+      flex: 0 0 auto;
+      flex-wrap: wrap;
+      align-items:center;
+      justify-content:flex-start;
+    }
+    .sf-codebar .btn{
+      min-height: 42px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      line-height: 1;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    .sf-mini-row{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+
+    .sf-toggle{
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.05);
+      color: rgba(233,238,246,0.90);
+      border-radius: 14px;
+      padding: 8px 10px;
+      font-weight: 650;
+      font-size: 13px;
+      cursor:pointer;
+      user-select:none;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      min-height: 40px;
+    }
+    .sf-toggle:hover{ background: rgba(255,255,255,0.07); }
+    .sf-toggle:active{ transform: translateY(0.5px); }
 
     /* Section header */
     .sf-section-head{
@@ -183,7 +239,6 @@
     }
     .sf-swipe-right{ border-color: rgba(59,130,246,0.40); box-shadow: 0 0 0 4px rgba(59,130,246,0.10); }
     .sf-swipe-left{ border-color: rgba(255,255,255,0.18); }
-
     .sf-drag{
       position: relative;
       transform: translateX(0);
@@ -191,89 +246,7 @@
       will-change: transform;
     }
 
-    /* Context menu modal */
-    .sf-modal-backdrop{
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.55);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      z-index: 9999;
-    }
-    .sf-modal-backdrop.show{ display:flex; }
-
-    .sf-modal{
-      width: min(520px, 100%);
-      border-radius: 16px;
-      background: var(--card, #14171c);
-      color: var(--text, #e9eef6);
-      box-shadow: 0 18px 60px rgba(0,0,0,0.45);
-      border: 1px solid rgba(255,255,255,0.08);
-      overflow: hidden;
-    }
-    .sf-modal-header{
-      padding: 16px 16px 10px 16px;
-      font-weight: 750;
-      font-size: 16px;
-    }
-    .sf-modal-body{
-      padding: 0 16px 16px 16px;
-      color: rgba(233,238,246,0.86);
-      line-height: 1.35;
-      font-size: 14px;
-      word-break: break-word;
-    }
-    .sf-modal-actions{
-      display:flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: 10px;
-      padding: 12px 16px 16px 16px;
-    }
-    .sf-modal-btn{
-      border: 0;
-      border-radius: 12px;
-      padding: 10px 14px;
-      font-weight: 700;
-      cursor:pointer;
-      background: rgba(255,255,255,0.08);
-      color: rgba(233,238,246,0.92);
-    }
-    .sf-modal-btn-primary{ background:#3b82f6; color:#fff; }
-    .sf-modal-btn-danger{ background: rgba(255,85,85,0.18); color: rgba(255,220,220,0.95); border: 1px solid rgba(255,85,85,0.28); }
-    .sf-modal-btn-quiet{ background: rgba(255,255,255,0.06); color: rgba(233,238,246,0.85); }
-
-    .sf-mini-row{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items:center;
-      justify-content: space-between;
-      margin-top: 10px;
-    }
-
-    .msg-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
-
-    .sf-toggle{
-      appearance: none;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.05);
-      color: rgba(233,238,246,0.90);
-      border-radius: 14px;
-      padding: 8px 10px;
-      font-weight: 650;
-      font-size: 13px;
-      cursor:pointer;
-      user-select:none;
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-    }
-    .sf-toggle:hover{ background: rgba(255,255,255,0.07); }
-    .sf-toggle:active{ transform: translateY(0.5px); }
-
+    /* Kind pill */
     .sf-kind{
       display:inline-flex;
       align-items:center;
@@ -292,6 +265,120 @@
       border-color: rgba(59,130,246,0.40);
       box-shadow: 0 0 0 4px rgba(59,130,246,0.10);
     }
+
+    /* ✅ FIX STRAY BOXES: Delvee + Actions modals are hidden by default */
+    .delvee-backdrop,
+    .sf-modal-backdrop{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 9999;
+    }
+    .delvee-backdrop.show,
+    .sf-modal-backdrop.show{ display:flex; }
+
+    .delvee-modal{
+      width: min(560px, 100%);
+      border-radius: 18px;
+      background: var(--card, #14171c);
+      color: var(--text, #e9eef6);
+      box-shadow: 0 18px 60px rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .delvee-head{
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 14px 10px 14px;
+    }
+    .delvee-title{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+    .delvee-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius: 999px;
+      padding: 4px 8px;
+      border: 1px solid rgba(59,130,246,0.40);
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.10);
+      background: rgba(59,130,246,0.12);
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .delvee-body{ padding: 0 14px 12px 14px; }
+    .delvee-stage{
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      padding: 14px;
+      position: relative;
+      overflow:hidden;
+      min-height: 140px;
+    }
+    .delvee-reveal{ display:none; }
+    .delvee-stage.is-revealed .delvee-reveal{ display:block; }
+
+    .delvee-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      padding: 12px 14px 14px 14px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* Actions modal */
+    .sf-modal{
+      width: min(520px, 100%);
+      border-radius: 16px;
+      background: var(--card, #14171c);
+      color: var(--text, #e9eef6);
+      box-shadow: 0 18px 60px rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .sf-modal-header{
+      padding: 16px 16px 10px 16px;
+      font-weight: 800;
+      font-size: 16px;
+    }
+    .sf-modal-body{
+      padding: 0 16px 16px 16px;
+      color: rgba(233,238,246,0.86);
+      line-height: 1.35;
+      font-size: 14px;
+      word-break: break-word;
+    }
+    .sf-modal-actions{
+      display:flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 12px 16px 16px 16px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .sf-modal-btn{
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 750;
+      cursor:pointer;
+      background: rgba(255,255,255,0.08);
+      color: rgba(233,238,246,0.92);
+    }
+    .sf-modal-btn-primary{ background:#3b82f6; color:#fff; }
+    .sf-modal-btn-danger{ background: rgba(255,85,85,0.18); color: rgba(255,220,220,0.95); border: 1px solid rgba(255,85,85,0.28); }
+    .sf-modal-btn-quiet{ background: rgba(255,255,255,0.06); color: rgba(233,238,246,0.85); }
   </style>
 </head>
 
@@ -321,120 +408,113 @@
     <div class="card">
       <h1>Inbox</h1>
 
-      <div class="sf-inbox-top">
-        <div class="status" role="status" aria-live="polite" id="status-bar">
-          <div class="status-title">
-            <span class="dot" id="status-dot"></span>
-            <span id="status-title">Ready</span>
-          </div>
-          <p class="status-line" id="status-line">Sign in to fetch signed inbox messages.</p>
+      <div class="status" role="status" aria-live="polite" id="status-bar">
+        <div class="status-title">
+          <span class="dot" id="status-dot"></span>
+          <span id="status-title">Ready</span>
         </div>
+        <p class="status-line" id="status-line">Sign in to fetch signed inbox messages.</p>
+      </div>
 
-        <!-- ROUTES -->
-        <div id="route-inbox" class="sf-route show">
-          <div id="inbox-ui" class="hidden">
-            <div class="field" style="margin-top: var(--s-4);">
-              <label for="code-input">Secure or Personal code</label>
-              <input id="code-input" type="text" inputmode="text" placeholder="Paste SF-… or SFS-…" />
-            </div>
-
-            <div class="msg-toolbar">
-              <div class="left">
-                <button class="btn btn-primary" id="btn-fetch" type="button">Fetch</button>
-                <button class="btn btn-secondary" id="btn-fetch-summaries" type="button">Fetch summaries</button>
-                <button class="btn btn-quiet" id="btn-clear" type="button">Clear</button>
-              </div>
-              <div class="right">
-                <span class="kbd" id="count-pill">0 messages</span>
+      <!-- ROUTES -->
+      <div id="route-inbox" class="sf-route show">
+        <div id="inbox-ui" class="hidden">
+          <!-- ✅ Codebar (aligned) -->
+          <div class="sf-codebar" aria-label="Inbox code and actions">
+            <div class="sf-codecol">
+              <div class="field" style="margin:0;">
+                <label for="code-input">Secure or Personal code</label>
+                <input id="code-input" type="text" inputmode="text" placeholder="Paste SF-… or SFS-…" />
               </div>
             </div>
 
-            <div class="sf-mini-row">
-              <button class="sf-toggle" id="btn-auto" type="button">
-                <span id="auto-label">Auto polling: Off</span>
-              </button>
-              <button class="sf-toggle" id="btn-show-blocked" type="button">
-                <span id="blocked-label">Hidden senders: Hidden</span>
-              </button>
-              <button class="sf-toggle" id="btn-summaries-only" type="button">
-                <span id="summaries-label">Show: All</span>
-              </button>
-            </div>
-
-            <!-- PINNED -->
-            <div class="sf-section-head" id="head-pinned" style="display:none;">
-              <h2>Pinned</h2>
-              <span class="sf-pill" id="pill-pinned">0</span>
-            </div>
-            <div id="list-pinned"></div>
-
-            <!-- UPCOMING -->
-            <div class="sf-section-head">
-              <h2>Upcoming</h2>
-              <span class="sf-pill" id="pill-upcoming">0</span>
-            </div>
-            <div id="list-upcoming"></div>
-
-            <!-- AWAITING -->
-            <div class="sf-section-head">
-              <h2>Awaiting</h2>
-              <span class="sf-pill" id="pill-awaiting">0</span>
-            </div>
-            <div id="list-awaiting"></div>
-
-            <!-- RELEASED -->
-            <div class="sf-section-head">
-              <h2>Released</h2>
-              <span class="sf-pill" id="pill-released">0</span>
-            </div>
-            <div id="list-released"></div>
-
-            <div class="panel" style="margin-top: var(--s-6);">
-              <p class="panel-title">How it works</p>
-              <p class="panel-sub">
-                Swipe right on <strong>Upcoming</strong> → mark <strong>Awaiting</strong> (best-effort browser notifications).<br/>
-                Swipe left on <strong>Upcoming</strong> → hide it until release.<br/>
-                Long-press a <strong>Released</strong> message → pin / hide sender / hide message.
-              </p>
-
-              <small class="help">
-                Signed envelopes require sign-in. Rolling inbox is intentionally not shown here.
-              </small>
+            <div class="sf-btncol" role="group" aria-label="Fetch actions">
+              <button class="btn btn-primary" id="btn-fetch" type="button">Fetch</button>
+              <button class="btn btn-secondary" id="btn-fetch-summaries" type="button">Fetch summaries</button>
+              <button class="btn btn-quiet" id="btn-clear" type="button">Clear</button>
+              <span class="kbd" id="count-pill">0 messages</span>
             </div>
           </div>
-        </div>
 
-        <div id="route-hidden" class="sf-route">
-          <div id="hidden-ui" class="hidden">
-            <h2 style="margin-top: var(--s-4);">Hidden messages</h2>
-            <p class="lead">
-              Hidden messages don’t show in Inbox. You can restore them here.
+          <div class="sf-mini-row">
+            <button class="sf-toggle" id="btn-auto" type="button">
+              <span id="auto-label">Auto polling: Off</span>
+            </button>
+
+            <button class="sf-toggle" id="btn-show-blocked" type="button">
+              <span id="blocked-label">Hidden senders: Hidden</span>
+            </button>
+
+            <button class="sf-toggle" id="btn-summaries-only" type="button">
+              <span id="summaries-label">Show: All</span>
+            </button>
+          </div>
+
+          <!-- PINNED -->
+          <div class="sf-section-head" id="head-pinned" style="display:none;">
+            <h2>Pinned</h2>
+            <span class="sf-pill" id="pill-pinned">0</span>
+          </div>
+          <div id="list-pinned"></div>
+
+          <!-- UPCOMING -->
+          <div class="sf-section-head">
+            <h2>Upcoming</h2>
+            <span class="sf-pill" id="pill-upcoming">0</span>
+          </div>
+          <div id="list-upcoming"></div>
+
+          <!-- AWAITING -->
+          <div class="sf-section-head">
+            <h2>Awaiting</h2>
+            <span class="sf-pill" id="pill-awaiting">0</span>
+          </div>
+          <div id="list-awaiting"></div>
+
+          <!-- RELEASED -->
+          <div class="sf-section-head">
+            <h2>Released</h2>
+            <span class="sf-pill" id="pill-released">0</span>
+          </div>
+          <div id="list-released"></div>
+
+          <div class="panel" style="margin-top: var(--s-6);">
+            <p class="panel-title">How it works</p>
+            <p class="panel-sub">
+              Swipe right on <strong>Upcoming</strong> → mark <strong>Awaiting</strong> (best-effort browser notifications).<br/>
+              Swipe left on <strong>Upcoming</strong> → hide it until release.<br/>
+              Long-press a <strong>Released</strong> message → pin / hide sender / hide message.
             </p>
 
-            <div class="msg-toolbar">
-              <div class="left">
-                <button class="btn btn-quiet" id="btn-hidden-back" type="button">Back to Inbox</button>
-                <button class="btn btn-secondary" id="btn-hidden-clearall" type="button">Clear hidden</button>
-              </div>
-              <div class="right">
-                <span class="kbd" id="pill-hidden">0 hidden</span>
-              </div>
-            </div>
-
-            <div id="list-hidden" style="margin-top: 10px;"></div>
-
-            <small class="help" style="margin-top: 10px;">
-              Hidden items are stored locally in this browser only.
+            <small class="help">
+              Hidden senders filter applies everywhere (Pinned/Upcoming/Awaiting/Released).
             </small>
           </div>
         </div>
       </div>
 
+      <div id="route-hidden" class="sf-route">
+        <div id="hidden-ui" class="hidden">
+          <h2 style="margin-top: var(--s-4);">Hidden messages</h2>
+          <p class="lead">Hidden messages don’t show in Inbox. You can restore them here.</p>
+
+          <div class="actions" style="justify-content: space-between; flex-wrap: wrap;">
+            <div style="display:flex; gap:10px; flex-wrap: wrap;">
+              <button class="btn btn-quiet" id="btn-hidden-back" type="button">Back to Inbox</button>
+              <button class="btn btn-secondary" id="btn-hidden-clearall" type="button">Clear hidden</button>
+            </div>
+            <span class="kbd" id="pill-hidden">0 hidden</span>
+          </div>
+
+          <div id="list-hidden" style="margin-top: 10px;"></div>
+
+          <small class="help" style="margin-top: 10px;">Hidden items are stored locally in this browser only.</small>
+        </div>
+      </div>
+
       <div class="panel" style="margin-top: var(--s-6);">
         <p class="panel-title">Sign in</p>
-        <p class="panel-sub">
-          Signed inbox requires sign-in.
-        </p>
+        <p class="panel-sub">Signed inbox requires sign-in.</p>
 
         <div class="actions">
           <button class="btn btn-lg btn-primary" id="btn-google" type="button">Continue with Google</button>
@@ -442,9 +522,7 @@
           <span class="kbd" id="auth-pill">Not signed in</span>
         </div>
 
-        <small class="help">
-          Fetch is read-only. Consume is explicit.
-        </small>
+        <small class="help">Fetch is read-only. Consume is explicit.</small>
       </div>
 
       <footer>
@@ -473,32 +551,10 @@
 
       <div class="delvee-body">
         <div class="delvee-stage" id="delvee-stage">
-          <div class="delvee-bolt" aria-hidden="true">
-            <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
-              <path class="bolt-fill" d="M36 2L10 36h18l-4 26 30-40H36l4-20z"/>
-            </svg>
-          </div>
-
-          <div class="delvee-confetti" id="delvee-confetti" aria-hidden="true">
-            <i style="left:12%; top:22%"></i>
-            <i style="left:22%; top:58%"></i>
-            <i style="left:35%; top:18%"></i>
-            <i style="left:48%; top:64%"></i>
-            <i style="left:62%; top:26%"></i>
-            <i style="left:74%; top:56%"></i>
-            <i style="left:86%; top:34%"></i>
-          </div>
-
-          <div class="delvee-envelope" aria-hidden="true">
-            <div class="delvee-flap"></div>
-          </div>
-
           <div class="delvee-reveal" id="delvee-reveal">
             <h3 style="margin-top:0;" id="delvee-heading">Message</h3>
             <p id="delvee-text"></p>
-            <small class="help" style="margin-top:10px;">
-              Decryption is local in your browser.
-            </small>
+            <small class="help" style="margin-top:10px;">Decryption is local in your browser.</small>
           </div>
         </div>
       </div>
@@ -534,20 +590,16 @@
     const auth = window.sfAuth;
     const functions = window.sfFunctions;
 
-    // ✅ Finalize redirect sign-in if user signed in from another page
-    auth.getRedirectResult()
-      .then(() => {})
-      .catch((e) => {
-        console.error(e);
-        const code = (e && e.code) ? String(e.code) : "";
-        if (code === "auth/unauthorized-domain") {
-          setStatus("warn", "Auth domain not authorized", "Add this domain in Firebase Auth → Settings → Authorized domains.");
-        } else if (code === "auth/operation-not-allowed") {
-          setStatus("warn", "Google provider disabled", "Enable Google in Firebase Auth → Sign-in method.");
-        } else if (code) {
-          setStatus("warn", "Sign-in failed", code);
-        }
-      });
+    // ✅ Redirect completion handler
+    auth.getRedirectResult().catch((e) => {
+      console.error(e);
+      const code = (e && e.code) ? String(e.code) : "";
+      if (code === "auth/unauthorized-domain") {
+        setStatus("warn", "Auth domain not authorized", "Add this domain in Firebase Auth → Settings → Authorized domains.");
+      } else if (code) {
+        setStatus("warn", "Sign-in failed", code);
+      }
+    });
 
     // -------------------------
     // Status helper
@@ -571,6 +623,7 @@
     const routeHidden = document.getElementById("route-hidden");
     const hiddenUi = document.getElementById("hidden-ui");
     const inboxUi = document.getElementById("inbox-ui");
+    const navHidden = document.getElementById("nav-hidden");
 
     function showRoute(which){
       const isHidden = which === "hidden";
@@ -580,11 +633,9 @@
       hiddenUi.classList.toggle("hidden", !(auth.currentUser));
       inboxUi.classList.toggle("hidden", !(auth.currentUser) || isHidden);
     }
-
     function currentRoute(){
       return (window.location.hash || "").toLowerCase().includes("hidden") ? "hidden" : "inbox";
     }
-
     window.addEventListener("hashchange", () => showRoute(currentRoute()));
 
     // -------------------------
@@ -595,12 +646,10 @@
     const btnGoogle = document.getElementById("btn-google");
     const btnSignOut = document.getElementById("btn-sign-out");
     const authPill = document.getElementById("auth-pill");
-    const inboxNav = document.querySelectorAll(".auth-only");
-    const navHidden = document.getElementById("nav-hidden");
 
     function setSignedAuthedFlag(isAuthed) {
       try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
-      inboxNav.forEach(el => el.classList.toggle("hidden", !isAuthed));
+      document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
     }
 
     function renderAuthUI(user){
@@ -609,8 +658,6 @@
 
       btnGoogle.classList.toggle("hidden", isAuthed);
       btnSignOut.disabled = !isAuthed;
-
-      inboxUi.classList.toggle("hidden", !isAuthed);
       authPill.textContent = isAuthed ? (user.email || "Signed in") : "Not signed in";
 
       if (navHidden) navHidden.classList.toggle("hidden", !isAuthed);
@@ -623,7 +670,6 @@
 
     auth.onAuthStateChanged((user) => renderAuthUI(user));
 
-    // ✅ Use redirect (consistent across pages)
     btnGoogle.addEventListener("click", async () => {
       try {
         setStatus("good", "Signing in…", "Opening Google sign-in…");
@@ -862,44 +908,47 @@
     const delveeHeading = document.getElementById("delvee-heading");
 
     let delveeActiveEnvelopeId = null;
-    let delveeActiveCardEl = null;
 
     function delveeHide(){
       delveeModal.classList.remove("show");
-      delveeStage.classList.remove("is-playing");
-      delveeStage.classList.remove("is-revealed");
-      delveeText.textContent = "";
-      delveeWho.textContent = "Opening…";
-      delveeConsume.disabled = false;
-      delveeConsume.textContent = "Consume";
+      if (delveeStage) {
+        delveeStage.classList.remove("is-playing");
+        delveeStage.classList.remove("is-revealed");
+      }
+      if (delveeText) delveeText.textContent = "";
+      if (delveeWho) delveeWho.textContent = "Opening…";
+      if (delveeConsume) {
+        delveeConsume.disabled = false;
+        delveeConsume.textContent = "Consume";
+      }
       delveeActiveEnvelopeId = null;
-      delveeActiveCardEl = null;
       if (delveeHeading) delveeHeading.textContent = "Message";
     }
 
     function delveeShow({ envelopeId, body, senderUid, kindLabel }){
       delveeActiveEnvelopeId = envelopeId;
-      delveeWho.textContent = senderUid ? `From ${senderUid}` : "A surprise drop";
-      delveeText.textContent = "";
+      if (delveeWho) delveeWho.textContent = senderUid ? `From ${senderUid}` : "A surprise drop";
       if (delveeHeading) delveeHeading.textContent = kindLabel || "Message";
+      if (delveeText) delveeText.textContent = "";
 
       delveeModal.classList.add("show");
-      delveeStage.classList.remove("is-playing");
-      delveeStage.classList.remove("is-revealed");
+      if (delveeStage) {
+        delveeStage.classList.remove("is-playing");
+        delveeStage.classList.remove("is-revealed");
+      }
 
       requestAnimationFrame(() => {
-        delveeStage.classList.add("is-playing");
+        if (delveeStage) delveeStage.classList.add("is-playing");
         setTimeout(() => {
-          delveeText.textContent = body || "";
-          delveeStage.classList.add("is-revealed");
-        }, 920);
+          if (delveeText) delveeText.textContent = body || "";
+          if (delveeStage) delveeStage.classList.add("is-revealed");
+        }, 250);
       });
     }
 
     delveeClose.addEventListener("click", delveeHide);
     delveeOk.addEventListener("click", delveeHide);
     delveeModal.addEventListener("click", (e) => { if (e.target === delveeModal) delveeHide(); });
-    window.addEventListener("keydown", (e) => { if (e.key === "Escape") { delveeHide(); hideActionsModal(); } });
 
     // -------------------------
     // Released actions modal
@@ -929,48 +978,7 @@
 
     actionsModal.addEventListener("click", (e) => { if (e.target === actionsModal) hideActionsModal(); });
     btnActDone.addEventListener("click", hideActionsModal);
-
-    btnActPin.addEventListener("click", () => {
-      if (!activeActionItem) return;
-      const pinned = getPinnedIds();
-      if (!pinned.includes(activeActionItem.id)) pinned.push(activeActionItem.id);
-      setPinnedIds(pinned);
-      hideActionsModal();
-      renderAll();
-      setStatus("good", "Pinned", "Message pinned on this device.");
-    });
-
-    btnActHideMsg.addEventListener("click", () => {
-      if (!activeActionItem) return;
-      const hidden = getHiddenReleasedIds();
-      if (!hidden.includes(activeActionItem.id)) hidden.push(activeActionItem.id);
-      setHiddenReleasedIds(hidden);
-      hideActionsModal();
-      refreshHiddenNav();
-      renderAll();
-      setStatus("warn", "Hidden", "Message hidden on this device.");
-    });
-
-    btnActBlockSender.addEventListener("click", () => {
-      if (!activeActionItem) return;
-      if (!activeActionItem.senderUid) {
-        setStatus("warn", "No sender", "This message has no sender id to hide.");
-        return;
-      }
-      const blocked = getBlockedSenders();
-      if (!blocked.includes(activeActionItem.senderUid)) blocked.push(activeActionItem.senderUid);
-      setBlockedSenders(blocked);
-      hideActionsModal();
-      renderAll();
-      applyToggleUI();
-      setStatus("warn", "Sender hidden", "Messages from this sender are hidden on this device.");
-    });
-
-    btnActConsume.addEventListener("click", async () => {
-      if (!activeActionItem) return;
-      await consumeEnvelope(activeActionItem.id);
-      hideActionsModal();
-    });
+    window.addEventListener("keydown", (e) => { if (e.key === "Escape") { delveeHide(); hideActionsModal(); } });
 
     // -------------------------
     // Notifications
@@ -1056,6 +1064,7 @@
       return out;
     }
 
+    // ✅ FIX: blocked-sender filtering applies to ALL sections (Pinned/Upcoming/Awaiting/Released)
     function categorize(items){
       const now = Date.now();
 
@@ -1075,14 +1084,18 @@
       for (const it of items || []) {
         if (summariesOnly && it.kind !== "delvee_summary") continue;
 
+        const isSenderBlocked = it.senderUid && blockedSenders.has(it.senderUid);
+
+        // ✅ Apply sender-block filter globally (unless user toggles "Shown")
+        if (!showBlocked && isSenderBlocked) {
+          continue;
+        }
+
         const deliverMillis = it.deliverMillis;
         const isReleased = (deliverMillis == null) ? true : (deliverMillis <= now);
 
-        const isSenderBlocked = it.senderUid && blockedSenders.has(it.senderUid);
-
         if (isReleased) {
           if (hiddenReleasedIds.has(it.id)) continue;
-          if (!showBlocked && isSenderBlocked) continue;
 
           const body = decryptedById.get(it.id) || "";
           const entry = { ...it, body };
@@ -1092,6 +1105,7 @@
           continue;
         }
 
+        // not released
         const entry = { ...it, body: "" };
 
         if (awaitingIds.has(it.id)) awaiting.push(entry);
@@ -1112,10 +1126,9 @@
       return { pinned, upcoming, awaiting, released };
     }
 
-    // ---- From here down: your original inbox logic is unchanged ----
-    // (Swipe handling, rendering, consume, toggles, fetching)
-    // ----------------------------------------------------------------
-
+    // -------------------------
+    // Swipe + rendering
+    // -------------------------
     function attachSwipeHandlers(cardEl, opts){
       const dragEl = cardEl.querySelector(".sf-drag");
       const bgEl = cardEl.querySelector(".sf-swipe-bg");
@@ -1379,10 +1392,10 @@
       if (released.length === 0) renderEmpty(listReleased, summariesOnly ? "No released summaries" : "No released messages", "When delivery time arrives, messages appear here.");
       else listReleased.innerHTML = released.map(it => messageCardHTML(it, "released")).join("");
 
-      wireUpcoming(listUpcoming, upcoming);
-      wireAwaiting(listAwaiting, awaiting);
-      wireReleased(listPinned, pinned);
-      wireReleased(listReleased, released);
+      wireUpcoming(listUpcoming);
+      wireAwaiting(listAwaiting);
+      wireReleased(listPinned);
+      wireReleased(listReleased);
 
       if (currentRoute() === "hidden") renderHidden();
     }
@@ -1391,7 +1404,7 @@
       return (latestItems || []).find(x => x.id === id) || null;
     }
 
-    function wireUpcoming(container, items){
+    function wireUpcoming(container){
       container.querySelectorAll(".sf-msg-card").forEach(card => {
         const id = card.getAttribute("data-id");
         if (!id) return;
@@ -1442,7 +1455,7 @@
       });
     }
 
-    function wireAwaiting(container, items){
+    function wireAwaiting(container){
       container.querySelectorAll(".sf-msg-card").forEach(card => {
         const id = card.getAttribute("data-id");
         if (!id) return;
@@ -1463,20 +1476,19 @@
       });
     }
 
-    function wireReleased(container, items){
+    function wireReleased(container){
       container.querySelectorAll(".sf-msg-card").forEach(card => {
         const id = card.getAttribute("data-id");
         if (!id) return;
 
-        const item = items.find(x => x.id === id) || null;
+        const item = findItemById(id);
         if (!item) return;
 
         attachSwipeHandlers(card, {
           enableLongPress: true,
           onLongPress: () => {
-            const full = findItemById(id);
             const body = decryptedById.get(id) || "";
-            showActionsModal({ id, senderUid: full ? full.senderUid : null, when: item.when, body });
+            showActionsModal({ id, senderUid: item.senderUid || null, when: item.when, body });
           }
         });
 
@@ -1484,7 +1496,6 @@
         if (btnOpen) btnOpen.addEventListener("click", () => {
           const full = findItemById(id);
           const body = decryptedById.get(id) || "";
-          delveeActiveCardEl = card;
           const kindLabel = full && full.kindLabel ? full.kindLabel : "Message";
           delveeShow({ envelopeId: id, body, senderUid: full ? (full.senderUid || null) : null, kindLabel });
         });
@@ -1498,12 +1509,53 @@
 
         const btnMore = card.querySelector(`button[data-more="${CSS.escape(id)}"]`);
         if (btnMore) btnMore.addEventListener("click", () => {
-          const full = findItemById(id);
           const body = decryptedById.get(id) || "";
-          showActionsModal({ id, senderUid: full ? full.senderUid : null, when: item.when, body });
+          showActionsModal({ id, senderUid: item.senderUid || null, when: item.when, body });
         });
       });
     }
+
+    btnActPin.addEventListener("click", () => {
+      if (!activeActionItem) return;
+      const pinned = getPinnedIds();
+      if (!pinned.includes(activeActionItem.id)) pinned.push(activeActionItem.id);
+      setPinnedIds(pinned);
+      hideActionsModal();
+      renderAll();
+      setStatus("good", "Pinned", "Message pinned on this device.");
+    });
+
+    btnActHideMsg.addEventListener("click", () => {
+      if (!activeActionItem) return;
+      const hidden = getHiddenReleasedIds();
+      if (!hidden.includes(activeActionItem.id)) hidden.push(activeActionItem.id);
+      setHiddenReleasedIds(hidden);
+      hideActionsModal();
+      refreshHiddenNav();
+      renderAll();
+      setStatus("warn", "Hidden", "Message hidden on this device.");
+    });
+
+    btnActBlockSender.addEventListener("click", () => {
+      if (!activeActionItem) return;
+      if (!activeActionItem.senderUid) {
+        setStatus("warn", "No sender", "This message has no sender id to hide.");
+        return;
+      }
+      const blocked = getBlockedSenders();
+      if (!blocked.includes(activeActionItem.senderUid)) blocked.push(activeActionItem.senderUid);
+      setBlockedSenders(blocked);
+      hideActionsModal();
+      applyToggleUI();
+      renderAll();
+      setStatus("warn", "Sender hidden", "Messages from this sender are hidden on this device.");
+    });
+
+    btnActConsume.addEventListener("click", async () => {
+      if (!activeActionItem) return;
+      await consumeEnvelope(activeActionItem.id);
+      hideActionsModal();
+    });
 
     delveeConsume.addEventListener("click", async () => {
       if (!delveeActiveEnvelopeId) return;
@@ -1557,7 +1609,7 @@
       setShowBlocked(next);
       applyToggleUI();
       renderAll();
-      setStatus("good", "Updated", next ? "Hidden senders are now shown." : "Hidden senders are now hidden.");
+      setStatus("good", "Updated", next ? "Hidden senders are now shown everywhere." : "Hidden senders are now hidden everywhere.");
     });
 
     btnSummariesOnly.addEventListener("click", () => {
@@ -1611,7 +1663,7 @@
 
         if (!quiet) {
           if (latestItems.length === 0) setStatus("warn", "No messages", "No decryptable messages for this code (or none unconsumed).");
-          else setStatus("good", "Fetched", "Lists updated. Open reveals plaintext with Delvee.");
+          else setStatus("good", "Fetched", "Lists updated. Open reveals plaintext.");
         }
       } catch (e) {
         console.error(e);
