@@ -2262,6 +2262,51 @@
       setStatus("warn", "Cleared", "Inbox cleared. Paste a code and press Fetch.");
     });
 
+    // -------------------------
+    // Fetch flow
+    // -------------------------
+    // ... your existing fetch code ...
+
+    btnClear.addEventListener("click", () => {
+      ...
+    });
+
+
+    // ✅ Add delegated Open / Consume handler here
+    document.addEventListener("click", (e) => {
+      const btn = e.target && e.target.closest
+        ? e.target.closest("button[data-open],button[data-consume]")
+        : null;
+      if (!btn) return;
+
+      const openId = btn.getAttribute("data-open");
+      const consumeId = btn.getAttribute("data-consume");
+
+      if (openId) {
+        const full = findItemById(openId);
+        const body = decryptedById.get(openId) || "";
+        const kindLabel = full && full.kindLabel ? full.kindLabel : "Message";
+
+        delveeShow({
+          envelopeId: openId,
+          body,
+          senderUid: full ? (full.senderUid || null) : null,
+          kindLabel
+        });
+        return;
+      }
+
+      if (consumeId) {
+        btn.disabled = true;
+        const prev = btn.textContent;
+        btn.textContent = "Consuming…";
+        consumeEnvelope(consumeId).finally(() => {
+          btn.disabled = false;
+          btn.textContent = prev;
+        });
+      }
+    }, true);
+
     // Boot
     applyToggleUI();
     refreshHiddenNav();
