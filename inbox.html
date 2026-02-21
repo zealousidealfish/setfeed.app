@@ -1523,6 +1523,9 @@
       }
 
       function onDown(e){
+        // ✅ If user is clicking a real control (Open/Consume/etc), don't start swipe capture.
+        if (e.target && e.target.closest && e.target.closest("button,a,input,select,textarea,label")) return;
+
         if (!dragEl) return;
         active = true;
         startX = e.clientX;
