@@ -978,7 +978,7 @@
 
     signedAdvBtns.forEach(btn => btn.addEventListener("click", (e) => { e.preventDefault();
       const mode = btn.getAttribute("data-mode") || "tomorrow";
-      setSignedMode(mode);
+      const y = window.scrollY; setSignedMode(mode); window.scrollTo(0, y);
     }));
 
     signedTimeChips.forEach(btn => btn.addEventListener("click", () => {
