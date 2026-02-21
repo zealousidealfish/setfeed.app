@@ -36,8 +36,9 @@
 
     if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
-    const auth = firebase.auth();
-    const functions = firebase.app().functions("europe-west2");
+    // Make these globals so the rest of the page can't accidentally shadow them
+    window.sfAuth = firebase.auth();
+    window.sfFunctions = firebase.app().functions("europe-west2");
 
     function startAppCheck() {
       try {
@@ -172,10 +173,9 @@
       color: color-mix(in srgb, #ff4d4d 70%, var(--text));
     }
 
-    /* plan details section */
     .sf-plans{
       margin-top: var(--s-7);
-      scroll-margin-top: 90px; /* header offset */
+      scroll-margin-top: 90px;
     }
     .sf-plan-detail{
       border-radius: var(--radius-2);
@@ -307,9 +307,12 @@
             <p class="panel-sub">Sign in with Google to buy a plan and to see Delvee credit balance.</p>
 
             <div class="actions">
-              <button class="btn btn-lg btn-primary" id="btn-google" type="button">Continue with Google</button>
+              <!-- Inline fallback: even if JS binding fails, this still calls window.sfSignInGoogle() -->
+              <button class="btn btn-lg btn-primary" id="btn-google" type="button" onclick="window.sfSignInGoogle && window.sfSignInGoogle()">Continue with Google</button>
               <a class="btn btn-lg btn-secondary" id="btn-email" href="./send.html#signin">Continue with email</a>
             </div>
+
+            <div class="sf-pay-status hidden" id="sf-auth-status" aria-live="polite"></div>
 
             <small class="help">Rolling is always available without signing in.</small>
           </div>
@@ -403,7 +406,8 @@
     // -------------------------
     // Auth + Checkout wiring
     // -------------------------
-    const auth = firebase.auth();
+    const auth = window.sfAuth;
+    const functions = window.sfFunctions;
 
     function setSignedAuthedFlag(isAuthed) {
       document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
@@ -416,19 +420,23 @@
     const creditsLine = document.getElementById("sf-credits-line");
 
     const payStatus = document.getElementById("sf-pay-status");
+    const authStatus = document.getElementById("sf-auth-status");
 
-    function setPayStatus(msg, isError) {
-      if (!payStatus) return;
+    function setStatus(el, msg, isError) {
+      if (!el) return;
       if (!msg) {
-        payStatus.classList.add("hidden");
-        payStatus.textContent = "";
-        payStatus.classList.remove("sf-danger");
+        el.classList.add("hidden");
+        el.textContent = "";
+        el.classList.remove("sf-danger");
         return;
       }
-      payStatus.classList.remove("hidden");
-      payStatus.textContent = msg;
-      payStatus.classList.toggle("sf-danger", !!isError);
+      el.classList.remove("hidden");
+      el.textContent = msg;
+      el.classList.toggle("sf-danger", !!isError);
     }
+
+    function setPayStatus(msg, isError) { setStatus(payStatus, msg, isError); }
+    function setAuthStatus(msg, isError) { setStatus(authStatus, msg, isError); }
 
     function setCreditsLine(n) {
       if (!creditsLine) return;
@@ -453,6 +461,7 @@
       const isAuthed = !!user;
       setSignedAuthedFlag(isAuthed);
       setPayStatus("", false);
+      setAuthStatus("", false);
 
       if (isAuthed && pillLabel) pillLabel.textContent = user.email || "Signed in";
       loadCredits().catch(() => {});
@@ -460,76 +469,90 @@
 
     auth.onAuthStateChanged((user) => renderAuthed(user));
 
-    // ✅ Make Google sign-in work reliably:
-    // - Use redirect on mobile/Safari/blocked-popup cases
-    // - Use popup when allowed
-    // - Handle redirect result on load
-    async function signInWithGoogle() {
+    // ✅ Redirect-first is the most reliable (works even when popups are blocked).
+    // If redirect is blocked/misconfigured, we show clear errors for the usual causes:
+    // - auth/operation-not-allowed (Google provider not enabled)
+    // - auth/unauthorized-domain (your domain not in Firebase Authorized domains)
+    async function doGoogleSignIn() {
+      setAuthStatus("", false);
+
+      if (!auth) {
+        setAuthStatus("Auth failed to initialize (firebase-auth not loaded).", true);
+        return;
+      }
+
+      if (auth.currentUser) return;
+
+      try {
+        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+      } catch (_) {
+        // ignore
+      }
+
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
 
-      // If already authed, no-op
-      if (auth.currentUser) return;
-
-      // Prefer popup, fall back to redirect on common popup-blocked environments.
       try {
-        await auth.signInWithPopup(provider);
-      } catch (err) {
-        const code = (err && err.code) ? String(err.code) : "";
-        const popupBlocked =
-          code.includes("popup-blocked") ||
-          code.includes("popup-closed-by-user") ||
-          code.includes("cancelled-popup-request");
-
-        // Some browsers (esp. iOS Safari / in-app browsers) make popup unreliable.
-        // Redirect is the most robust.
-        if (popupBlocked || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-          await auth.signInWithRedirect(provider);
-          return;
+        setAuthStatus("Opening Google sign-in…", false);
+        await auth.signInWithRedirect(provider);
+      } catch (e) {
+        console.error(e);
+        const code = (e && e.code) ? String(e.code) : "";
+        if (code === "auth/operation-not-allowed") {
+          setAuthStatus("Google sign-in is disabled in Firebase Auth. Enable Google provider in Firebase Console → Authentication → Sign-in method.", true);
+        } else if (code === "auth/unauthorized-domain") {
+          setAuthStatus("This domain isn’t authorized for Firebase Auth. Add it in Firebase Console → Authentication → Settings → Authorized domains.", true);
+        } else {
+          setAuthStatus("Couldn’t start Google sign-in. Check console for details.", true);
         }
-
-        // If it's some other error, surface it.
-        console.error(err);
-        alert("Couldn’t sign in with Google. Check pop-up settings and try again.");
       }
     }
 
-    // Handle redirect results (if we used signInWithRedirect)
+    // Expose globally so inline onclick always works
+    window.sfSignInGoogle = doGoogleSignIn;
+
+    // Handle redirect result on load (completes the flow)
     auth.getRedirectResult()
-      .then((result) => {
+      .then(() => {
         // If successful, onAuthStateChanged will update UI.
-        // Keep silent.
+        setAuthStatus("", false);
       })
       .catch((e) => {
-        // Don’t spam for normal cases; only show real errors.
         const code = (e && e.code) ? String(e.code) : "";
-        if (code && !code.includes("auth/no-auth-event")) {
-          console.error(e);
+        if (!code) return;
+        console.error(e);
+
+        if (code === "auth/operation-not-allowed") {
+          setAuthStatus("Google sign-in is disabled in Firebase Auth. Enable Google provider in Firebase Console → Authentication → Sign-in method.", true);
+        } else if (code === "auth/unauthorized-domain") {
+          setAuthStatus("This domain isn’t authorized for Firebase Auth. Add it in Firebase Console → Authentication → Settings → Authorized domains.", true);
+        } else {
+          setAuthStatus("Google sign-in failed. See console for details.", true);
         }
       });
 
-    if (btnGoogle) {
-      btnGoogle.addEventListener("click", async (e) => {
-        e.preventDefault();
-        btnGoogle.disabled = true;
-        try { await signInWithGoogle(); }
-        finally { btnGoogle.disabled = false; }
-      });
-    }
+    // Also bind via JS (in case you remove the inline onclick later)
+    document.addEventListener("DOMContentLoaded", () => {
+      if (btnGoogle) {
+        btnGoogle.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          doGoogleSignIn();
+        });
+      }
 
-    if (btnSignout) {
-      btnSignout.addEventListener("click", async () => {
-        try { await auth.signOut(); } catch (e) {
-          console.error(e);
-          alert("Couldn’t sign out. Try again.");
-        }
-      });
-    }
+      if (btnSignout) {
+        btnSignout.addEventListener("click", async () => {
+          try { await auth.signOut(); } catch (e) {
+            console.error(e);
+            alert("Couldn’t sign out. Try again.");
+          }
+        });
+      }
+    });
 
     // -------------------------
     // Stripe Checkout (callable)
     // -------------------------
-    // These lookup keys MUST exist in Stripe and in your server LOOKUP_KEY_MAP.
     const LOOKUP_KEYS = {
       private: "delvee_private_unlimited_monthly",
       lobbies: "delvee_lobby_unlimited_monthly",
@@ -538,7 +561,8 @@
 
     async function startStripeCheckout(lookupKey) {
       if (!auth.currentUser) {
-        alert("Please sign in first.");
+        setPayStatus("Please sign in first.", true);
+        location.hash = "#signin";
         return;
       }
 
