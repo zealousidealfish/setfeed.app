@@ -129,6 +129,12 @@
     .sf-price-val{ font-weight: var(--fw-medium); color: var(--text); }
     .sf-price-sub{ margin: 6px 0 0 0; font-size: 13.6px; color: var(--muted); line-height: 1.55; }
 
+    .sf-price-actions{
+      display:flex;
+      justify-content:flex-end;
+      margin-top: 10px;
+    }
+
     .sf-auth-pill{
       display:inline-flex;
       gap:8px;
@@ -154,16 +160,6 @@
       margin-top: 10px;
     }
 
-    .sf-pay-row{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-      align-items:center;
-    }
-    .sf-pay-row .btn{
-      white-space: nowrap;
-    }
     .sf-pay-status{
       margin-top: 10px;
       font-size: 13px;
@@ -173,6 +169,38 @@
     .sf-danger{
       color: color-mix(in srgb, #ff4d4d 70%, var(--text));
     }
+
+    /* plan details section */
+    .sf-plans{
+      margin-top: var(--s-7);
+      scroll-margin-top: 90px; /* header offset */
+    }
+    .sf-plan-detail{
+      border-radius: var(--radius-2);
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
+      padding: 16px;
+      margin-top: 12px;
+    }
+    .sf-plan-detail h3{
+      margin: 0 0 6px 0;
+      font-size: 16px;
+      color: var(--text);
+    }
+    .sf-plan-detail p{
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 13.6px;
+    }
+    .sf-bullets{
+      margin: 10px 0 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 13.6px;
+    }
+    .sf-bullets li{ margin: 4px 0; }
   </style>
 </head>
 
@@ -193,7 +221,7 @@
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
 
-        <a class="nav-cta" href="https://delvee.app" rel="noreferrer" aria-label="Open Delvee">Download app</a>
+        <a class="nav-cta" href="https://delvee.app" rel="noreferrer" aria-label="Open Delvee">Open Delvee</a>
       </nav>
     </div>
   </header>
@@ -216,132 +244,81 @@
             <a class="btn btn-lg btn-quiet" href="./security.html">Security</a>
           </div>
 
-          <!-- -----------------------------
-               Delvee plans (Stripe Checkout)
-               ----------------------------- -->
           <div class="panel" style="margin-top: var(--s-6);">
-            <p class="panel-title" style="margin-top:0;">Delvee Unlimited (Stripe)</p>
+            <p class="panel-title" style="margin-top:0;">Delvee plans</p>
             <p class="panel-sub">
-              This web checkout is only for testing Stripe + webhook. Your Android app can still use Google Play Billing.
-            </p>
-
-            <div class="sf-price-grid" aria-label="Delvee unlimited plans">
-              <div class="sf-price-card">
-                <div class="sf-price-top">
-                  <div class="sf-price-name">Lobby Unlimited</div>
-                  <div class="sf-price-val">Monthly</div>
-                </div>
-                <p class="sf-price-sub">Unlimited Lobby pulses.</p>
-
-                <div class="sf-pay-row">
-                  <button class="btn btn-lg btn-primary auth-only hidden"
-                          type="button"
-                          data-lookup="delvee_lobby_unlimited_monthly">
-                    Subscribe (Lobby)
-                  </button>
-                  <a class="btn btn-lg btn-secondary no-auth-only" href="./send.html#signin">Sign in to subscribe</a>
-                </div>
-              </div>
-
-              <div class="sf-price-card">
-                <div class="sf-price-top">
-                  <div class="sf-price-name">Private Unlimited</div>
-                  <div class="sf-price-val">Monthly</div>
-                </div>
-                <p class="sf-price-sub">Unlimited Private pulses.</p>
-
-                <div class="sf-pay-row">
-                  <button class="btn btn-lg btn-primary auth-only hidden"
-                          type="button"
-                          data-lookup="delvee_private_unlimited_monthly">
-                    Subscribe (Private)
-                  </button>
-                  <a class="btn btn-lg btn-secondary no-auth-only" href="./send.html#signin">Sign in to subscribe</a>
-                </div>
-              </div>
-
-              <div class="sf-price-card">
-                <div class="sf-price-top">
-                  <div class="sf-price-name">Both Unlimited</div>
-                  <div class="sf-price-val">Monthly</div>
-                </div>
-                <p class="sf-price-sub">Unlimited Lobby + Private pulses.</p>
-
-                <div class="sf-pay-row">
-                  <button class="btn btn-lg btn-primary auth-only hidden"
-                          type="button"
-                          data-lookup="delvee_both_unlimited_monthly">
-                    Subscribe (Both)
-                  </button>
-                  <a class="btn btn-lg btn-secondary no-auth-only" href="./send.html#signin">Sign in to subscribe</a>
-                </div>
-              </div>
-            </div>
-
-            <div class="sf-pay-status hidden" id="sf-pay-status" aria-live="polite"></div>
-
-            <small class="help">
-              After checkout completes, Stripe will call your webhook and your Firestore entitlements should update.
-            </small>
-          </div>
-
-          <!-- -----------------------------
-               Your existing “credits” copy
-               ----------------------------- -->
-          <div class="panel" style="margin-top: var(--s-6);">
-            <p class="panel-title" style="margin-top:0;">Delvee credits (copy)</p>
-            <p class="panel-sub">
-              This section is just your marketing copy. Your current Stripe backend maps <b>Unlimited Monthly</b> plans via lookup keys.
+              Choose a plan for your pulse experience. Tap <b>See more</b> for plan details.
             </p>
 
             <div class="sf-price-grid" aria-label="Delvee pricing">
               <div class="sf-price-card">
                 <div class="sf-price-top">
-                  <div class="sf-price-name">10 credits</div>
-                  <div class="sf-price-val">£2</div>
+                  <div class="sf-price-name">Delvee Private</div>
+                  <div class="sf-price-val">£2.99 / month</div>
                 </div>
-                <p class="sf-price-sub">Good for a small set of pulses.</p>
+                <p class="sf-price-sub">Private pulses for 1:1 sessions.</p>
+                <div class="sf-price-actions">
+                  <button class="btn btn-primary auth-only hidden" id="buy-private" type="button">Buy now</button>
+                  <a class="btn btn-secondary no-auth-only" href="#signin">Sign in</a>
+                </div>
               </div>
 
               <div class="sf-price-card">
                 <div class="sf-price-top">
-                  <div class="sf-price-name">20 credits</div>
-                  <div class="sf-price-val">£3</div>
+                  <div class="sf-price-name">Delvee Lobbies</div>
+                  <div class="sf-price-val">£4.99 / month</div>
                 </div>
-                <p class="sf-price-sub">Better value for regular use.</p>
+                <p class="sf-price-sub">Join lobbies and run group pulses.</p>
+                <div class="sf-price-actions">
+                  <button class="btn btn-primary auth-only hidden" id="buy-lobbies" type="button">Buy now</button>
+                  <a class="btn btn-secondary no-auth-only" href="#signin">Sign in</a>
+                </div>
               </div>
 
               <div class="sf-price-card">
                 <div class="sf-price-top">
-                  <div class="sf-price-name">Unlimited session</div>
-                  <div class="sf-price-val">£3.50</div>
+                  <div class="sf-price-name">Delvee Max</div>
+                  <div class="sf-price-val">£6.99 / month</div>
                 </div>
-                <p class="sf-price-sub">One session without counting credits.</p>
+                <p class="sf-price-sub">Everything included (Private + Lobbies).</p>
+                <div class="sf-price-actions">
+                  <button class="btn btn-primary auth-only hidden" id="buy-max" type="button">Buy now</button>
+                  <a class="btn btn-secondary no-auth-only" href="#signin">Sign in</a>
+                </div>
               </div>
             </div>
 
+            <!-- ✅ requested: replace Buy credits text with See more -->
             <div class="actions" style="margin-top: 12px;">
-              <a class="btn btn-lg btn-primary" href="https://delvee.app" rel="noreferrer">Open Delvee</a>
-              <a class="btn btn-lg btn-secondary" href="./send.html#signin">Sign in on Setfeed</a>
+              <a class="btn btn-lg btn-quiet" id="btn-see-more" href="#plans">See more</a>
             </div>
+
+            <div class="sf-pay-status hidden" id="sf-pay-status" aria-live="polite"></div>
 
             <small class="help">
-              Setfeed + Delvee can share sign-in (Firebase). Purchases can stay inside Delvee/app.
+              Web checkout is for Stripe testing. The Android app can use Google Play Billing separately.
             </small>
           </div>
 
-          <div class="panel" style="margin-top: var(--s-6);">
+          <!-- ✅ requested: sign-in section disappears when signed in -->
+          <div class="panel no-auth-only" id="signin" style="margin-top: var(--s-6);">
             <p class="panel-title">Sign in</p>
-            <p class="panel-sub">Sign in with Google to use Signed sending and to see Delvee credit balance.</p>
+            <p class="panel-sub">Sign in with Google to buy a plan and to see Delvee credit balance.</p>
 
             <div class="actions">
               <button class="btn btn-lg btn-primary" id="btn-google" type="button">Continue with Google</button>
               <a class="btn btn-lg btn-secondary" id="btn-email" href="./send.html#signin">Continue with email</a>
-              <button class="btn btn-lg btn-quiet hidden" id="btn-signout" type="button">Sign out</button>
             </div>
 
+            <small class="help">Rolling is always available without signing in.</small>
+          </div>
+
+          <!-- Signed-in mini panel (only when authed) -->
+          <div class="panel auth-only hidden" style="margin-top: var(--s-6);">
+            <p class="panel-title">Signed in</p>
+
             <div style="margin-top: 10px;">
-              <span class="sf-auth-pill hidden" id="sf-auth-pill">
+              <span class="sf-auth-pill" id="sf-auth-pill">
                 <span aria-hidden="true">✓</span>
                 <span id="sf-auth-label">Signed in</span>
               </span>
@@ -349,19 +326,59 @@
 
             <div class="sf-mini" id="sf-credits-line">Delvee credits: —</div>
 
-            <small class="help">Rolling is always available without signing in.</small>
+            <div class="actions" style="margin-top: 12px;">
+              <button class="btn btn-lg btn-quiet" id="btn-signout" type="button">Sign out</button>
+            </div>
           </div>
+
+          <!-- ✅ requested: details at bottom + navigate via See more -->
+          <section class="sf-plans" id="plans">
+            <h2 style="margin:0;">Plan details</h2>
+            <p class="sf-mini" style="margin-top:8px;">
+              All plans unlock paid pulse experiences in Delvee. Cancel anytime from the Stripe billing portal.
+            </p>
+
+            <div class="sf-plan-detail">
+              <h3>Delvee Private — £2.99 / month</h3>
+              <p>For 1:1 pulse sessions where privacy is the priority.</p>
+              <ul class="sf-bullets">
+                <li>Unlimited private pulse sessions</li>
+                <li>Ideal for personal conversations</li>
+                <li>Best entry plan</li>
+              </ul>
+            </div>
+
+            <div class="sf-plan-detail">
+              <h3>Delvee Lobbies — £4.99 / month</h3>
+              <p>For group sessions and shared spaces (“lobbies”).</p>
+              <ul class="sf-bullets">
+                <li>Unlimited lobby pulses</li>
+                <li>Create/join group lobbies</li>
+                <li>Good for communities</li>
+              </ul>
+            </div>
+
+            <div class="sf-plan-detail">
+              <h3>Delvee Max — £6.99 / month</h3>
+              <p>Everything: Private + Lobbies in one plan.</p>
+              <ul class="sf-bullets">
+                <li>Unlimited private sessions</li>
+                <li>Unlimited lobbies</li>
+                <li>Best value for power users</li>
+              </ul>
+            </div>
+          </section>
         </div>
 
         <aside class="panel">
-          <p class="panel-title">What’s the “Download app” button?</p>
+          <p class="panel-title">What’s the “Open Delvee” button?</p>
           <p class="panel-sub">
             Right now it opens Delvee — the paid pulse experience. You can ship Android/web first, no iOS required.
           </p>
 
           <div class="note">
             <p style="margin:0;">
-              Setfeed web focuses on sending. Delvee is where you promote credits.
+              Setfeed web focuses on sending. Delvee is where you promote plans.
             </p>
           </div>
         </aside>
@@ -386,23 +403,20 @@
     // -------------------------
     // Auth wiring (Google popup)
     // -------------------------
-    const AUTH_KEY = "sf_signed_authed";
     const auth = firebase.auth();
 
     function setSignedAuthedFlag(isAuthed) {
-      try { localStorage.setItem(AUTH_KEY, isAuthed ? "true" : "false"); } catch (_) {}
       document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
       document.querySelectorAll(".no-auth-only").forEach(el => el.classList.toggle("hidden", isAuthed));
     }
 
     const btnGoogle = document.getElementById("btn-google");
-    const btnEmail = document.getElementById("btn-email");
     const btnSignout = document.getElementById("btn-signout");
-    const pill = document.getElementById("sf-auth-pill");
     const pillLabel = document.getElementById("sf-auth-label");
     const creditsLine = document.getElementById("sf-credits-line");
 
     const payStatus = document.getElementById("sf-pay-status");
+
     function setPayStatus(msg, isError) {
       if (!payStatus) return;
       if (!msg) {
@@ -431,7 +445,6 @@
         const bal = (typeof data.balance === "number") ? data.balance : (typeof data.credits === "number" ? data.credits : null);
         setCreditsLine((typeof bal === "number") ? bal : null);
       } catch (e) {
-        // Soft-fail: function may not exist yet.
         setCreditsLine(null);
       }
     }
@@ -439,45 +452,46 @@
     function renderAuthed(user) {
       const isAuthed = !!user;
       setSignedAuthedFlag(isAuthed);
-
-      btnGoogle.classList.toggle("hidden", isAuthed);
-      btnSignout.classList.toggle("hidden", !isAuthed);
-
-      if (btnEmail) btnEmail.classList.toggle("hidden", isAuthed);
-
-      if (pill && pillLabel) {
-        pill.classList.toggle("hidden", !isAuthed);
-        if (isAuthed) pillLabel.textContent = user.email || "Signed in";
-      }
-
       setPayStatus("", false);
+
+      if (isAuthed && pillLabel) pillLabel.textContent = user.email || "Signed in";
       loadCredits().catch(() => {});
     }
 
     auth.onAuthStateChanged((user) => renderAuthed(user));
 
-    btnGoogle.addEventListener("click", async () => {
-      try {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: "select_account" });
-        await auth.signInWithPopup(provider);
-        window.location.href = "./send.html#signin";
-      } catch (e) {
-        console.error(e);
-        alert("Couldn’t sign in with Google. Check your browser pop-up settings and try again.");
-      }
-    });
+    if (btnGoogle) {
+      btnGoogle.addEventListener("click", async () => {
+        try {
+          const provider = new firebase.auth.GoogleAuthProvider();
+          provider.setCustomParameters({ prompt: "select_account" });
+          await auth.signInWithPopup(provider);
+        } catch (e) {
+          console.error(e);
+          alert("Couldn’t sign in with Google. Check pop-up settings and try again.");
+        }
+      });
+    }
 
-    btnSignout.addEventListener("click", async () => {
-      try { await auth.signOut(); } catch (e) {
-        console.error(e);
-        alert("Couldn’t sign out. Try again.");
-      }
-    });
+    if (btnSignout) {
+      btnSignout.addEventListener("click", async () => {
+        try { await auth.signOut(); } catch (e) {
+          console.error(e);
+          alert("Couldn’t sign out. Try again.");
+        }
+      });
+    }
 
     // -------------------------
     // Stripe Checkout (callable)
     // -------------------------
+    // These lookup keys MUST exist in Stripe and in your server LOOKUP_KEY_MAP.
+    const LOOKUP_KEYS = {
+      private: "delvee_private_unlimited_monthly",
+      lobbies: "delvee_lobby_unlimited_monthly",
+      max: "delvee_both_unlimited_monthly",
+    };
+
     async function startStripeCheckout(lookupKey) {
       if (!auth.currentUser) {
         alert("Please sign in first.");
@@ -497,32 +511,39 @@
           return;
         }
 
-        // Send them to Stripe-hosted Checkout
         window.location.href = url;
       } catch (e) {
         console.error(e);
-        setPayStatus("Couldn’t start checkout. Check Functions logs + App Check and try again.", true);
+        setPayStatus("Couldn’t start checkout. Check your function deploy + App Check settings.", true);
       }
     }
 
-    // Wire all checkout buttons
-    document.querySelectorAll("button[data-lookup]").forEach((btn) => {
+    function wireBuy(btnId, lookupKey) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
       btn.addEventListener("click", async () => {
-        const lookupKey = btn.getAttribute("data-lookup") || "";
-        if (!lookupKey) return;
-
-        // UI: disable all checkout buttons while we start
-        const all = Array.from(document.querySelectorAll("button[data-lookup]"));
-        all.forEach(b => b.disabled = true);
-
-        try {
-          await startStripeCheckout(lookupKey);
-        } finally {
-          // If redirect fails, re-enable
-          all.forEach(b => b.disabled = false);
-        }
+        btn.disabled = true;
+        try { await startStripeCheckout(lookupKey); }
+        finally { btn.disabled = false; }
       });
-    });
+    }
+
+    wireBuy("buy-private", LOOKUP_KEYS.private);
+    wireBuy("buy-lobbies", LOOKUP_KEYS.lobbies);
+    wireBuy("buy-max", LOOKUP_KEYS.max);
+
+    // Smooth scroll for "See more"
+    const seeMore = document.getElementById("btn-see-more");
+    if (seeMore) {
+      seeMore.addEventListener("click", (e) => {
+        // keep normal anchor behavior, but smooth-scroll if supported
+        const target = document.getElementById("plans");
+        if (!target) return;
+        e.preventDefault();
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        history.replaceState(null, "", "#plans");
+      });
+    }
   </script>
 </body>
 </html>
