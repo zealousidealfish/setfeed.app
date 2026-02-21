@@ -1,3 +1,4 @@
+<!-- receive.html (FULL FILE REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -32,8 +33,12 @@
 
     if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
-    const functions = firebase.app().functions("europe-west2");
-    const auth = firebase.auth();
+    // ✅ Keep consistent with index/send/inbox: shared globals + LOCAL persistence
+    window.sfFunctions = firebase.app().functions("europe-west2");
+    window.sfAuth = firebase.auth();
+
+    // Ensure cross-page persistence is consistent everywhere
+    window.sfAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
   </script>
 
   <!-- THEME -->
@@ -43,7 +48,9 @@
       const root = document.documentElement;
 
       function applyTheme(){
-        const stored = localStorage.getItem(themeKey) || "system";
+        let stored = "system";
+        try { stored = localStorage.getItem(themeKey) || "system"; } catch (_) {}
+
         if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
         else root.removeAttribute("data-theme");
 
@@ -65,60 +72,98 @@
 
     .code-grid{ display:grid; grid-template-columns:1fr; gap:12px; margin-top:12px; }
     @media (min-width: 840px){ .code-grid{ grid-template-columns:1fr 1fr 1fr; } }
-    .code-card{ border-radius:16px; padding:12px; border:1px solid rgba(0,0,0,0.08); background:rgba(0,0,0,0.02); }
-    [data-theme="dark"] .code-card{ border-color:rgba(255,255,255,0.10); background:rgba(255,255,255,0.06); }
-    .code-label{ font-weight: 600; margin:0 0 8px 0; color: var(--text); }
+
+    .code-card{
+      border-radius:16px;
+      padding:12px;
+      border:1px solid rgba(0,0,0,0.08);
+      background:rgba(0,0,0,0.02);
+    }
+    [data-theme="dark"] .code-card{
+      border-color: rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.07);
+    }
+
+    .code-label{ font-weight: 650; margin:0 0 8px 0; color: var(--text); }
 
     .code-box{
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       border-radius: 12px;
       padding: 10px 12px;
-      border: 1px solid rgba(0,0,0,0.08);
-      background: rgba(255,255,255,0.75);
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(255,255,255,0.82);
       word-break: break-all;
       text-align: center;
-      color: var(--text);
+      color: #0F1114; /* ✅ always black text for contrast */
+      font-weight: 700;
+      letter-spacing: 0.01em;
     }
 
-    /* ✅ Per request: in dark mode, make code text black (and keep box readable). */
+    /* ✅ Dark theme: keep the box bright and the text BLACK so codes pop */
     [data-theme="dark"] .code-box{
-      border-color: rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.92);
+      border-color: rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.94);
       color: #0F1114;
     }
 
-    .mini{ font-size:12px; opacity:0.85; margin-top:8px; line-height:1.35; color: var(--muted); }
-    .row-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center; justify-content:space-between; }
-    .row-actions .left, .row-actions .right{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .statusline{ margin-top:10px; font-size:13px; opacity:0.9; color: var(--muted); }
+    .mini{
+      font-size:12px;
+      opacity:0.9;
+      margin-top:8px;
+      line-height:1.35;
+      color: var(--muted);
+    }
+
+    .row-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:12px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .row-actions .left, .row-actions .right{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .statusline{
+      margin-top:10px;
+      font-size:13px;
+      opacity:0.92;
+      color: var(--muted);
+    }
 
     /* Delvee prefs */
     .prefs-grid{ display:grid; grid-template-columns:1fr; gap:10px; margin-top: 10px; }
     @media (min-width: 840px){ .prefs-grid{ grid-template-columns: 1.2fr 1fr; } }
     .prefs-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
-    .prefs-left{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     .prefs-right{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 
     .sf-select, .sf-input{
       border-radius: 12px;
       padding: 10px 12px;
       border: 1px solid rgba(0,0,0,0.10);
-      background: rgba(255,255,255,0.85);
-      color: var(--text);
-      min-width: 220px;
+      background: rgba(255,255,255,0.90);
+      color: #0F1114; /* ✅ force readable */
+      min-width: 260px;
+      font-weight: 650;
     }
 
-    /* ✅ Fix: dropdown/input text not visible in dark mode */
-    [data-theme="dark"] .sf-select, [data-theme="dark"] .sf-input{
-      border-color: rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.92);
+    /* ✅ Dark theme: make these bright with BLACK text (matches your screenshots need) */
+    [data-theme="dark"] .sf-select,
+    [data-theme="dark"] .sf-input{
+      border-color: rgba(255,255,255,0.20);
+      background: rgba(255,255,255,0.96);
       color: #0F1114;
     }
 
-    /* Also ensure option text stays readable (some browsers render options oddly) */
+    /* ✅ Ensure dropdown options remain readable */
     [data-theme="dark"] .sf-select option{
-      color: #0F1114;
       background: #ffffff;
+      color: #0F1114;
     }
 
     .sf-switch{
@@ -131,11 +176,18 @@
       user-select:none;
     }
     [data-theme="dark"] .sf-switch{
-      border-color: rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.07);
     }
     .sf-switch input{ transform: scale(1.1); }
-    .prefs-note{ font-size: 12px; opacity: 0.85; line-height: 1.35; color: var(--muted); margin-top: 8px; }
+
+    .prefs-note{
+      font-size: 12px;
+      opacity: 0.9;
+      line-height: 1.35;
+      color: var(--muted);
+      margin-top: 8px;
+    }
   </style>
 </head>
 
@@ -209,7 +261,7 @@
             </div>
           </section>
 
-          <!-- ✅ Delvee summaries prefs (signed-in only) -->
+          <!-- Delvee summaries prefs (signed-in only) -->
           <section class="panel auth-only hidden" aria-label="Delvee summaries">
             <p class="panel-title">Delvee pulse summaries</p>
             <p class="panel-sub">
@@ -331,6 +383,12 @@
   <script>
     document.getElementById("y").textContent = new Date().getFullYear();
 
+    const auth = window.sfAuth;
+    const functions = window.sfFunctions;
+
+    // If a redirect sign-in happened elsewhere, finalize cleanly (no UI needed here, just safety)
+    auth.getRedirectResult().then(() => {}).catch(() => {});
+
     function applyAuthVisibility(isAuthed){
       document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
       document.querySelectorAll(".auth-off").forEach(el => el.classList.toggle("hidden", isAuthed));
@@ -339,9 +397,7 @@
 
     auth.onAuthStateChanged((user) => {
       applyAuthVisibility(!!user);
-      if (user) {
-        loadDelveePrefs().catch(() => {});
-      }
+      if (user) loadDelveePrefs().catch(() => {});
     });
 
     // ---------------------------
