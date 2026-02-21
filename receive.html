@@ -36,8 +36,6 @@
     // ✅ Keep consistent with index/send/inbox: shared globals + LOCAL persistence
     window.sfFunctions = firebase.app().functions("europe-west2");
     window.sfAuth = firebase.auth();
-
-    // Ensure cross-page persistence is consistent everywhere
     window.sfAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
   </script>
 
@@ -70,12 +68,27 @@
   <style>
     .hidden{ display:none !important; }
 
-    .code-grid{ display:grid; grid-template-columns:1fr; gap:12px; margin-top:12px; }
-    @media (min-width: 840px){ .code-grid{ grid-template-columns:1fr 1fr 1fr; } }
+    /* --------- Spacing / layout fixes --------- */
+    .hero{ gap: 22px; } /* makes main + aside feel less cramped */
+
+    /* Give panels a consistent separation inside the left column */
+    .hero > div > .panel{ margin-top: 16px; }
+    .hero > div > .panel:first-of-type{ margin-top: 0; }
+
+    /* Code cards */
+    .code-grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:16px;              /* ✅ more breathing room */
+      margin-top:14px;
+    }
+    @media (min-width: 840px){
+      .code-grid{ grid-template-columns:1fr 1fr 1fr; }
+    }
 
     .code-card{
       border-radius:16px;
-      padding:12px;
+      padding:14px;          /* ✅ slightly roomier */
       border:1px solid rgba(0,0,0,0.08);
       background:rgba(0,0,0,0.02);
     }
@@ -84,22 +97,28 @@
       background: rgba(255,255,255,0.07);
     }
 
-    .code-label{ font-weight: 650; margin:0 0 8px 0; color: var(--text); }
-
-    .code-box{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      border-radius: 12px;
-      padding: 10px 12px;
-      border: 1px solid rgba(0,0,0,0.10);
-      background: rgba(255,255,255,0.82);
-      word-break: break-all;
-      text-align: center;
-      color: #0F1114; /* ✅ always black text for contrast */
-      font-weight: 700;
-      letter-spacing: 0.01em;
+    .code-label{
+      font-weight: 650;
+      margin:0 0 10px 0;
+      color: var(--text);
     }
 
-    /* ✅ Dark theme: keep the box bright and the text BLACK so codes pop */
+    .code-box{
+      box-sizing: border-box;
+      width: 100%;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      border-radius: 12px;
+      padding: 12px 14px;     /* ✅ more padding */
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(255,255,255,0.82);
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      text-align: center;
+      color: #0F1114;          /* ✅ always black text for contrast */
+      font-weight: 750;
+      letter-spacing: 0.01em;
+      line-height: 1.25;
+    }
     [data-theme="dark"] .code-box{
       border-color: rgba(255,255,255,0.18);
       background: rgba(255,255,255,0.94);
@@ -109,14 +128,15 @@
     .mini{
       font-size:12px;
       opacity:0.9;
-      margin-top:8px;
+      margin-top:10px;
       line-height:1.35;
       color: var(--muted);
     }
 
+    /* Buttons row: align cleanly + wrap predictably */
     .row-actions{
       display:flex;
-      gap:10px;
+      gap:12px;
       flex-wrap:wrap;
       margin-top:12px;
       align-items:center;
@@ -128,6 +148,11 @@
       flex-wrap:wrap;
       align-items:center;
     }
+    /* ✅ On narrow widths, put copy buttons on a new row and align left */
+    @media (max-width: 560px){
+      .row-actions{ justify-content:flex-start; }
+      .row-actions .right{ width: 100%; justify-content:flex-start; }
+    }
 
     .statusline{
       margin-top:10px;
@@ -136,38 +161,59 @@
       color: var(--muted);
     }
 
-    /* Delvee prefs */
-    .prefs-grid{ display:grid; grid-template-columns:1fr; gap:10px; margin-top: 10px; }
-    @media (min-width: 840px){ .prefs-grid{ grid-template-columns: 1.2fr 1fr; } }
-    .prefs-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
-    .prefs-right{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-
-    .sf-select, .sf-input{
-      border-radius: 12px;
-      padding: 10px 12px;
-      border: 1px solid rgba(0,0,0,0.10);
-      background: rgba(255,255,255,0.90);
-      color: #0F1114; /* ✅ force readable */
-      min-width: 260px;
-      font-weight: 650;
+    /* --------- Delvee prefs spacing fixes --------- */
+    .prefs-row{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-top: var(--s-3);
+    }
+    .prefs-right{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
     }
 
-    /* ✅ Dark theme: make these bright with BLACK text (matches your screenshots need) */
+    .prefs-grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:16px;              /* ✅ more space between the two boxes */
+      margin-top: 14px;
+      align-items: start;
+    }
+    @media (min-width: 840px){
+      .prefs-grid{ grid-template-columns: 1fr 1fr; } /* ✅ balanced columns */
+    }
+
+    .sf-select, .sf-input{
+      box-sizing: border-box;
+      width: 100%;           /* ✅ prevents “floating” narrow select */
+      min-width: 0;          /* ✅ prevents overflow in grid */
+      border-radius: 12px;
+      padding: 11px 12px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(255,255,255,0.90);
+      color: #0F1114;        /* ✅ readable */
+      font-weight: 650;
+    }
     [data-theme="dark"] .sf-select,
     [data-theme="dark"] .sf-input{
       border-color: rgba(255,255,255,0.20);
       background: rgba(255,255,255,0.96);
       color: #0F1114;
     }
-
-    /* ✅ Ensure dropdown options remain readable */
     [data-theme="dark"] .sf-select option{
       background: #ffffff;
       color: #0F1114;
     }
 
     .sf-switch{
-      display:flex; align-items:center; gap:10px;
+      display:flex;
+      align-items:center;
+      gap:10px;
       border: 1px solid rgba(0,0,0,0.10);
       background: rgba(0,0,0,0.02);
       padding: 10px 12px;
@@ -186,7 +232,13 @@
       opacity: 0.9;
       line-height: 1.35;
       color: var(--muted);
-      margin-top: 8px;
+      margin-top: 10px;      /* ✅ consistent breathing room below selects */
+    }
+
+    /* Make “Destination” + “Website inbox code” labels feel consistent */
+    .prefs-grid .mini{
+      display:block;
+      margin-bottom: 8px;
     }
   </style>
 </head>
@@ -268,7 +320,7 @@
               If enabled, Delvee will send a session summary into your Setfeed destination.
             </p>
 
-            <div class="prefs-row" style="margin-top: var(--s-3);">
+            <div class="prefs-row">
               <label class="sf-switch" for="dv-enabled">
                 <input id="dv-enabled" type="checkbox" />
                 <span>Receive Delvee summaries</span>
@@ -282,7 +334,7 @@
 
             <div class="prefs-grid">
               <div>
-                <label class="mini" for="dv-dest" style="display:block; margin-bottom:6px;">Destination</label>
+                <label class="mini" for="dv-dest">Destination</label>
                 <select id="dv-dest" class="sf-select">
                   <option value="setfeed_web_inbox">Setfeed website inbox (this account)</option>
                   <option value="setfeed_app_code">Setfeed app (paste a receive code)</option>
@@ -294,7 +346,7 @@
               </div>
 
               <div id="dv-web-box">
-                <label class="mini" for="dv-web-type" style="display:block; margin-bottom:6px;">Website inbox code</label>
+                <label class="mini" for="dv-web-type">Website inbox code</label>
                 <select id="dv-web-type" class="sf-select">
                   <option value="secure">Secure (recommended)</option>
                   <option value="personal">Personal</option>
@@ -306,7 +358,7 @@
               </div>
 
               <div id="dv-app-box" class="hidden">
-                <label class="mini" for="dv-app-code" style="display:block; margin-bottom:6px;">App receive code</label>
+                <label class="mini" for="dv-app-code">App receive code</label>
                 <input id="dv-app-code" class="sf-input" placeholder="Paste SF-… or SFS-… (app)" />
 
                 <div class="prefs-note">
