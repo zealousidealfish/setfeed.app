@@ -140,6 +140,15 @@ strong, b{ font-weight: var(--fw-bold); }
 
 a{ color: var(--primary); text-decoration: none; }
 a:hover{ text-decoration: underline; }
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible{
+  outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  outline-offset: 2px;
+}
 
 ::selection{ background: var(--primary-soft); }
 
@@ -157,7 +166,18 @@ a:hover{ text-decoration: underline; }
       rgba(255,255,255,0.025) 0%,
       rgba(255,255,255,0.00) 28%);
 }
-:root[data-theme="dark"] .page-bg,
+:root[data-theme="dark"] .page-bg{
+  background:
+    radial-gradient(900px 520px at 18% -10%,
+      color-mix(in srgb, var(--primary) 6%, transparent) 0%,
+      transparent 56%),
+    radial-gradient(700px 460px at 85% 0%,
+      rgba(255,255,255,0.045) 0%,
+      transparent 62%),
+    linear-gradient(180deg,
+      rgba(255,255,255,0.022) 0%,
+      rgba(255,255,255,0.00) 28%);
+}
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]) .page-bg{
     background:
@@ -353,6 +373,11 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   flex: 1 1 320px;
   min-width: 320px;
 }
+@media (max-width: 720px){
+  .col{
+    min-width: 100%;
+  }
+}
 
 /* Tabs */
 .tabs{
@@ -417,6 +442,15 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 }
 .btn:active{ transform: translateY(0.5px); }
 .btn:disabled{ cursor: not-allowed; transform: none; opacity: 1; box-shadow: none; }
+
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 .btn-lg{
   padding: 12px 18px;
