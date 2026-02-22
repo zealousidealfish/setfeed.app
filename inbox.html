@@ -15,11 +15,10 @@
 
   <link rel="stylesheet" href="./styles.css" />
 
-  <!-- FIREBASE (AUTH + FUNCTIONS + FIRESTORE) -->
+  <!-- FIREBASE (AUTH + FUNCTIONS) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -37,7 +36,6 @@
     window.sfFunctions = firebase.app().functions("europe-west2");
     window.sfAuth = firebase.auth();
     window.sfAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
-    window.sfDb = firebase.firestore();
   </script>
 
   <!-- THEME -->
@@ -342,6 +340,9 @@
       box-shadow: 0 18px 60px rgba(0,0,0,0.45);
       border: 1px solid var(--line);
       overflow: hidden;
+      max-height: calc(100vh - 32px);
+      display:flex;
+      flex-direction: column;
     }
     .delvee-head{
       display:flex;
@@ -349,6 +350,7 @@
       justify-content: space-between;
       gap: 10px;
       padding: 14px 14px 10px 14px;
+      flex: 0 0 auto;
     }
     .delvee-title{
       display:flex;
@@ -371,7 +373,14 @@
       font-weight: 850;
       color: var(--text);
     }
-    .delvee-body{ padding: 0 14px 12px 14px; }
+
+    /* ✅ Make modal body scrollable */
+    .delvee-body{
+      padding: 0 14px 12px 14px;
+      flex: 1 1 auto;
+      overflow: auto;
+    }
+
     .delvee-stage{
       border-radius: 16px;
       border: 1px solid var(--line);
@@ -380,6 +389,18 @@
       position: relative;
       overflow:hidden;
       min-height: 160px;
+    }
+
+    /* ✅ Inline images inside summary text */
+    .sf-inline-img{
+      width: 100%;
+      max-height: 520px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      object-fit: contain;
+      display:block;
+      margin: 10px 0;
+      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
     }
 
     /* ✅ Opening animation (blue lightning sweep) */
@@ -482,6 +503,7 @@
       gap:10px;
       padding: 12px 14px 14px 14px;
       border-top: 1px solid var(--line);
+      flex: 0 0 auto;
     }
 
     /* Actions modal */
@@ -734,7 +756,9 @@
 
           <div class="delvee-reveal" id="delvee-reveal">
             <h3 style="margin-top:0; color: var(--text);" id="delvee-heading">Message</h3>
-            <p id="delvee-text" style="color: var(--muted); white-space: pre-wrap; margin: 0;"></p>
+
+            <!-- ✅ changed from <p> to <div> so we can inject inline images -->
+            <div id="delvee-text" style="color: var(--muted); white-space: pre-wrap; margin: 0;"></div>
 
             <div class="delvee-attachments hidden" id="delvee-attachments">
               <h4 id="delvee-attachments-title">Images</h4>
@@ -777,7 +801,6 @@
 
     const auth = window.sfAuth;
     const functions = window.sfFunctions;
-    const db = window.sfDb;
 
     // ✅ Redirect completion handler
     auth.getRedirectResult().catch((e) => {
@@ -873,7 +896,7 @@
       showRoute(currentRoute());
 
       if (isAuthed) {
-        setStatus("good", "Signed in", "Fetch will also deliver any pending Delvee summaries (with images).");
+        setStatus("good", "Signed in", "Paste a Secure/Personal code and press Fetch.");
         showConsumeTipIfNeeded();
       } else {
         setStatus("warn", "Not signed in", "Sign in to fetch signed inbox messages.");
@@ -881,13 +904,7 @@
       }
     }
 
-    auth.onAuthStateChanged((user) => {
-      renderAuthUI(user);
-      if (user) {
-        // Gentle background delivery attempt when the user signs in.
-        processPendingDelveeJobs({ quiet: true }).catch(() => {});
-      }
-    });
+    auth.onAuthStateChanged((user) => renderAuthUI(user));
 
     btnGoogle.addEventListener("click", async () => {
       try {
@@ -1000,13 +1017,6 @@
     // -------------------------
     function normalizeCodeAndroid(raw) { return raw.trim().toUpperCase().replace(/[\s-]/g, ""); }
 
-    function bytesToB64(bytes) {
-      let bin = "";
-      const arr = (bytes instanceof Uint8Array) ? bytes : new Uint8Array(bytes);
-      for (let i = 0; i < arr.length; i++) bin += String.fromCharCode(arr[i]);
-      return btoa(bin);
-    }
-
     function b64ToBytes(b64) {
       const bin = atob(b64);
       const out = new Uint8Array(bin.length);
@@ -1020,7 +1030,7 @@
       return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
     }
 
-    async function deriveAesKeyFromPassphrase(passphrase, saltBytes, usages) {
+    async function deriveAesKeyFromPassphrase(passphrase, saltBytes) {
       const passBytes = new TextEncoder().encode(passphrase);
       const baseKey = await crypto.subtle.importKey("raw", passBytes, { name: "PBKDF2" }, false, ["deriveKey"]);
       return await crypto.subtle.deriveKey(
@@ -1028,7 +1038,7 @@
         baseKey,
         { name: "AES-GCM", length: 256 },
         false,
-        usages
+        ["decrypt"]
       );
     }
 
@@ -1038,7 +1048,7 @@
         const salt = b64ToBytes(saltB64);
         const iv = b64ToBytes(ivB64);
         const ct = b64ToBytes(ciphertextB64);
-        const key = await deriveAesKeyFromPassphrase(passphrase, salt, ["decrypt"]);
+        const key = await deriveAesKeyFromPassphrase(passphrase, salt);
         const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
         return new TextDecoder().decode(pt);
       } catch (_) {
@@ -1050,23 +1060,9 @@
       const passphrase = normalizeCodeAndroid(rawCode);
       const salt = b64ToBytes(saltB64);
       const iv = b64ToBytes(ivB64);
-      const key = await deriveAesKeyFromPassphrase(passphrase, salt, ["decrypt"]);
+      const key = await deriveAesKeyFromPassphrase(passphrase, salt);
       const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, encryptedBytes);
       return new Uint8Array(pt);
-    }
-
-    // ✅ NEW: encrypt bytes for Setfeed attachment scheme (PBKDF2 + AES-GCM)
-    async function encryptBytesForCode(rawCode, plainBytesU8) {
-      const passphrase = normalizeCodeAndroid(rawCode);
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const key = await deriveAesKeyFromPassphrase(passphrase, salt, ["encrypt"]);
-      const ctBuf = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plainBytesU8);
-      return {
-        ciphertextBytes: new Uint8Array(ctBuf),
-        ivB64: bytesToB64(iv),
-        saltB64: bytesToB64(salt),
-      };
     }
 
     // -------------------------
@@ -1189,22 +1185,18 @@
 
       attachmentBusy.add(k);
       try {
-        // mint short-lived download URL
         const callable = functions.httpsCallable("createSignedAttachmentDownloadUrl");
         const res = await callable({ signedEnvelopeId, attachmentId: attachment.attachmentId });
         const payload = (res && res.data) ? res.data : {};
         const downloadUrl = payload.downloadUrl;
         if (!downloadUrl) throw new Error("No downloadUrl");
 
-        // fetch encrypted bytes
         const r = await fetch(downloadUrl);
         if (!r.ok) throw new Error(`Download failed (${r.status})`);
         const encBuf = await r.arrayBuffer();
 
-        // decrypt bytes using existing scheme (PBKDF2 + AES-GCM) with per-attachment iv/salt
         const plainBytes = await decryptAttachmentBytesForCode(rawCode, encBuf, attachment.ivB64, attachment.saltB64);
 
-        // object URL
         const blob = new Blob([plainBytes], { type: attachment.contentType || "application/octet-stream" });
         const url = URL.createObjectURL(blob);
 
@@ -1268,7 +1260,6 @@
       if (delveeAttachmentsTitle) delveeAttachmentsTitle.textContent = `Images (${item.attachments.length})`;
       if (delveeAttachments) delveeAttachments.classList.remove("hidden");
 
-      // skeletons
       for (let i = 0; i < item.attachments.length; i++) {
         const sk = document.createElement("div");
         sk.className = "sf-thumb-skel";
@@ -1276,7 +1267,6 @@
         delveeThumbGrid.appendChild(sk);
       }
 
-      // thumbs
       for (let i = 0; i < item.attachments.length; i++) {
         const a = item.attachments[i];
         const skel = delveeThumbGrid.children[i];
@@ -1296,7 +1286,6 @@
         }
       }
 
-      // quick action: open all
       if (delveeAttachActions) {
         const btnOpenAll = document.createElement("button");
         btnOpenAll.className = "btn btn-secondary";
@@ -1314,6 +1303,56 @@
       }
     }
 
+    // ✅ Replace "[image]" lines with inline images (in attachment order)
+    async function renderBodyWithInlineImages(envelopeId, bodyText){
+      const item = findItemById(envelopeId);
+      const rawCode = (lastFetchedCode || (codeInput && codeInput.value) || "").trim();
+      const attachments = (item && Array.isArray(item.attachments)) ? item.attachments : [];
+
+      const lines = String(bodyText || "").split("\n");
+      const container = document.createElement("div");
+
+      let imgIndex = 0;
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+
+        const looksLikeImageLine =
+          trimmed === "[image]" ||
+          trimmed === "• [image]" ||
+          trimmed.includes("[image]");
+
+        if (looksLikeImageLine && imgIndex < attachments.length && rawCode) {
+          const p = document.createElement("div");
+          p.textContent = line; // keep the bullet line
+          p.style.whiteSpace = "pre-wrap";
+          p.style.marginBottom = "6px";
+          container.appendChild(p);
+
+          const a = attachments[imgIndex++];
+          const img = document.createElement("img");
+          img.className = "sf-inline-img";
+          img.alt = "Image";
+          img.loading = "lazy";
+          container.appendChild(img);
+
+          // load later (don’t block UI)
+          openSignedAttachmentAsObjectUrl({ rawCode, signedEnvelopeId: envelopeId, attachment: a })
+            .then((url) => { img.src = url; })
+            .catch(() => { img.remove(); });
+
+          continue;
+        }
+
+        const div = document.createElement("div");
+        div.textContent = line;
+        div.style.whiteSpace = "pre-wrap";
+        container.appendChild(div);
+      }
+
+      return container;
+    }
+
     function modalShow({ envelopeId, body, senderUid, kindLabel }){
       delveeActiveEnvelopeId = envelopeId;
 
@@ -1323,24 +1362,36 @@
 
       clearModalAttachmentsUI();
 
-      // show modal
       delveeModal.classList.add("show");
 
-      // reset stage
       if (delveeStage) {
         delveeStage.classList.remove("is-revealed");
         delveeStage.classList.add("is-playing");
       }
 
-      // reveal after animation window
       const REVEAL_MS = 950;
       setTimeout(async () => {
-        if (!delveeActiveEnvelopeId) return; // closed
-        if (delveeText) delveeText.textContent = body || "";
+        if (!delveeActiveEnvelopeId) return;
+
+        // ✅ Render inline images for Delvee summaries; default to plain text otherwise.
+        const item = findItemById(envelopeId);
+        const isDelveeSummary = item && item.kind === "delvee_summary";
+
+        if (delveeText) {
+          if (isDelveeSummary) {
+            const node = await renderBodyWithInlineImages(envelopeId, body || "");
+            delveeText.innerHTML = "";
+            delveeText.appendChild(node);
+          } else {
+            delveeText.textContent = body || "";
+          }
+        }
+
         if (delveeStage) {
           delveeStage.classList.remove("is-playing");
           delveeStage.classList.add("is-revealed");
         }
+
         await renderModalAttachmentsForEnvelope(envelopeId);
       }, REVEAL_MS);
     }
@@ -1553,7 +1604,6 @@
       }
 
       function onDown(e){
-        // ✅ If user is clicking a real control (Open/Consume/etc), don't start swipe capture.
         if (e.target && e.target.closest && e.target.closest("button,a,input,select,textarea,label")) return;
 
         if (!dragEl) return;
@@ -1707,7 +1757,6 @@
 
       try {
         setStatus("good", "Consuming…", "Marking envelope consumed…");
-
         const callable = functions.httpsCallable("markSignedEnvelopeConsumed");
         await callable({ signedEnvelopeId: id });
 
@@ -1724,7 +1773,7 @@
         setStatus("good", "Consumed", "Message consumed (won’t return on future fetches).");
       } catch (e) {
         console.error(e);
-        setStatus("warn", "Couldn’t consume", "Confirm the callable is deployed as markSignedEnvelopeConsumed.");
+        setStatus("warn", "Couldn’t consume", "If this keeps happening, confirm the callable is deployed as markSignedEnvelopeConsumed.");
       }
     }
 
@@ -1970,229 +2019,6 @@
     });
 
     // -------------------------
-    // ✅ Delvee reliable delivery jobs -> Setfeed message WITH IMAGES
-    // -------------------------
-    async function getMyWebSecureCode(){
-      const callable = functions.httpsCallable("getReceiveCodes");
-      const res = await callable({});
-      const data = res && res.data ? res.data : null;
-      const secure = data && data.secure && data.secure.code ? String(data.secure.code) : "";
-      return secure.trim();
-    }
-
-    async function listPendingDelveeJobs(){
-      const u = auth.currentUser;
-      if (!u) return [];
-
-      const snap = await db
-        .collection("users").doc(u.uid)
-        .collection("delvee_delivery_jobs")
-        .where("state", "==", "PENDING")
-        .limit(25)
-        .get();
-
-      return snap.docs.map(d => ({ id: d.id, ref: d.ref, data: d.data() || {} }));
-    }
-
-    async function readDelveeImagePulses(sessionId){
-      // Avoid composite index by ordering only, then filtering client-side.
-      const snap = await db
-        .collection("delvee_sessions").doc(sessionId)
-        .collection("pulses")
-        .orderBy("createdAtMillis", "asc")
-        .limit(250)
-        .get();
-
-      const out = [];
-      snap.forEach(doc => {
-        const p = doc.data() || {};
-        if (p.kind !== "image") return;
-        const a = p.attachment || {};
-        if (!a.storagePath || !a.contentType || !a.sizeBytes) return;
-        out.push({
-          storagePath: String(a.storagePath),
-          contentType: String(a.contentType),
-          sizeBytes: Number(a.sizeBytes) || 0,
-        });
-      });
-      return out;
-    }
-
-    async function downloadDelveeImageBytes(sessionId, storagePath){
-      const call = functions.httpsCallable("delveeCreateImageDownloadUrl");
-      const res = await call({ sessionId, storagePath });
-      const url = res && res.data ? res.data.downloadUrl : null;
-      if (!url) throw new Error("Missing downloadUrl for image");
-      const r = await fetch(url);
-      if (!r.ok) throw new Error(`Image download failed (${r.status})`);
-      return new Uint8Array(await r.arrayBuffer());
-    }
-
-    async function createSignedAttachmentUploadUrlBestEffort(payload){
-      // We don’t know your exact callable signature across versions.
-      // Try the “envelope-aware” payload first, then fall back to a simpler payload.
-      const call = functions.httpsCallable("createSignedAttachmentUpload");
-
-      try {
-        const res = await call(payload);
-        return res && res.data ? res.data : null;
-      } catch (e1) {
-        console.warn("[createSignedAttachmentUpload] retry without signedEnvelopeId", e1);
-
-        const fallback = {
-          attachmentId: payload.attachmentId,
-          contentType: payload.contentType,
-          sizeBytes: payload.sizeBytes,
-          // keep request id if your backend uses it
-          clientRequestId: payload.signedEnvelopeId || payload.clientRequestId || null
-        };
-
-        const res2 = await call(fallback);
-        return res2 && res2.data ? res2.data : null;
-      }
-    }
-
-    async function deliverJobToSetfeed(job){
-      const u = auth.currentUser;
-      if (!u) throw new Error("Not signed in");
-
-      const d = job.data || {};
-      const sessionId = String(d.sessionId || job.id || "").trim().toUpperCase();
-      const summaryText = (typeof d.summaryText === "string") ? d.summaryText : "";
-      if (!sessionId) throw new Error("Job missing sessionId");
-      if (!summaryText) throw new Error("Job missing summaryText");
-
-      // ✅ pick delivery code:
-      // - if user pasted a code, use it
-      // - otherwise automatically use this account’s web Secure code
-      let rawCode = (codeInput && codeInput.value) ? codeInput.value.trim() : "";
-      if (!rawCode) {
-        rawCode = await getMyWebSecureCode();
-        if (rawCode) codeInput.value = rawCode;
-      }
-      if (!rawCode) throw new Error("Missing Setfeed receive code (couldn’t auto-load web secure code).");
-
-      // Gather Delvee image pulses for this session (best-effort)
-      const imagePulses = await readDelveeImagePulses(sessionId);
-      const maxImages = 24; // keep sane for payload/time
-      const images = imagePulses.slice(0, maxImages);
-
-      // We’ll reuse a stable “request id” per job attempt.
-      const signedEnvelopeHint = `dvsum_${sessionId}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-
-      // Upload images as Setfeed signed attachments (encrypted locally with receive code)
-      const attachmentsForSend = [];
-
-      for (let i = 0; i < images.length; i++) {
-        const imgMeta = images[i];
-
-        // download image bytes (these are whatever Delvee stored; currently your lobby uploads raw bytes)
-        const plainBytes = await downloadDelveeImageBytes(sessionId, imgMeta.storagePath);
-
-        // encrypt bytes using Setfeed attachment scheme for the SAME receive code
-        const enc = await encryptBytesForCode(rawCode, plainBytes);
-
-        const attachmentId = `dvimg_${i}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-
-        // create upload URL
-        const up = await createSignedAttachmentUploadUrlBestEffort({
-          signedEnvelopeId: signedEnvelopeHint,
-          attachmentId,
-          contentType: imgMeta.contentType,
-          sizeBytes: enc.ciphertextBytes.byteLength,
-        });
-
-        const uploadUrl = up && up.uploadUrl ? up.uploadUrl : null;
-        if (!uploadUrl) throw new Error("Missing uploadUrl from createSignedAttachmentUpload");
-
-        // PUT encrypted bytes
-        const put = await fetch(uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": "application/octet-stream" },
-          body: enc.ciphertextBytes
-        });
-        if (!put.ok) throw new Error(`Attachment upload failed (${put.status})`);
-
-        attachmentsForSend.push({
-          attachmentId,
-          contentType: imgMeta.contentType,
-          sizeBytes: enc.ciphertextBytes.byteLength,
-          ivB64: enc.ivB64,
-          saltB64: enc.saltB64,
-        });
-      }
-
-      // Encrypt summary text and send signed ciphertext (with attachments)
-      const normalized = normalizeCodeAndroid(rawCode);
-      const codeHash = await sha256Hex(normalized);
-
-      // text envelope encryption is done server-side in your system? No: your sendSignedCiphertext expects ciphertext/iv/salt from client.
-      // We'll encrypt summary text in the same PBKDF2/AES-GCM scheme as receive.html/lobby.html use.
-      const ptBytes = new TextEncoder().encode(summaryText);
-      const encText = await encryptBytesForCode(rawCode, ptBytes);
-
-      const callSend = functions.httpsCallable("sendSignedCiphertext");
-      await callSend({
-        codeHash,
-        ciphertext: bytesToB64(encText.ciphertextBytes),
-        iv: encText.ivB64,
-        salt: encText.saltB64,
-        deliverAtLocalIso: new Date().toISOString(),
-        userTimezone: (Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"),
-        clientRequestId: signedEnvelopeHint,
-        attachments: attachmentsForSend,
-        // harmless extra context (ignored by backend if not used)
-        meta: { kind: "delvee_summary", sessionId }
-      });
-
-      return { ok: true, sessionId, attachmentsUploaded: attachmentsForSend.length };
-    }
-
-    async function markJob(ref, patch){
-      // Only status-ish fields (matches the rules style you were aiming for)
-      const now = new Date().toISOString();
-      const next = Object.assign({}, patch, { updatedAtUtc: now });
-      await ref.set(next, { merge: true });
-    }
-
-    let jobsBusy = false;
-
-    async function processPendingDelveeJobs({ quiet } = { quiet: false }){
-      if (jobsBusy) return;
-      if (!auth.currentUser) return;
-
-      jobsBusy = true;
-      try {
-        const jobs = await listPendingDelveeJobs();
-        if (!jobs.length) {
-          if (!quiet) setStatus("good", "No jobs", "No pending Delvee summary deliveries.");
-          return;
-        }
-
-        if (!quiet) setStatus("good", "Delivering…", `Delivering ${jobs.length} Delvee summary job(s) (with images)…`);
-
-        for (const job of jobs) {
-          const ref = job.ref;
-
-          const prevAttempts = (job.data && typeof job.data.attempts === "number") ? job.data.attempts : 0;
-          await markJob(ref, { state: "PROCESSING", attempts: prevAttempts + 1, lastError: null });
-
-          try {
-            const res = await deliverJobToSetfeed(job);
-            await markJob(ref, { state: "DELIVERED", deliveredAtUtc: new Date().toISOString(), lastError: null, deliveredImages: res.attachmentsUploaded || 0 });
-          } catch (e) {
-            console.error("[Delvee job deliver failed]", e);
-            await markJob(ref, { state: "FAILED", lastError: (e && e.message) ? String(e.message) : "Deliver failed" });
-          }
-        }
-
-        if (!quiet) setStatus("good", "Delivered", "Delvee jobs processed. Fetch to view in Released.");
-      } finally {
-        jobsBusy = false;
-      }
-    }
-
-    // -------------------------
     // Auto polling + toggles
     // -------------------------
     let autoTimer = null;
@@ -2212,10 +2038,6 @@
       stopAuto();
       autoTimer = setInterval(async () => {
         if (!auth.currentUser) return;
-
-        // Also try delivering pending Delvee jobs while auto polling is on.
-        await processPendingDelveeJobs({ quiet: true });
-
         const rawCode = (codeInput && codeInput.value) ? codeInput.value.trim() : "";
         if (!rawCode) return;
         await doFetch(rawCode, { quiet: true });
@@ -2228,7 +2050,7 @@
       applyToggleUI();
       if (next) {
         startAuto();
-        setStatus("good", "Auto polling on", "Fetching every ~15s while this tab is open (and delivering pending Delvee jobs).");
+        setStatus("good", "Auto polling on", "Fetching every ~15s while this tab is open.");
       } else {
         stopAuto();
         setStatus("warn", "Auto polling off", "Manual Fetch only.");
@@ -2269,7 +2091,6 @@
         const envelopes = await fetchSignedEnvelopesForCode(code);
         const items = await buildLatestItems(code, envelopes);
 
-        // If the code changed, clear cached attachment URLs
         if (lastFetchedCode && normalizeCodeAndroid(lastFetchedCode) !== normalizeCodeAndroid(code)) {
           revokeAllAttachmentUrls();
         }
@@ -2300,7 +2121,7 @@
 
         if (!quiet) {
           if (latestItems.length === 0) setStatus("warn", "No messages", "No decryptable messages for this code (or none unconsumed).");
-          else setStatus("good", "Fetched", "Lists updated. Open reveals inside the vault (images appear after opening).");
+          else setStatus("good", "Fetched", "Lists updated. Open reveals inside the vault.");
         }
       } catch (e) {
         console.error(e);
@@ -2313,7 +2134,6 @@
       const prev = btnFetch.textContent;
       btnFetch.textContent = "Fetching…";
       try {
-        await processPendingDelveeJobs({ quiet: true });
         await doFetch(codeInput.value, { quiet:false });
       } finally {
         btnFetch.disabled = false;
@@ -2326,15 +2146,11 @@
       const prev = btnFetchSummaries.textContent;
       btnFetchSummaries.textContent = "Fetching…";
       try {
-        // ✅ This is the “job pump”: deliver pending summaries first (with images),
-        // then fetch and show summaries only.
-        await processPendingDelveeJobs({ quiet: false });
-
         await doFetch(codeInput.value, { quiet:false });
         summariesOnly = true;
         applyToggleUI();
         renderAll();
-        setStatus("good", "Summaries", "Showing Delvee Summaries only (images available after Open).");
+        setStatus("good", "Summaries", "Showing Delvee Summaries only.");
       } finally {
         btnFetchSummaries.disabled = false;
         btnFetchSummaries.textContent = prev;
