@@ -74,99 +74,81 @@
       <p class="lead">Effective date: <strong>2026-02-15</strong></p>
 
       <p>
-        This page explains Setfeed’s security model, encryption boundaries, and operational safeguards.
-        Our approach is simple: encrypt early, minimize data, and reduce server trust wherever possible.
-      </p>
-
-      <h2>Security design principles</h2>
-      <ul>
-        <li><strong>Encrypt before transport:</strong> Messages are encrypted in the browser before reaching our servers.</li>
-        <li><strong>Ciphertext-only storage:</strong> Servers store encrypted envelopes, not readable message content.</li>
-        <li><strong>Device-held private keys:</strong> Private keys remain on recipient devices.</li>
-        <li><strong>Minimal moving parts:</strong> Calm, deterministic flows reduce complexity and attack surface.</li>
-      </ul>
-
-      <h2>Encryption boundary</h2>
-      <p>
-        Messages sent through <strong>setfeed.app</strong> are encrypted client-side.
-        The server receives ciphertext plus required cryptographic metadata (such as IV and salt),
-        but not plaintext message content.
+        Setfeed is designed so message content does not need to be readable by Setfeed servers.
+        When encrypted delivery is used, the web bridge (<strong>setfeed.app</strong>) acts as a ciphertext transport layer.
       </p>
 
       <div class="note">
         <p style="margin:0;">
-          Private decryption keys are stored only on recipient devices and are never intentionally uploaded to Setfeed servers.
+          Responsible disclosure: <a href="mailto:security@setfeed.app">security@setfeed.app</a>
         </p>
       </div>
 
-      <h2>Message flow (high level)</h2>
-
-      <h3>1) Send</h3>
+      <h2>Threat model (plain language)</h2>
       <ul>
-        <li>Message is written in the browser.</li>
-        <li>Encryption happens locally using the recipient’s public key.</li>
-        <li>Only encrypted ciphertext is transmitted to the server.</li>
+        <li><strong>Setfeed servers should not learn message contents</strong> when end-to-end encryption is used.</li>
+        <li><strong>Attackers may try to abuse the bridge</strong> (spam, scraping, automation), so we use integrity checks and rate controls.</li>
+        <li><strong>Your device matters:</strong> if a recipient device is compromised, content could be exposed there (as with any secure messenger).</li>
       </ul>
 
-      <h3>2) Store</h3>
-      <ul>
-        <li>Encrypted envelope is stored.</li>
-        <li>Consumption state is tracked to prevent replay.</li>
-        <li>No plaintext content is stored when encryption is used.</li>
-      </ul>
-
-      <h3>3) Receive</h3>
-      <ul>
-        <li>Recipient device fetches ciphertext.</li>
-        <li>Decryption occurs locally on the device.</li>
-        <li>Message becomes readable only after successful local decryption.</li>
-      </ul>
-
-      <h2>Replay protection</h2>
+      <h2>Encryption boundary</h2>
       <p>
-        Envelopes are designed for one-time consumption. Once consumed, the delivery state is updated
-        to prevent reuse of the same encrypted payload.
+        Messages sent through setfeed.app are encrypted in your browser before they reach our servers.
+        When encrypted delivery is used, Setfeed stores and transports only encrypted ciphertext (plus required cryptographic metadata such as IV and salt).
       </p>
 
-      <h2>Integrity and abuse protection</h2>
+      <h3>What Setfeed can and cannot see</h3>
+      <ul>
+        <li><strong>Cannot read:</strong> encrypted message content (ciphertext remains opaque to Setfeed).</li>
+        <li><strong>Can process:</strong> delivery metadata required to deliver an envelope and enforce one-time consumption.</li>
+        <li><strong>May see:</strong> operational/security logs from infrastructure (e.g., IP address and request metadata) for reliability and abuse prevention.</li>
+      </ul>
+
+      <h2>Keys</h2>
       <p>
-        Setfeed uses Firebase App Check to reduce automated abuse.
-        On Android, App Check may use Play Integrity; on the web bridge it may use reCAPTCHA.
-        These systems issue short-lived tokens that help verify that requests originate from authentic environments.
+        Private encryption keys are stored only on recipient devices and are never intentionally uploaded to Setfeed servers.
+        This is an explicit boundary: the system is built so Setfeed does not need access to your private keys to deliver encrypted envelopes.
       </p>
+
+      <h2>Attachments (images)</h2>
+      <p>
+        When image attachments are supported for a message flow, Setfeed stores encrypted attachment bytes and delivers them alongside the encrypted envelope.
+        Attachments are intended to follow the same boundary as message text: encrypted client-side, stored as ciphertext-only, and decrypted on the recipient device.
+      </p>
+
+      <h2>Integrity and abuse prevention</h2>
+      <p>
+        To reduce automated abuse, Setfeed can use Firebase App Check. On Android, App Check can use Play Integrity;
+        on the web bridge it can use reCAPTCHA. These systems may process signals and tokens that help verify requests come from an authentic
+        app/browser environment.
+      </p>
+      <ul>
+        <li><strong>App Check / Integrity tokens:</strong> short-lived attestation tokens.</li>
+        <li><strong>Basic device/app signals:</strong> required for integrity verification (handled by Google’s services).</li>
+      </ul>
 
       <h2>Backend protections</h2>
       <ul>
-        <li><strong>Transport encryption (HTTPS/TLS)</strong> for all network communication.</li>
-        <li><strong>Access controls</strong> restricting backend administrative access.</li>
-        <li><strong>Rate limiting</strong> to reduce automated attacks.</li>
-        <li><strong>Operational logging</strong> for reliability and incident response.</li>
+        <li><strong>Transport security:</strong> HTTPS for data in transit.</li>
+        <li><strong>Access controls:</strong> server-side authorization checks and Firebase security controls.</li>
+        <li><strong>Replay protection:</strong> delivery state enforces one-time consumption where applicable.</li>
+        <li><strong>Rate limits / constraints:</strong> conservative caps to reduce abuse and accidental overload.</li>
       </ul>
 
-      <h2>Limitations</h2>
+      <h2>Reporting a vulnerability</h2>
       <p>
-        No system is perfectly secure. While end-to-end encryption reduces server trust requirements,
-        security also depends on the integrity of user devices and browsers.
-      </p>
-      <p>
-        If a device is compromised, decrypted content on that device may be exposed.
-        Users are encouraged to keep devices updated and secured.
-      </p>
-
-      <h2>Responsible disclosure</h2>
-      <p>
-        If you believe you have found a security vulnerability, please contact
+        If you believe you’ve found a security issue, email
         <a href="mailto:security@setfeed.app">security@setfeed.app</a>.
+        Please include steps to reproduce, impact, and (if possible) a minimal proof of concept.
       </p>
-      <p>
-        Please include sufficient detail to reproduce the issue. We appreciate responsible disclosure
-        and will investigate promptly.
-      </p>
+      <ul>
+        <li>Please do not publicly disclose until we’ve had a chance to investigate and mitigate.</li>
+        <li>Please avoid accessing data that isn’t yours, and avoid service disruption.</li>
+      </ul>
 
-      <h2>Relationship to the Privacy Policy</h2>
+      <h2>Changes to this page</h2>
       <p>
-        For details about data processing categories, retention, and third-party providers,
-        see the <a href="./privacy.html">Privacy Policy</a>.
+        If we change this page, we will update the effective date above and publish the updated version here.
       </p>
 
       <footer>
