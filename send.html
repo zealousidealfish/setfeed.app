@@ -370,18 +370,23 @@
             <div class="sf-subhead" id="sf-delvee-cta" role="link" tabindex="0" aria-label="Create pulse lobby with Delvee">
               Create pulse lobby with Delvee
             </div>
+            <div class="panel" style="margin-top:10px;">
+              <p class="panel-title" style="margin-top:0;">Private pulse session</p>
+              <p class="panel-sub">Start a private multi-message summary (1 credit). Choose destination and 2/3 minute session on the next screen.</p>
+              <div class="actions"><a class="btn btn-lg btn-primary" href="./session.html">Start pulse session</a></div>
+            </div>
 
-            <div class="field" style="margin-top: 10px;">
+            <div class="field hidden" style="margin-top: 10px;">
               <label for="signed-code">Secure or Personal code</label>
               <input id="signed-code" type="text" inputmode="text" placeholder="Paste a Secure (SFS-…) or Personal (SF-…) code" />
             </div>
 
-            <div class="field">
+            <div class="field hidden">
               <label for="signed-body">Add a message</label>
               <textarea id="signed-body" maxlength="1200" placeholder="Add a message… (optional for Pulse)"></textarea>
             </div>
 
-            <div class="actions">
+            <div class="actions hidden">
               <button class="btn btn-lg btn-primary" id="btn-signed-send" type="button" disabled>Encrypt and send</button>
               <button class="btn btn-lg btn-quiet" id="btn-signed-clear" type="button">Clear</button>
             </div>
@@ -406,11 +411,11 @@
               <!-- Pulse controls (only for Pulse mode) -->
               <div class="chips hidden" aria-label="Pulse durations (signed)" id="signed-pulse-minutes">
                 <button class="chip" type="button" aria-pressed="true" data-min="2">2 minutes</button>
+                <button class="chip" type="button" aria-pressed="false" data-min="3">3 minutes</button>
               </div>
 
               <div class="chips hidden" aria-label="Pulse type (signed)" id="signed-pulse-type">
-                <button class="chip" type="button" aria-pressed="true"  data-type="single">Single-message (free)</button>
-                <button class="chip" type="button" aria-pressed="false" data-type="multi">Multi-message summary (1 credit)</button>
+                <button class="chip" type="button" aria-pressed="true"  data-type="multi">Multi-message summary (1 credit)</button>
               </div>
 
               <div class="sf-adv-row hidden" id="signed-advanced-row" aria-label="Signed delivery modes">
@@ -431,7 +436,7 @@
                   </div>
                 </div>
                 <div class="sf-pulse-note" id="sf-pulse-note">
-                  Single-message pulse is free and sends immediately. Multi-message pulse runs for 2 minutes and produces one summary (1 credit).
+                  Use the private session flow for multi-message summary. Start session below to choose self/other and 2/3 minutes.
                 </div>
               </div>
 
@@ -823,7 +828,7 @@
     let signedPresetTime = "13:00";
 
     let signedPulseMinutes = 2; // fixed for Setfeed private pulse
-    let signedPulseType = "single"; // single | multi
+    let signedPulseType = "multi"; // multi only
 
     const signedTimeChips = Array.from(document.querySelectorAll('#signed-time-chips .chip[data-time]'));
     const signedPulseMinuteChips = Array.from(document.querySelectorAll('#signed-pulse-minutes .chip[data-min]'));
@@ -905,11 +910,7 @@
 
     function updateSignedSendLabel() {
       if (signedMode === "pulse") {
-        if (signedPulseType === "single") {
-          btnSignedSend.textContent = "Pulse is instant (use Pulse image / send)";
-        } else {
-          btnSignedSend.textContent = pulseRunning ? "Pulse running…" : (privatePulseSessionId ? "Finalize + send summary" : "Start 2-min pulse session");
-        }
+        btnSignedSend.textContent = pulseRunning ? "Pulse running…" : (privatePulseSessionId ? "Finalize + send summary" : "Start pulse session");
       } else {
         btnSignedSend.textContent = "Encrypt and send";
       }
@@ -931,7 +932,7 @@
 
     function setPulseTypeHighlight() {
       signedPulseTypeChips.forEach(b => {
-        const t = b.getAttribute("data-type") || "single";
+        const t = b.getAttribute("data-type") || "multi";
         b.setAttribute("aria-pressed", (t === signedPulseType) ? "true" : "false");
       });
     }
@@ -984,7 +985,7 @@
     }));
 
     signedPulseTypeChips.forEach(btn => btn.addEventListener("click", () => {
-      signedPulseType = (btn.getAttribute("data-type") || "single");
+      signedPulseType = "multi";
       setPulseTypeHighlight();
       setPulseNote();
       // Switching type stops any running multi session
@@ -1064,7 +1065,7 @@
 
       // single: can send immediately; multi: can send only when session exists (or user can still press and we auto-start)
       const can =
-        isAuthed && fileOk && isPulseMode && codeOk && (signedPulseType === "single" || true);
+        isAuthed && fileOk && isPulseMode && codeOk && pulseRunning;
 
       btnPulseImage.disabled = !can;
 
@@ -1073,8 +1074,7 @@
         else if (!isPulseMode) sfImageHelp.textContent = "Select “Pulse” to enable pulse image.";
         else if (!codeOk) sfImageHelp.textContent = "Paste the recipient Secure/Personal code to enable pulse image.";
         else if (!fileOk) sfImageHelp.textContent = "Choose an image to continue.";
-        else if (signedPulseType === "single") sfImageHelp.textContent = "Single-message: sends immediately to the recipient code (free).";
-        else sfImageHelp.textContent = pulseRunning ? "Multi-message: image added to the running session." : "Multi-message: starts a 2-min session then adds the image.";
+        else sfImageHelp.textContent = pulseRunning ? "Image added to the running session." : "Start pulse session first.";
       }
     }
 
@@ -1260,7 +1260,7 @@
       if (isAuthed) {
         if (signedMode !== "pulse") setSignedMode("pulse");
       } else {
-        if (signedMode === "pulse") setSignedMode("tomorrow");
+        if (signedMode === "pulse") setSignedMode("pulse");
         if (pulseRunning || privatePulseSessionId) stopPulseTimerUI({ silent: true });
       }
 
@@ -1373,7 +1373,8 @@
     }
 
     async function pulseImageMultiAddToSession({ code, file }) {
-      const sid = await ensurePrivatePulseSession({ code });
+      const sid = if (!code) { setStatus("warn", "Recipient code needed", "Use the Private pulse session page to choose recipient first."); return; }
+            await ensurePrivatePulseSession({ code });
 
       // 1) Encrypt image bytes for recipient code
       const ab = await file.arrayBuffer();
@@ -1464,16 +1465,9 @@
       try {
         btnPulseImage.disabled = true;
 
-        if (signedPulseType === "single") {
-          setStatus("good", "Sending image…", "Encrypting + uploading…");
-          await pulseImageSingleToSetfeed({ code, file });
-          setStatus("good", "Sent", "Image sent to the recipient code.");
-        } else {
-          // multi: add image pulse into the running/created session
-          setStatus("good", "Adding to session…", "Encrypting + uploading…");
-          await pulseImageMultiAddToSession({ code, file });
-          setStatus("good", "Added", "Image added. Finalize to send summary.");
-        }
+        setStatus("good", "Adding to session…", "Encrypting + uploading…");
+        await pulseImageMultiAddToSession({ code, file });
+        setStatus("good", "Added", "Image added. Finalize to send summary.");
       } catch (e) {
         console.error(e);
         setStatus("warn", "Pulse image failed", (e && e.message) ? String(e.message) : "Try again.");
@@ -1501,17 +1495,13 @@
         const code = (signedCode.value || "").trim();
         if (!code) { setStatus("warn", "Recipient code needed", "Paste a Secure/Personal code first."); return; }
 
-        if (signedPulseType === "single") {
-          setStatus("warn", "Single is instant", "Use “Pulse image” (for images) or “Encrypt and send” (for text) outside Pulse.");
-          return;
-        }
-
-        // multi: if session exists and not running -> finalize; if no session -> start; if running -> do nothing
+        // if session exists and not running -> finalize; if no session -> start; if running -> do nothing
         try {
           btnSignedSend.disabled = true;
 
           if (!privatePulseSessionId) {
-            setStatus("good", "Starting pulse…", "Creating a 2-minute summary session…");
+            setStatus("good", "Starting pulse…", `Creating a ${signedPulseMinutes}-minute summary session…`);
+            if (!code) { setStatus("warn", "Recipient code needed", "Use the Private pulse session page to choose recipient first."); return; }
             await ensurePrivatePulseSession({ code });
             setStatus("good", "Running", "Add pulses (text via message box + send later, images via Pulse image).");
             return;
@@ -1524,7 +1514,7 @@
 
           setStatus("good", "Finalizing…", "Generating summary and sending…");
           await finalizePrivatePulseAndSend({ code });
-          setStatus("good", "Sent", "Summary delivered to the recipient code.");
+          setStatus("good", "Sent", "Summary delivered. Press fetch on Inbox page to receive summary.");
         } catch (e) {
           console.error(e);
           setStatus("warn", "Pulse failed", (e && e.message) ? String(e.message) : "Try again.");
@@ -1651,14 +1641,20 @@
     setPulseNote();
 
     // Not authed yet -> keep UI calm and predictable
-    setSignedMode("tomorrow");
+    setSignedMode("pulse");
 
     applyBodyGuardrails();
     refreshPulseImageEnabled();
     updateSignedSendLabel();
     setStatus("good", "Ready", "App Check is active. Encryption + sending are wired.");
 
-    if (window.location.hash && window.location.hash.toLowerCase().includes("signin")) {
+    
+    const pulseDone = new URLSearchParams(window.location.search).get("pulseDone") === "1";
+    if (pulseDone && signedAdvancedRow) {
+      signedAdvancedRow.classList.remove("hidden");
+      signedDeliveryHelp.textContent = "Pulse session ended. You can now use other delivery options.";
+    }
+if (window.location.hash && window.location.hash.toLowerCase().includes("signin")) {
       userChoseTab = true;
       setTab("signed");
     }
