@@ -687,7 +687,8 @@
             </p>
             <small class="help">
               Hidden senders filter applies everywhere (Pinned/Upcoming/Awaiting/Released).<br/>
-              <strong>Delvee summaries:</strong> Open will load images directly from your Delvee account inbox doc (users/{uid}/delvee_account_inbox/{sessionId}).
+              <strong>Delvee summaries:</strong> Open will load images directly from your Delvee account inbox doc (users/{uid}/delvee_account_inbox/{sessionId}).<br/>
+              <strong>Important:</strong> If Delvee images were uploaded without iv/salt metadata, this inbox will still show them (treated as plaintext bytes).
             </small>
           </div>
         </div>
@@ -1091,19 +1092,6 @@
       };
     }
 
-    async function encryptBytesForCode(rawCode, plainBytes) {
-      const passphrase = normalizeCodeAndroid(rawCode);
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const key = await deriveAesKeyFromPassphrase(passphrase, salt, "encrypt");
-      const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plainBytes);
-      return {
-        ciphertextBytes: new Uint8Array(ct),
-        ivB64: bytesToB64(iv),
-        saltB64: bytesToB64(salt),
-      };
-    }
-
     // -------------------------
     // Time formatting
     // -------------------------
@@ -1264,9 +1252,9 @@
     }
 
     // -------------------------
-    // Delvee account inbox images (KEY FIX)
+    // Delvee account inbox images (KEY FIX + robustness)
     // -------------------------
-    const delveeAccountInboxCache = new Map(); // sessionId -> { images: [], fetchedAtMs }
+    const delveeAccountInboxCache = new Map(); // sessionId -> { images: [], imagesCount, fetchedAtMs }
     const delveeAccountInboxBusy = new Set();  // sessionId
 
     function asStr(v){ return (typeof v === "string" && v.trim().length) ? v.trim() : null; }
@@ -1286,6 +1274,8 @@
       return null;
     }
 
+    // ✅ IMPORTANT: allow iv/salt to be null.
+    // If iv/salt are missing, we treat the downloaded bytes as plaintext image bytes.
     function normalizeJobImages(raw){
       return asArr(raw).map(x => (x || {})).map(m => ({
         storagePath: asStr(m.storagePath),
@@ -1293,12 +1283,12 @@
         sizeBytes: asNum(m.sizeBytes),
         ivB64: asStr(m.ivB64),
         saltB64: asStr(m.saltB64),
-      })).filter(x => x.storagePath && x.ivB64 && x.saltB64);
+      })).filter(x => x.storagePath);
     }
 
     async function fetchDelveeAccountInboxDoc(sessionId){
       const sid = asStr(sessionId);
-      if (!sid) return { images: [] };
+      if (!sid) return { images: [], imagesCount: 0, fetchedAtMs: Date.now() };
 
       if (delveeAccountInboxCache.has(sid)) return delveeAccountInboxCache.get(sid);
       if (delveeAccountInboxBusy.has(sid)) {
@@ -1306,10 +1296,10 @@
           await new Promise(r => setTimeout(r, 120));
           if (delveeAccountInboxCache.has(sid)) return delveeAccountInboxCache.get(sid);
         }
-        return { images: [] };
+        return { images: [], imagesCount: 0, fetchedAtMs: Date.now() };
       }
 
-      if (!auth.currentUser) return { images: [] };
+      if (!auth.currentUser) return { images: [], imagesCount: 0, fetchedAtMs: Date.now() };
 
       delveeAccountInboxBusy.add(sid);
       try {
@@ -1317,19 +1307,20 @@
         const ref = db.collection("users").doc(uid).collection("delvee_account_inbox").doc(sid);
         const snap = await ref.get();
         if (!snap.exists) {
-          const empty = { images: [] };
+          const empty = { images: [], imagesCount: 0, fetchedAtMs: Date.now() };
           delveeAccountInboxCache.set(sid, empty);
           return empty;
         }
 
         const d = snap.data() || {};
         const images = normalizeJobImages(d.images);
-        const out = { images, fetchedAtMs: Date.now() };
+        const imagesCount = (typeof d.imagesCount === "number" && Number.isFinite(d.imagesCount)) ? d.imagesCount : images.length;
+        const out = { images, imagesCount, fetchedAtMs: Date.now() };
         delveeAccountInboxCache.set(sid, out);
         return out;
       } catch (e) {
         console.warn("[fetchDelveeAccountInboxDoc] failed", e);
-        const empty = { images: [] };
+        const empty = { images: [], imagesCount: 0, fetchedAtMs: Date.now() };
         delveeAccountInboxCache.set(sid, empty);
         return empty;
       } finally {
@@ -1341,7 +1332,7 @@
     const delveeInlineBusy = new Set();
 
     function delveeInlineKey(sessionId, storagePath, ivB64, saltB64){
-      return `${sessionId}::${storagePath}::${ivB64}::${saltB64}`;
+      return `${sessionId}::${storagePath}::${ivB64 || "noiv"}::${saltB64 || "nosalt"}`;
     }
 
     async function openDelveeJobImageAsObjectUrl(rawCode, sessionId, imgMeta){
@@ -1368,11 +1359,24 @@
         if (!r.ok) throw new Error(`Download failed (${r.status})`);
         const encBuf = await r.arrayBuffer();
 
-        // IMPORTANT: this assumes iv/salt + your inbox code derive the decrypt key.
-        // If your Delvee images are encrypted under a different session key, decryption will fail.
-        const plainBytes = await decryptAttachmentBytesForCode(rawCode, encBuf, imgMeta.ivB64, imgMeta.saltB64);
+        let bytesToShow;
+        const hasIvSalt = !!(imgMeta && imgMeta.ivB64 && imgMeta.saltB64);
 
-        const blob = new Blob([plainBytes], { type: imgMeta.contentType || "image/jpeg" });
+        if (hasIvSalt) {
+          // Try decrypt with inbox code (best-effort).
+          // If this fails (e.g. Delvee used a different session key), we fall back to showing nothing.
+          try {
+            bytesToShow = await decryptAttachmentBytesForCode(rawCode, encBuf, imgMeta.ivB64, imgMeta.saltB64);
+          } catch (e) {
+            console.warn("[openDelveeJobImageAsObjectUrl] decrypt failed", e);
+            throw e;
+          }
+        } else {
+          // ✅ KEY FIX: if Delvee wrote iv/salt as null, treat bytes as plaintext image bytes.
+          bytesToShow = new Uint8Array(encBuf);
+        }
+
+        const blob = new Blob([bytesToShow], { type: imgMeta.contentType || "image/jpeg" });
         const url = URL.createObjectURL(blob);
         delveeInlineUrlCache.set(k, url);
         return url;
@@ -1453,7 +1457,7 @@
           img.addEventListener("click", () => window.open(url, "_blank", "noopener"));
           delveeThumbGrid.replaceChild(img, skel);
         } catch (e) {
-          console.warn("[delvee thumb decrypt failed]", e);
+          console.warn("[delvee thumb load failed]", e);
           skel.textContent = "x";
         }
       }
@@ -1488,7 +1492,7 @@
         extractDelveeSessionIdFromSummaryText(pt);
 
       // Fetch account inbox doc images
-      const doc = sessionId ? await fetchDelveeAccountInboxDoc(sessionId) : { images: [] };
+      const doc = sessionId ? await fetchDelveeAccountInboxDoc(sessionId) : { images: [], imagesCount: 0 };
       const images = doc && Array.isArray(doc.images) ? doc.images : [];
 
       // Inline replace: map each "[image]" placeholder to next image in images[]
@@ -1502,7 +1506,7 @@
           trimmed === "• [image]" ||
           trimmed.includes("[image]");
 
-        if (looksLikeImageLine && imgIndex < images.length && rawCode && sessionId) {
+        if (looksLikeImageLine && imgIndex < images.length && sessionId) {
           const p = document.createElement("div");
           p.textContent = line;
           p.style.whiteSpace = "pre-wrap";
@@ -1530,7 +1534,7 @@
       }
 
       // Also populate the modal “Images” section from the same account doc
-      if (rawCode && sessionId) {
+      if (sessionId) {
         await renderDelveeAccountImagesUI({ sessionId, rawCode, images });
       } else {
         clearModalAttachmentsUI();
@@ -2121,12 +2125,16 @@
           ? `<span class="sf-kind delvee">${safeText(item.kindPillText || "Delvee")}</span>`
           : ``;
 
-      // For Delvee summaries: show a “Images: ?” indicator if we can infer count from account inbox later.
+      // For Delvee summaries: show "Images: …" once we hydrate from account inbox doc.
       // For normal messages: use signed attachments count.
-      const attachmentCount = Array.isArray(item.attachments) ? item.attachments.length : 0;
+      const isDelvee = (item && item.kind === "delvee_summary");
+      const signedAttachmentCount = Array.isArray(item.attachments) ? item.attachments.length : 0;
 
-      const attachCountLine = (isReleased && (attachmentCount > 0))
-        ? `<div class="sf-attach-count"><span class="dot"></span><span>Images: ${attachmentCount}</span></div>`
+      const attachCountLine = (isReleased && (isDelvee || signedAttachmentCount > 0))
+        ? `<div class="sf-attach-count" data-attach-line="1" data-sid="${safeText(item.delveeSessionId || "")}">
+             <span class="dot"></span>
+             <span data-attach-text="1">${isDelvee ? "Images: …" : ("Images: " + signedAttachmentCount)}</span>
+           </div>`
         : ``;
 
       return `
@@ -2223,6 +2231,37 @@
       });
     }
 
+    async function hydrateDelveeImageCounts(){
+      // Update "Images: …" for visible released/pinned Delvee summaries.
+      const cards = document.querySelectorAll('.sf-msg-card[data-mode="released"], .sf-msg-card[data-mode="pinned"]');
+      const sidSet = new Set();
+
+      cards.forEach(card => {
+        const attachLine = card.querySelector('[data-attach-line="1"]');
+        if (!attachLine) return;
+        const sid = attachLine.getAttribute("data-sid") || "";
+        const sidTrim = sid.trim();
+        if (!sidTrim) return;
+        sidSet.add(sidTrim);
+      });
+
+      const sids = Array.from(sidSet);
+      if (sids.length === 0) return;
+
+      for (const sid of sids) {
+        try {
+          const doc = await fetchDelveeAccountInboxDoc(sid);
+          const n = (doc && typeof doc.imagesCount === "number") ? doc.imagesCount : (doc.images ? doc.images.length : 0);
+
+          // Write into all cards with this sid
+          document.querySelectorAll(`[data-attach-line="1"][data-sid="${CSS.escape(sid)}"]`).forEach(line => {
+            const span = line.querySelector('[data-attach-text="1"]');
+            if (span) span.textContent = `Images: ${n}`;
+          });
+        } catch (_) {}
+      }
+    }
+
     function renderAll(){
       refreshHiddenNav();
 
@@ -2259,6 +2298,9 @@
       wireReleased(listReleased);
 
       if (currentRoute() === "hidden") renderHidden();
+
+      // ✅ After render, hydrate Delvee image counts in list cards.
+      hydrateDelveeImageCounts().catch(() => {});
     }
 
     function findItemById(id){
@@ -2592,6 +2634,8 @@
       revokeAllAttachmentUrls();
       delveeAccountInboxCache.clear();
       delveeAccountInboxBusy.clear();
+      delveeInlineUrlCache.clear();
+      delveeInlineBusy.clear();
 
       applyToggleUI();
       refreshHiddenNav();
