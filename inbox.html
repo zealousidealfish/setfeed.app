@@ -687,7 +687,7 @@
             </p>
             <small class="help">
               Hidden senders filter applies everywhere (Pinned/Upcoming/Awaiting/Released).<br/>
-              <strong>Delvee summaries:</strong> Fetch summaries will also try to deliver any pending Delvee summary jobs for your account into this inbox.
+              <strong>Delvee summaries:</strong> Open will load images directly from your Delvee account inbox doc (users/{uid}/delvee_account_inbox/{sessionId}).
             </small>
           </div>
         </div>
@@ -1263,182 +1263,126 @@
       }
     }
 
-    /* ============================
-       TARGETED CHANGE (inbox.html)
-       Goal: For Delvee summaries, fetch/decrypt inline images using the embedded
-            [delvee:image-meta]{...} JSON (storagePath/sessionId/ivB64/saltB64),
-            instead of leaving “[image]” as a placeholder.
-       ============================ */
+    // -------------------------
+    // Delvee account inbox images (KEY FIX)
+    // -------------------------
+    const delveeAccountInboxCache = new Map(); // sessionId -> { images: [], fetchedAtMs }
+    const delveeAccountInboxBusy = new Set();  // sessionId
 
-    // Parse one inline Delvee image block from summary text:
-    // "[delvee:image] ... [delvee:image-meta]{...json...}"
-    function parseInlineDelveeImageBlock(rawBlock){
-      const marker = "[delvee:image-meta]";
-      const idx = rawBlock.toLowerCase().indexOf(marker);
-      if (idx < 0) return null;
+    function asStr(v){ return (typeof v === "string" && v.trim().length) ? v.trim() : null; }
+    function asNum(v){ return (typeof v === "number" && Number.isFinite(v)) ? v : null; }
+    function asArr(v){ return Array.isArray(v) ? v : []; }
 
-      const before = rawBlock.slice(0, idx)
-        .replace(/\[delvee:image\]/ig, "")
-        .trim();
+    function extractDelveeSessionIdFromSummaryText(pt){
+      const s = String(pt || "");
+      // Typical: "Session DV-ABCD-EFGH"
+      let m = s.match(/\bSession\s+(DV-[A-Z0-9]{4}-[A-Z0-9]{4})\b/i);
+      if (m && m[1]) return String(m[1]).toUpperCase();
 
-      const jsonRaw = rawBlock.slice(idx + marker.length).trim();
-      let meta = null;
-      try { meta = JSON.parse(jsonRaw); } catch (_) { return null; }
+      // Sometimes: "Session DV-ABCD-EFGHParticipants:" (missing whitespace)
+      m = s.match(/\bSession\s*(DV-[A-Z0-9]{4}-[A-Z0-9]{4})\b/i);
+      if (m && m[1]) return String(m[1]).toUpperCase();
 
-      const storagePath = (typeof meta.storagePath === "string" && meta.storagePath.trim()) ? meta.storagePath.trim() : null;
-      const contentType = (typeof meta.contentType === "string" && meta.contentType.trim()) ? meta.contentType.trim() : "image/jpeg";
-      const ivB64 = (typeof meta.ivB64 === "string" && meta.ivB64.trim()) ? meta.ivB64.trim() : null;
-      const saltB64 = (typeof meta.saltB64 === "string" && meta.saltB64.trim()) ? meta.saltB64.trim() : null;
-
-      // sessionId can be derived from ".../sessions/{sessionId}/..."
-      let sessionId = null;
-      if (storagePath) {
-        const parts = storagePath.split("/");
-        const si = parts.indexOf("sessions");
-        if (si >= 0 && si + 1 < parts.length) sessionId = parts[si + 1] || null;
-      }
-
-      // Optional fallbacks if present (rare in summary meta, but harmless)
-      const attachmentId = (typeof meta.attachmentId === "string" && meta.attachmentId.trim()) ? meta.attachmentId.trim() : null;
-      const signedEnvelopeId = (typeof meta.signedEnvelopeId === "string" && meta.signedEnvelopeId.trim()) ? meta.signedEnvelopeId.trim() : null;
-
-      if (!ivB64 || !saltB64) return null;
-
-      return {
-        displayText: before || "Image",
-        storagePath,
-        sessionId,
-        contentType,
-        ivB64,
-        saltB64,
-        attachmentId,
-        signedEnvelopeId,
-      };
+      return null;
     }
 
-    // Find all inline image blocks in text by brace-matching the JSON
-    function extractInlineDelveeImageBlocks(text){
-      const s = String(text || "");
-      const out = [];
-
-      const marker = "[delvee:image-meta]";
-      const lower = s.toLowerCase();
-
-      let cursor = 0;
-      while (true) {
-        const metaIdx = lower.indexOf(marker, cursor);
-        if (metaIdx < 0) break;
-
-        // Try to include preceding [delvee:image] if present
-        const imgStart = lower.lastIndexOf("[delvee:image]", metaIdx);
-        const blockStart = (imgStart >= 0) ? imgStart : metaIdx;
-
-        // Find JSON start after marker
-        let j = metaIdx + marker.length;
-        while (j < s.length && /\s/.test(s[j])) j++;
-        if (j >= s.length || s[j] !== "{") { cursor = metaIdx + marker.length; continue; }
-
-        // Brace match
-        let depth = 0, end = -1;
-        for (let i = j; i < s.length; i++) {
-          if (s[i] === "{") depth++;
-          else if (s[i] === "}") {
-            depth--;
-            if (depth === 0) { end = i; break; }
-          }
-        }
-        if (end < 0) break;
-
-        const rawBlock = s.slice(blockStart, end + 1);
-        const parsed = parseInlineDelveeImageBlock(rawBlock);
-        if (parsed) out.push({ start: blockStart, end: end + 1, meta: parsed });
-
-        cursor = end + 1;
-      }
-
-      return out;
+    function normalizeJobImages(raw){
+      return asArr(raw).map(x => (x || {})).map(m => ({
+        storagePath: asStr(m.storagePath),
+        contentType: asStr(m.contentType) || "image/jpeg",
+        sizeBytes: asNum(m.sizeBytes),
+        ivB64: asStr(m.ivB64),
+        saltB64: asStr(m.saltB64),
+      })).filter(x => x.storagePath && x.ivB64 && x.saltB64);
     }
 
-    // Cache for inline summary images (so opening/closing modal doesn’t re-download)
-    const inlineDelveeImgUrlCache = new Map(); // key -> objectUrl
-    const inlineDelveeImgBusy = new Set();
+    async function fetchDelveeAccountInboxDoc(sessionId){
+      const sid = asStr(sessionId);
+      if (!sid) return { images: [] };
 
-    function inlineDelveeKey(meta){
-      // storagePath is ideal; fall back to attachment ids if present
-      return meta.storagePath
-        ? `sp:${meta.storagePath}::${meta.ivB64}::${meta.saltB64}`
-        : `att:${meta.signedEnvelopeId || "?"}::${meta.attachmentId || "?"}::${meta.ivB64}::${meta.saltB64}`;
-    }
-
-    async function resolveDelveeInlineDownloadUrl(meta){
-      // Preferred: job/session storagePath
-      if (meta.sessionId && meta.storagePath) {
-        // Try job url first, then non-job
-        try {
-          const res = await functions.httpsCallable("delveeCreateJobImageDownloadUrl")({
-            sessionId: meta.sessionId,
-            storagePath: meta.storagePath,
-          });
-          const payload = (res && res.data) ? res.data : {};
-          if (payload.downloadUrl) return payload.downloadUrl;
-        } catch (_) {}
-
-        try {
-          const res = await functions.httpsCallable("delveeCreateImageDownloadUrl")({
-            sessionId: meta.sessionId,
-            storagePath: meta.storagePath,
-          });
-          const payload = (res && res.data) ? res.data : {};
-          if (payload.downloadUrl) return payload.downloadUrl;
-        } catch (_) {}
-      }
-
-      // Fallback: if the meta included envelope/attachment ids, use the signed attachment callable
-      if (meta.signedEnvelopeId && meta.attachmentId) {
-        const res = await functions.httpsCallable("createSignedAttachmentDownloadUrl")({
-          signedEnvelopeId: meta.signedEnvelopeId,
-          attachmentId: meta.attachmentId,
-        });
-        const payload = (res && res.data) ? res.data : {};
-        if (payload.downloadUrl) return payload.downloadUrl;
-      }
-
-      throw new Error("No download path for inline image");
-    }
-
-    async function openInlineDelveeMetaImageAsObjectUrl(rawCode, meta){
-      const k = inlineDelveeKey(meta);
-      if (inlineDelveeImgUrlCache.has(k)) return inlineDelveeImgUrlCache.get(k);
-
-      if (inlineDelveeImgBusy.has(k)) {
+      if (delveeAccountInboxCache.has(sid)) return delveeAccountInboxCache.get(sid);
+      if (delveeAccountInboxBusy.has(sid)) {
         for (let i = 0; i < 30; i++) {
           await new Promise(r => setTimeout(r, 120));
-          if (inlineDelveeImgUrlCache.has(k)) return inlineDelveeImgUrlCache.get(k);
+          if (delveeAccountInboxCache.has(sid)) return delveeAccountInboxCache.get(sid);
+        }
+        return { images: [] };
+      }
+
+      if (!auth.currentUser) return { images: [] };
+
+      delveeAccountInboxBusy.add(sid);
+      try {
+        const uid = auth.currentUser.uid;
+        const ref = db.collection("users").doc(uid).collection("delvee_account_inbox").doc(sid);
+        const snap = await ref.get();
+        if (!snap.exists) {
+          const empty = { images: [] };
+          delveeAccountInboxCache.set(sid, empty);
+          return empty;
+        }
+
+        const d = snap.data() || {};
+        const images = normalizeJobImages(d.images);
+        const out = { images, fetchedAtMs: Date.now() };
+        delveeAccountInboxCache.set(sid, out);
+        return out;
+      } catch (e) {
+        console.warn("[fetchDelveeAccountInboxDoc] failed", e);
+        const empty = { images: [] };
+        delveeAccountInboxCache.set(sid, empty);
+        return empty;
+      } finally {
+        delveeAccountInboxBusy.delete(sid);
+      }
+    }
+
+    const delveeInlineUrlCache = new Map(); // key -> objectUrl
+    const delveeInlineBusy = new Set();
+
+    function delveeInlineKey(sessionId, storagePath, ivB64, saltB64){
+      return `${sessionId}::${storagePath}::${ivB64}::${saltB64}`;
+    }
+
+    async function openDelveeJobImageAsObjectUrl(rawCode, sessionId, imgMeta){
+      const k = delveeInlineKey(sessionId, imgMeta.storagePath, imgMeta.ivB64, imgMeta.saltB64);
+      if (delveeInlineUrlCache.has(k)) return delveeInlineUrlCache.get(k);
+
+      if (delveeInlineBusy.has(k)) {
+        for (let i = 0; i < 30; i++) {
+          await new Promise(r => setTimeout(r, 120));
+          if (delveeInlineUrlCache.has(k)) return delveeInlineUrlCache.get(k);
         }
         throw new Error("Inline image busy");
       }
 
-      inlineDelveeImgBusy.add(k);
+      delveeInlineBusy.add(k);
       try {
-        const downloadUrl = await resolveDelveeInlineDownloadUrl(meta);
+        const dlCallable = functions.httpsCallable("delveeCreateJobImageDownloadUrl");
+        const dlRes = await dlCallable({ sessionId, storagePath: imgMeta.storagePath });
+        const dlPayload = (dlRes && dlRes.data) ? dlRes.data : {};
+        const downloadUrl = dlPayload.downloadUrl;
+        if (!downloadUrl) throw new Error("No downloadUrl");
 
         const r = await fetch(downloadUrl);
         if (!r.ok) throw new Error(`Download failed (${r.status})`);
         const encBuf = await r.arrayBuffer();
 
-        const plainBytes = await decryptAttachmentBytesForCode(rawCode, encBuf, meta.ivB64, meta.saltB64);
+        // IMPORTANT: this assumes iv/salt + your inbox code derive the decrypt key.
+        // If your Delvee images are encrypted under a different session key, decryption will fail.
+        const plainBytes = await decryptAttachmentBytesForCode(rawCode, encBuf, imgMeta.ivB64, imgMeta.saltB64);
 
-        const blob = new Blob([plainBytes], { type: meta.contentType || "image/jpeg" });
+        const blob = new Blob([plainBytes], { type: imgMeta.contentType || "image/jpeg" });
         const url = URL.createObjectURL(blob);
-        inlineDelveeImgUrlCache.set(k, url);
+        delveeInlineUrlCache.set(k, url);
         return url;
       } finally {
-        inlineDelveeImgBusy.delete(k);
+        delveeInlineBusy.delete(k);
       }
     }
 
     // -------------------------
-    // Modal (Open flow)
+    // UI: Modal (Open flow)
     // -------------------------
     const delveeModal = document.getElementById("delvee-modal");
     const delveeClose = document.getElementById("delvee-close");
@@ -1455,6 +1399,7 @@
     const delveeAttachActions = document.getElementById("delvee-attach-actions");
 
     let delveeActiveEnvelopeId = null;
+    window.delveeActiveEnvelopeId = null; // ✅ keep console introspection stable
 
     function clearModalAttachmentsUI(){
       if (delveeThumbGrid) delveeThumbGrid.innerHTML = "";
@@ -1475,11 +1420,176 @@
         delveeConsume.textContent = "Consume";
       }
       delveeActiveEnvelopeId = null;
+      window.delveeActiveEnvelopeId = null;
       if (delveeHeading) delveeHeading.textContent = "Message";
       clearModalAttachmentsUI();
     }
 
-    async function renderModalAttachmentsForEnvelope(envelopeId){
+    async function renderDelveeAccountImagesUI({ sessionId, rawCode, images }){
+      clearModalAttachmentsUI();
+      if (!sessionId || !images || images.length === 0) return;
+
+      if (delveeAttachmentsTitle) delveeAttachmentsTitle.textContent = `Images (${images.length})`;
+      if (delveeAttachments) delveeAttachments.classList.remove("hidden");
+
+      for (let i = 0; i < images.length; i++) {
+        const sk = document.createElement("div");
+        sk.className = "sf-thumb-skel";
+        sk.textContent = "…";
+        delveeThumbGrid.appendChild(sk);
+      }
+
+      for (let i = 0; i < images.length; i++) {
+        const imgMeta = images[i];
+        const skel = delveeThumbGrid.children[i];
+
+        try {
+          const url = await openDelveeJobImageAsObjectUrl(rawCode, sessionId, imgMeta);
+          const img = document.createElement("img");
+          img.className = "sf-thumb";
+          img.alt = "Image";
+          img.src = url;
+          img.title = "Open image";
+          img.addEventListener("click", () => window.open(url, "_blank", "noopener"));
+          delveeThumbGrid.replaceChild(img, skel);
+        } catch (e) {
+          console.warn("[delvee thumb decrypt failed]", e);
+          skel.textContent = "x";
+        }
+      }
+
+      if (delveeAttachActions) {
+        const btnOpenAll = document.createElement("button");
+        btnOpenAll.className = "btn btn-secondary";
+        btnOpenAll.type = "button";
+        btnOpenAll.textContent = "Open all images";
+        btnOpenAll.addEventListener("click", async () => {
+          for (const m of images) {
+            try {
+              const url = await openDelveeJobImageAsObjectUrl(rawCode, sessionId, m);
+              window.open(url, "_blank", "noopener");
+            } catch (_) {}
+          }
+        });
+        delveeAttachActions.appendChild(btnOpenAll);
+      }
+    }
+
+    async function renderBodyWithDelveeAccountImages(envelopeId, bodyText){
+      const item = findItemById(envelopeId);
+      const rawCode = (lastFetchedCode || (codeInput && codeInput.value) || "").trim();
+
+      const pt = String(bodyText || "");
+      const container = document.createElement("div");
+
+      // Determine sessionId (prefer stored on item, else parse from text)
+      const sessionId =
+        (item && item.delveeSessionId) ? item.delveeSessionId :
+        extractDelveeSessionIdFromSummaryText(pt);
+
+      // Fetch account inbox doc images
+      const doc = sessionId ? await fetchDelveeAccountInboxDoc(sessionId) : { images: [] };
+      const images = doc && Array.isArray(doc.images) ? doc.images : [];
+
+      // Inline replace: map each "[image]" placeholder to next image in images[]
+      const lines = pt.split("\n");
+      let imgIndex = 0;
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        const looksLikeImageLine =
+          trimmed === "[image]" ||
+          trimmed === "• [image]" ||
+          trimmed.includes("[image]");
+
+        if (looksLikeImageLine && imgIndex < images.length && rawCode && sessionId) {
+          const p = document.createElement("div");
+          p.textContent = line;
+          p.style.whiteSpace = "pre-wrap";
+          p.style.marginBottom = "6px";
+          container.appendChild(p);
+
+          const imgMeta = images[imgIndex++];
+          const img = document.createElement("img");
+          img.className = "sf-inline-img";
+          img.alt = "Image";
+          img.loading = "lazy";
+          container.appendChild(img);
+
+          openDelveeJobImageAsObjectUrl(rawCode, sessionId, imgMeta)
+            .then((url) => { img.src = url; })
+            .catch(() => { img.remove(); });
+
+          continue;
+        }
+
+        const div = document.createElement("div");
+        div.textContent = line;
+        div.style.whiteSpace = "pre-wrap";
+        container.appendChild(div);
+      }
+
+      // Also populate the modal “Images” section from the same account doc
+      if (rawCode && sessionId) {
+        await renderDelveeAccountImagesUI({ sessionId, rawCode, images });
+      } else {
+        clearModalAttachmentsUI();
+      }
+
+      return container;
+    }
+
+    function modalShow({ envelopeId, body, senderUid, kindLabel }){
+      delveeActiveEnvelopeId = envelopeId;
+      window.delveeActiveEnvelopeId = envelopeId; // ✅ for console/debug
+
+      if (delveeWho) delveeWho.textContent = senderUid ? `From ${senderUid}` : "A surprise drop";
+      if (delveeHeading) delveeHeading.textContent = kindLabel || "Message";
+      if (delveeText) delveeText.textContent = "";
+
+      clearModalAttachmentsUI();
+
+      delveeModal.classList.add("show");
+
+      if (delveeStage) {
+        delveeStage.classList.remove("is-revealed");
+        delveeStage.classList.add("is-playing");
+      }
+
+      const REVEAL_MS = 950;
+      setTimeout(async () => {
+        if (!delveeActiveEnvelopeId) return;
+
+        const item = findItemById(envelopeId);
+        const isDelveeSummary = item && item.kind === "delvee_summary";
+
+        if (delveeText) {
+          if (isDelveeSummary) {
+            const node = await renderBodyWithDelveeAccountImages(envelopeId, body || "");
+            delveeText.innerHTML = "";
+            delveeText.appendChild(node);
+          } else {
+            delveeText.textContent = body || "";
+            // For non-Delvee messages: show signed attachments as the “Images” section, if any
+            await renderModalAttachmentsForSignedEnvelope(envelopeId);
+          }
+        }
+
+        if (delveeStage) {
+          delveeStage.classList.remove("is-playing");
+          delveeStage.classList.add("is-revealed");
+        }
+      }, REVEAL_MS);
+    }
+
+    delveeClose.addEventListener("click", modalHide);
+    delveeOk.addEventListener("click", modalHide);
+    delveeModal.addEventListener("click", (e) => { if (e.target === delveeModal) modalHide(); });
+
+    // -------------------------
+    // Modal images for normal signed envelopes (non-Delvee)
+    // -------------------------
+    async function renderModalAttachmentsForSignedEnvelope(envelopeId){
       clearModalAttachmentsUI();
       const item = findItemById(envelopeId);
       if (!item || !Array.isArray(item.attachments) || item.attachments.length === 0) return;
@@ -1532,160 +1642,6 @@
         delveeAttachActions.appendChild(btnOpenAll);
       }
     }
-
-    // ✅ Render summaries with real images:
-    // - If summary includes inline "[delvee:image-meta]{...}" blocks -> fetch/decrypt those.
-    // - Else fallback to old placeholder-to-attachments behavior.
-    async function renderBodyWithInlineImages(envelopeId, bodyText){
-      const item = findItemById(envelopeId);
-      const rawCode = (lastFetchedCode || (codeInput && codeInput.value) || "").trim();
-
-      const text = String(bodyText || "");
-      const container = document.createElement("div");
-
-      // A) Prefer embedded image-meta blocks (Android-style summary output)
-      const blocks = extractInlineDelveeImageBlocks(text);
-
-      if (blocks.length > 0) {
-        let cursor = 0;
-
-        for (const b of blocks) {
-          const before = text.slice(cursor, b.start).trim();
-          if (before) {
-            const div = document.createElement("div");
-            div.textContent = before;
-            div.style.whiteSpace = "pre-wrap";
-            container.appendChild(div);
-          }
-
-          // Add the caption (displayText) if present
-          if (b.meta.displayText) {
-            const cap = document.createElement("div");
-            cap.textContent = b.meta.displayText;
-            cap.style.whiteSpace = "pre-wrap";
-            cap.style.marginTop = "6px";
-            cap.style.color = "var(--muted)";
-            container.appendChild(cap);
-          }
-
-          const img = document.createElement("img");
-          img.className = "sf-inline-img";
-          img.alt = "Image";
-          img.loading = "lazy";
-          container.appendChild(img);
-
-          if (rawCode) {
-            openInlineDelveeMetaImageAsObjectUrl(rawCode, b.meta)
-              .then((url) => { img.src = url; })
-              .catch(() => { img.remove(); });
-          } else {
-            // No code: show nothing instead of placeholder
-            img.remove();
-          }
-
-          cursor = b.end;
-        }
-
-        const tail = text.slice(cursor).trim();
-        if (tail) {
-          const div = document.createElement("div");
-          div.textContent = tail;
-          div.style.whiteSpace = "pre-wrap";
-          container.appendChild(div);
-        }
-
-        return container;
-      }
-
-      // B) Fallback: placeholder "[image]" lines mapped to signed attachments (your old behavior)
-      const attachments = (item && Array.isArray(item.attachments)) ? item.attachments : [];
-      const lines = text.split("\n");
-      let imgIndex = 0;
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-
-        const looksLikeImageLine =
-          trimmed === "[image]" ||
-          trimmed === "• [image]" ||
-          trimmed.includes("[image]");
-
-        if (looksLikeImageLine && imgIndex < attachments.length && rawCode) {
-          const p = document.createElement("div");
-          p.textContent = line;
-          p.style.whiteSpace = "pre-wrap";
-          p.style.marginBottom = "6px";
-          container.appendChild(p);
-
-          const a = attachments[imgIndex++];
-          const img = document.createElement("img");
-          img.className = "sf-inline-img";
-          img.alt = "Image";
-          img.loading = "lazy";
-          container.appendChild(img);
-
-          openSignedAttachmentAsObjectUrl({ rawCode, signedEnvelopeId: envelopeId, attachment: a })
-            .then((url) => { img.src = url; })
-            .catch(() => { img.remove(); });
-
-          continue;
-        }
-
-        const div = document.createElement("div");
-        div.textContent = line;
-        div.style.whiteSpace = "pre-wrap";
-        container.appendChild(div);
-      }
-
-      return container;
-    }
-
-    function modalShow({ envelopeId, body, senderUid, kindLabel }){
-      delveeActiveEnvelopeId = envelopeId;
-
-      if (delveeWho) delveeWho.textContent = senderUid ? `From ${senderUid}` : "A surprise drop";
-      if (delveeHeading) delveeHeading.textContent = kindLabel || "Message";
-      if (delveeText) delveeText.textContent = "";
-
-      clearModalAttachmentsUI();
-
-      delveeModal.classList.add("show");
-
-      if (delveeStage) {
-        delveeStage.classList.remove("is-revealed");
-        delveeStage.classList.add("is-playing");
-      }
-
-      const REVEAL_MS = 950;
-      setTimeout(async () => {
-        if (!delveeActiveEnvelopeId) return;
-
-        // ✅ Render inline images for Delvee summaries; default to plain text otherwise.
-        const item = findItemById(envelopeId);
-        const isDelveeSummary = item && item.kind === "delvee_summary";
-
-        if (delveeText) {
-          if (isDelveeSummary) {
-            const node = await renderBodyWithInlineImages(envelopeId, body || "");
-            delveeText.innerHTML = "";
-            delveeText.appendChild(node);
-          } else {
-            delveeText.textContent = body || "";
-          }
-        }
-
-        if (delveeStage) {
-          delveeStage.classList.remove("is-playing");
-          delveeStage.classList.add("is-revealed");
-        }
-
-        await renderModalAttachmentsForEnvelope(envelopeId);
-      }, REVEAL_MS);
-    }
-
-    delveeClose.addEventListener("click", modalHide);
-    delveeOk.addEventListener("click", modalHide);
-    delveeModal.addEventListener("click", (e) => { if (e.target === delveeModal) modalHide(); });
 
     // -------------------------
     // Released actions modal
@@ -1747,20 +1703,6 @@
     const JOB_STALE_MS = 3 * 60_000;  // treat PROCESSING older than this as abandoned
     const JOB_MAX_ATTEMPTS = 5;
 
-    function asStr(v){ return (typeof v === "string" && v.trim().length) ? v.trim() : null; }
-    function asNum(v){ return (typeof v === "number" && Number.isFinite(v)) ? v : null; }
-    function asArr(v){ return Array.isArray(v) ? v : []; }
-
-    function normalizeJobImages(raw){
-      return asArr(raw).map(x => (x || {})).map(m => ({
-        storagePath: asStr(m.storagePath),
-        contentType: asStr(m.contentType),
-        sizeBytes: asNum(m.sizeBytes),
-        ivB64: asStr(m.ivB64),
-        saltB64: asStr(m.saltB64),
-      })).filter(x => x.storagePath && x.contentType && x.sizeBytes && x.ivB64 && x.saltB64);
-    }
-
     async function claimJobTx(jobRef){
       // returns { ok, job, reason }
       return await db.runTransaction(async (tx) => {
@@ -1812,8 +1754,8 @@
     }
 
     async function deliverJobIntoSignedInbox(job, rawCode){
-      // This turns a Delvee delivery job into a signed envelope for THIS code.
-      // Summary text always delivered. Images: best-effort (we try to decrypt using the same code; if it fails, we skip the image).
+      // NOTE: We still deliver summary text into signed inbox.
+      // Images are NOT required here anymore for inbox rendering; images will be loaded from /delvee_account_inbox/{sessionId}.
       const summaryText = asStr(job.summaryText) || null;
       if (!summaryText) throw new Error("Job missing summaryText");
 
@@ -1822,67 +1764,6 @@
 
       const enc = await encryptTextForCode(rawCode, summaryText);
 
-      // Attachments: best-effort
-      const images = normalizeJobImages(job.images);
-      const attachments = [];
-
-      for (let i = 0; i < images.length; i++) {
-        const img = images[i];
-        try {
-          // 1) Get signed download URL gated by job ownership
-          const dlCallable = functions.httpsCallable("delveeCreateJobImageDownloadUrl");
-          const dlRes = await dlCallable({ sessionId: job.sessionId, storagePath: img.storagePath });
-          const dlPayload = (dlRes && dlRes.data) ? dlRes.data : {};
-          const downloadUrl = dlPayload.downloadUrl;
-          if (!downloadUrl) throw new Error("No downloadUrl");
-
-          // 2) Download encrypted bytes
-          const r = await fetch(downloadUrl);
-          if (!r.ok) throw new Error(`Download failed (${r.status})`);
-          const encBuf = await r.arrayBuffer();
-
-          // 3) Try decrypting using the same inbox code (best-effort)
-          // If your Delvee images are encrypted under a different key, this will fail and we simply skip images.
-          const plainBytes = await decryptAttachmentBytesForCode(rawCode, encBuf, img.ivB64, img.saltB64);
-
-          // 4) Re-encrypt under inbox code so Setfeed attachments work
-          const reEnc = await encryptBytesForCode(rawCode, plainBytes);
-
-          // 5) Create signed attachment upload + PUT ciphertext
-          const attachmentId = `job_${job.sessionId}_${i}_${Math.random().toString(16).slice(2)}`;
-          const upCallable = functions.httpsCallable("createSignedAttachmentUpload");
-          const upRes = await upCallable({
-            attachmentId,
-            contentType: img.contentType,
-            sizeBytes: reEnc.ciphertextBytes.byteLength,
-          });
-          const upPayload = (upRes && upRes.data) ? upRes.data : {};
-          const uploadUrl = upPayload.uploadUrl;
-          const storagePath = upPayload.storagePath;
-          if (!uploadUrl || !storagePath) throw new Error("No uploadUrl");
-
-          const put = await fetch(uploadUrl, {
-            method: "PUT",
-            headers: { "Content-Type": "application/octet-stream" },
-            body: reEnc.ciphertextBytes,
-          });
-          if (!put.ok) throw new Error(`Upload failed (${put.status})`);
-
-          attachments.push({
-            attachmentId,
-            storagePath,
-            contentType: img.contentType,
-            sizeBytes: reEnc.ciphertextBytes.byteLength,
-            ivB64: reEnc.ivB64,
-            saltB64: reEnc.saltB64,
-          });
-        } catch (e) {
-          console.warn("[job image skipped]", e);
-          // Skip this image silently (best-effort)
-        }
-      }
-
-      // 6) Send the signed envelope
       const codeHash = await sha256Hex(normalizeCodeAndroid(rawCode));
       const clientRequestId = `job_${job.sessionId}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
@@ -1895,13 +1776,13 @@
         deliverAtLocalIso,
         userTimezone,
         clientRequestId,
-        attachments,
+        attachments: [], // ✅ leave empty; UI will fetch Delvee images from account inbox doc
       });
 
       const sendPayload = (sendRes && sendRes.data) ? sendRes.data : {};
       return {
         signedEnvelopeId: sendPayload.signedEnvelopeId || null,
-        attachmentCount: attachments.length,
+        attachmentCount: 0,
       };
     }
 
@@ -1915,10 +1796,8 @@
         return { processed: 0, skipped: 0 };
       }
 
-      // Query potentially-eligible jobs
       const jobsRef = db.collection("users").doc(uid).collection(JOBS_COLL);
       const snap = await jobsRef.where("state", "in", ["PENDING", "RETRY", "PROCESSING"]).limit(25).get();
-
       if (snap.empty) return { processed: 0, skipped: 0 };
 
       let processed = 0;
@@ -2016,7 +1895,11 @@
         if (pt == null) continue;
 
         const k = detectKindFromPlaintext(pt);
-        const attachments = normalizeAttachments(env.attachments);
+
+        // If this is a Delvee summary, derive its sessionId from the plaintext
+        const delveeSessionId = (k.kind === "delvee_summary") ? extractDelveeSessionIdFromSummaryText(pt) : null;
+
+        const attachments = normalizeAttachments(env.attachments); // still used for non-Delvee image messages
 
         decryptedById.set(id, pt);
         out.push({
@@ -2028,7 +1911,8 @@
           kindLabel: k.label,
           kindPillText: k.pillText,
           kindPillCls: k.pillCls,
-          attachments
+          attachments,
+          delveeSessionId,
         });
       }
 
@@ -2237,9 +2121,11 @@
           ? `<span class="sf-kind delvee">${safeText(item.kindPillText || "Delvee")}</span>`
           : ``;
 
+      // For Delvee summaries: show a “Images: ?” indicator if we can infer count from account inbox later.
+      // For normal messages: use signed attachments count.
       const attachmentCount = Array.isArray(item.attachments) ? item.attachments.length : 0;
 
-      const attachCountLine = (isReleased && attachmentCount > 0)
+      const attachCountLine = (isReleased && (attachmentCount > 0))
         ? `<div class="sf-attach-count"><span class="dot"></span><span>Images: ${attachmentCount}</span></div>`
         : ``;
 
@@ -2704,6 +2590,8 @@
       lastFetchedCode = "";
 
       revokeAllAttachmentUrls();
+      delveeAccountInboxCache.clear();
+      delveeAccountInboxBusy.clear();
 
       applyToggleUI();
       refreshHiddenNav();
