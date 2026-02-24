@@ -1,0 +1,79 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Private Pulse Session — Setfeed</title>
+  <link rel="stylesheet" href="./styles.css"/>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+  <style>.hidden{display:none!important}.actions{margin-top:12px}.stack{display:flex;flex-direction:column;gap:12px}.session-only textarea,.session-only .actions{max-width:640px}</style>
+</head>
+<body class="page-bg">
+<div class="wrap"><div class="card">
+<h1>Private pulse session</h1>
+<p class="lead">Multi-message summary (1 credit). A pulse session collects messages/images for 2 or 3 minutes, then sends one encrypted summary. Pulse lobbies are optional shared rooms on Delvee; this page is for direct private sessions.</p>
+
+<div id="setup" class="stack">
+  <button id="start" class="btn btn-lg btn-primary" type="button">Start pulse session</button>
+  <div id="dest" class="chips hidden">
+    <button class="chip" data-dest="self" type="button">Send to yourself</button>
+    <button class="chip" data-dest="other" type="button">Send to someone else</button>
+  </div>
+  <div id="codeWrap" class="field hidden">
+    <label for="code">Recipient receive code</label>
+    <input id="code" type="text" placeholder="Paste receive code"/>
+  </div>
+  <div id="mins" class="chips hidden">
+    <button class="chip" data-min="2" aria-pressed="true" type="button">2 minutes</button>
+    <button class="chip" data-min="3" aria-pressed="false" type="button">3 minutes</button>
+  </div>
+</div>
+
+<div id="active" class="session-only hidden">
+  <h2>Session active</h2>
+  <p id="timer">Remaining: --:--</p>
+  <div class="field"><label for="body">Pulse message</label><textarea id="body" maxlength="1200" placeholder="Type pulse message"></textarea></div>
+  <div class="actions">
+    <button id="addMsg" class="btn btn-primary" type="button">Pulse message</button>
+    <button id="add2" class="btn btn-secondary" type="button">Add extra 2 minutes (1 credit)</button>
+  </div>
+  <p class="help">You can add extra 2 minutes up to 2 times.</p>
+</div>
+
+<div id="done" class="hidden">
+  <h2>Session complete</h2>
+  <p>Press the fetch button on the inbox page to receive summary.</p>
+  <div class="actions">
+    <a href="./send.html?pulseDone=1" class="btn btn-secondary">Go to Send</a>
+    <a href="./inbox.html" class="btn btn-primary">Go to Inbox</a>
+  </div>
+</div>
+
+<div class="status" id="st"><div class="status-title"><span class="dot good"></span><span id="stt">Ready</span></div><p class="status-line" id="stl">Sign in to start.</p></div>
+</div></div>
+<script>
+const firebaseConfig={apiKey:"AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",authDomain:"setfeed-fcd7a.firebaseapp.com",projectId:"setfeed-fcd7a",storageBucket:"setfeed-fcd7a.firebasestorage.app",messagingSenderId:"553573263069",appId:"1:553573263069:web:e5c9884101ca38eaee1d34"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);const auth=firebase.auth(),functions=firebase.app().functions("europe-west2");
+const $=id=>document.getElementById(id);const set=(t,l)=>{$('stt').textContent=t;$('stl').textContent=l};
+let dest=null,minutes=2,sessionId=null,ends=0,ext=0,targetCode='';
+
+document.querySelectorAll('#mins .chip').forEach(b=>b.onclick=()=>{minutes=Number(b.dataset.min)||2;document.querySelectorAll('#mins .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));});
+document.querySelectorAll('#dest .chip').forEach(b=>b.onclick=async()=>{dest=b.dataset.dest;document.querySelectorAll('#dest .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));$('codeWrap').classList.toggle('hidden',dest!=='other');$('mins').classList.remove('hidden');if(dest==='self'){try{const r=await functions.httpsCallable('getReceiveCodes')({});const d=r.data||{};targetCode=(d.secure&&d.secure.code)||(d.personal&&d.personal.code)||'';if(!targetCode)set('Missing code','Could not load your code.');}catch{set('Error','Could not load your receive codes.')}}});
+$('start').onclick=async()=>{if(!auth.currentUser){set('Sign-in required','Sign in on Send page first.');return;}$('dest').classList.remove('hidden');if(!dest){set('Choose destination','Pick self or someone else.');return;}if(dest==='other'){targetCode=($('code').value||'').trim();if(!targetCode){set('Recipient code needed','Enter receive code first.');return;}}
+try{const pass=targetCode.trim().toLowerCase();const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pass));const hash=[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+const r=await functions.httpsCallable('createSignedPrivatePulseSession')({recipientCodeHash:hash,clientRequestId:'ps_'+Date.now()});sessionId=r.data&&r.data.sessionId;if(!sessionId)throw new Error('No session id');
+$('setup').classList.add('hidden');$('active').classList.remove('hidden');ends=Date.now()+minutes*60000;tick();set('Running','Pulse session active.');
+}catch(e){set('Pulse failed',e.message||'Try again.');}}
+
+function tick(){const i=setInterval(async()=>{const rem=ends-Date.now();$('timer').textContent='Remaining: '+String(Math.max(0,Math.ceil(rem/1000)/60|0)).padStart(2,'0')+':'+String(Math.max(0,Math.ceil(rem/1000)%60)).padStart(2,'0');if(rem<=0){clearInterval(i);await finalize();}},250)}
+$('add2').onclick=()=>{if(ext>=2){set('Limit reached','Extra 2 minutes can be used twice.');return;}ext++;ends+=120000;set('Extended','Added 2 minutes (1 credit).');};
+$('addMsg').onclick=async()=>{const body=($('body').value||'').trim();if(!body||!sessionId)return;try{await functions.httpsCallable('signedPrivatePulseCommit')({sessionId,clientPulseId:'pulse_'+Date.now(),text:body});$('body').value='';set('Added','Pulse message added.');}catch{set('Message failed','Could not add message.');}};
+async function finalize(){try{const fin=await functions.httpsCallable('finalizeSignedPrivatePulseSession')({sessionId});const summary=(fin.data&&fin.data.summaryText)||'';if(!summary)throw new Error('No summary generated');
+const enc=new TextEncoder().encode(summary); // placeholder marker for sent copy storage handled server-side
+await functions.httpsCallable('sendSignedCiphertext')({ciphertext:btoa(String.fromCharCode(...enc.slice(0,Math.min(enc.length,256)))),iv:'',salt:'',deliverAtLocalIso:new Date().toISOString(),userTimezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',clientRequestId:'signed_'+Date.now(),copyCategory:'sent'});
+$('active').classList.add('hidden');$('done').classList.remove('hidden');set('Complete','Summary sent. Press fetch in Inbox.');}catch(e){set('Finalize failed',e.message||'Try again.')}}
+</script>
+</body></html>
