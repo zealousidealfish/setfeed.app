@@ -1373,8 +1373,11 @@
     }
 
     async function pulseImageMultiAddToSession({ code, file }) {
-      const sid = if (!code) { setStatus("warn", "Recipient code needed", "Use the Private pulse session page to choose recipient first."); return; }
-            await ensurePrivatePulseSession({ code });
+      if (!code) {
+        setStatus("warn", "Recipient code needed", "Use the Private pulse session page to choose recipient first.");
+        return;
+      }
+      const sid = await ensurePrivatePulseSession({ code });
 
       // 1) Encrypt image bytes for recipient code
       const ab = await file.arrayBuffer();
