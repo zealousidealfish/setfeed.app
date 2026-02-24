@@ -1263,6 +1263,180 @@
       }
     }
 
+    /* ============================
+       TARGETED CHANGE (inbox.html)
+       Goal: For Delvee summaries, fetch/decrypt inline images using the embedded
+            [delvee:image-meta]{...} JSON (storagePath/sessionId/ivB64/saltB64),
+            instead of leaving “[image]” as a placeholder.
+       ============================ */
+
+    // Parse one inline Delvee image block from summary text:
+    // "[delvee:image] ... [delvee:image-meta]{...json...}"
+    function parseInlineDelveeImageBlock(rawBlock){
+      const marker = "[delvee:image-meta]";
+      const idx = rawBlock.toLowerCase().indexOf(marker);
+      if (idx < 0) return null;
+
+      const before = rawBlock.slice(0, idx)
+        .replace(/\[delvee:image\]/ig, "")
+        .trim();
+
+      const jsonRaw = rawBlock.slice(idx + marker.length).trim();
+      let meta = null;
+      try { meta = JSON.parse(jsonRaw); } catch (_) { return null; }
+
+      const storagePath = (typeof meta.storagePath === "string" && meta.storagePath.trim()) ? meta.storagePath.trim() : null;
+      const contentType = (typeof meta.contentType === "string" && meta.contentType.trim()) ? meta.contentType.trim() : "image/jpeg";
+      const ivB64 = (typeof meta.ivB64 === "string" && meta.ivB64.trim()) ? meta.ivB64.trim() : null;
+      const saltB64 = (typeof meta.saltB64 === "string" && meta.saltB64.trim()) ? meta.saltB64.trim() : null;
+
+      // sessionId can be derived from ".../sessions/{sessionId}/..."
+      let sessionId = null;
+      if (storagePath) {
+        const parts = storagePath.split("/");
+        const si = parts.indexOf("sessions");
+        if (si >= 0 && si + 1 < parts.length) sessionId = parts[si + 1] || null;
+      }
+
+      // Optional fallbacks if present (rare in summary meta, but harmless)
+      const attachmentId = (typeof meta.attachmentId === "string" && meta.attachmentId.trim()) ? meta.attachmentId.trim() : null;
+      const signedEnvelopeId = (typeof meta.signedEnvelopeId === "string" && meta.signedEnvelopeId.trim()) ? meta.signedEnvelopeId.trim() : null;
+
+      if (!ivB64 || !saltB64) return null;
+
+      return {
+        displayText: before || "Image",
+        storagePath,
+        sessionId,
+        contentType,
+        ivB64,
+        saltB64,
+        attachmentId,
+        signedEnvelopeId,
+      };
+    }
+
+    // Find all inline image blocks in text by brace-matching the JSON
+    function extractInlineDelveeImageBlocks(text){
+      const s = String(text || "");
+      const out = [];
+
+      const marker = "[delvee:image-meta]";
+      const lower = s.toLowerCase();
+
+      let cursor = 0;
+      while (true) {
+        const metaIdx = lower.indexOf(marker, cursor);
+        if (metaIdx < 0) break;
+
+        // Try to include preceding [delvee:image] if present
+        const imgStart = lower.lastIndexOf("[delvee:image]", metaIdx);
+        const blockStart = (imgStart >= 0) ? imgStart : metaIdx;
+
+        // Find JSON start after marker
+        let j = metaIdx + marker.length;
+        while (j < s.length && /\s/.test(s[j])) j++;
+        if (j >= s.length || s[j] !== "{") { cursor = metaIdx + marker.length; continue; }
+
+        // Brace match
+        let depth = 0, end = -1;
+        for (let i = j; i < s.length; i++) {
+          if (s[i] === "{") depth++;
+          else if (s[i] === "}") {
+            depth--;
+            if (depth === 0) { end = i; break; }
+          }
+        }
+        if (end < 0) break;
+
+        const rawBlock = s.slice(blockStart, end + 1);
+        const parsed = parseInlineDelveeImageBlock(rawBlock);
+        if (parsed) out.push({ start: blockStart, end: end + 1, meta: parsed });
+
+        cursor = end + 1;
+      }
+
+      return out;
+    }
+
+    // Cache for inline summary images (so opening/closing modal doesn’t re-download)
+    const inlineDelveeImgUrlCache = new Map(); // key -> objectUrl
+    const inlineDelveeImgBusy = new Set();
+
+    function inlineDelveeKey(meta){
+      // storagePath is ideal; fall back to attachment ids if present
+      return meta.storagePath
+        ? `sp:${meta.storagePath}::${meta.ivB64}::${meta.saltB64}`
+        : `att:${meta.signedEnvelopeId || "?"}::${meta.attachmentId || "?"}::${meta.ivB64}::${meta.saltB64}`;
+    }
+
+    async function resolveDelveeInlineDownloadUrl(meta){
+      // Preferred: job/session storagePath
+      if (meta.sessionId && meta.storagePath) {
+        // Try job url first, then non-job
+        try {
+          const res = await functions.httpsCallable("delveeCreateJobImageDownloadUrl")({
+            sessionId: meta.sessionId,
+            storagePath: meta.storagePath,
+          });
+          const payload = (res && res.data) ? res.data : {};
+          if (payload.downloadUrl) return payload.downloadUrl;
+        } catch (_) {}
+
+        try {
+          const res = await functions.httpsCallable("delveeCreateImageDownloadUrl")({
+            sessionId: meta.sessionId,
+            storagePath: meta.storagePath,
+          });
+          const payload = (res && res.data) ? res.data : {};
+          if (payload.downloadUrl) return payload.downloadUrl;
+        } catch (_) {}
+      }
+
+      // Fallback: if the meta included envelope/attachment ids, use the signed attachment callable
+      if (meta.signedEnvelopeId && meta.attachmentId) {
+        const res = await functions.httpsCallable("createSignedAttachmentDownloadUrl")({
+          signedEnvelopeId: meta.signedEnvelopeId,
+          attachmentId: meta.attachmentId,
+        });
+        const payload = (res && res.data) ? res.data : {};
+        if (payload.downloadUrl) return payload.downloadUrl;
+      }
+
+      throw new Error("No download path for inline image");
+    }
+
+    async function openInlineDelveeMetaImageAsObjectUrl(rawCode, meta){
+      const k = inlineDelveeKey(meta);
+      if (inlineDelveeImgUrlCache.has(k)) return inlineDelveeImgUrlCache.get(k);
+
+      if (inlineDelveeImgBusy.has(k)) {
+        for (let i = 0; i < 30; i++) {
+          await new Promise(r => setTimeout(r, 120));
+          if (inlineDelveeImgUrlCache.has(k)) return inlineDelveeImgUrlCache.get(k);
+        }
+        throw new Error("Inline image busy");
+      }
+
+      inlineDelveeImgBusy.add(k);
+      try {
+        const downloadUrl = await resolveDelveeInlineDownloadUrl(meta);
+
+        const r = await fetch(downloadUrl);
+        if (!r.ok) throw new Error(`Download failed (${r.status})`);
+        const encBuf = await r.arrayBuffer();
+
+        const plainBytes = await decryptAttachmentBytesForCode(rawCode, encBuf, meta.ivB64, meta.saltB64);
+
+        const blob = new Blob([plainBytes], { type: meta.contentType || "image/jpeg" });
+        const url = URL.createObjectURL(blob);
+        inlineDelveeImgUrlCache.set(k, url);
+        return url;
+      } finally {
+        inlineDelveeImgBusy.delete(k);
+      }
+    }
+
     // -------------------------
     // Modal (Open flow)
     // -------------------------
@@ -1359,15 +1533,73 @@
       }
     }
 
-    // ✅ Replace "[image]" lines with inline images (in attachment order)
+    // ✅ Render summaries with real images:
+    // - If summary includes inline "[delvee:image-meta]{...}" blocks -> fetch/decrypt those.
+    // - Else fallback to old placeholder-to-attachments behavior.
     async function renderBodyWithInlineImages(envelopeId, bodyText){
       const item = findItemById(envelopeId);
       const rawCode = (lastFetchedCode || (codeInput && codeInput.value) || "").trim();
-      const attachments = (item && Array.isArray(item.attachments)) ? item.attachments : [];
 
-      const lines = String(bodyText || "").split("\n");
+      const text = String(bodyText || "");
       const container = document.createElement("div");
 
+      // A) Prefer embedded image-meta blocks (Android-style summary output)
+      const blocks = extractInlineDelveeImageBlocks(text);
+
+      if (blocks.length > 0) {
+        let cursor = 0;
+
+        for (const b of blocks) {
+          const before = text.slice(cursor, b.start).trim();
+          if (before) {
+            const div = document.createElement("div");
+            div.textContent = before;
+            div.style.whiteSpace = "pre-wrap";
+            container.appendChild(div);
+          }
+
+          // Add the caption (displayText) if present
+          if (b.meta.displayText) {
+            const cap = document.createElement("div");
+            cap.textContent = b.meta.displayText;
+            cap.style.whiteSpace = "pre-wrap";
+            cap.style.marginTop = "6px";
+            cap.style.color = "var(--muted)";
+            container.appendChild(cap);
+          }
+
+          const img = document.createElement("img");
+          img.className = "sf-inline-img";
+          img.alt = "Image";
+          img.loading = "lazy";
+          container.appendChild(img);
+
+          if (rawCode) {
+            openInlineDelveeMetaImageAsObjectUrl(rawCode, b.meta)
+              .then((url) => { img.src = url; })
+              .catch(() => { img.remove(); });
+          } else {
+            // No code: show nothing instead of placeholder
+            img.remove();
+          }
+
+          cursor = b.end;
+        }
+
+        const tail = text.slice(cursor).trim();
+        if (tail) {
+          const div = document.createElement("div");
+          div.textContent = tail;
+          div.style.whiteSpace = "pre-wrap";
+          container.appendChild(div);
+        }
+
+        return container;
+      }
+
+      // B) Fallback: placeholder "[image]" lines mapped to signed attachments (your old behavior)
+      const attachments = (item && Array.isArray(item.attachments)) ? item.attachments : [];
+      const lines = text.split("\n");
       let imgIndex = 0;
 
       for (const line of lines) {
@@ -1380,7 +1612,7 @@
 
         if (looksLikeImageLine && imgIndex < attachments.length && rawCode) {
           const p = document.createElement("div");
-          p.textContent = line; // keep the bullet line
+          p.textContent = line;
           p.style.whiteSpace = "pre-wrap";
           p.style.marginBottom = "6px";
           container.appendChild(p);
@@ -1392,7 +1624,6 @@
           img.loading = "lazy";
           container.appendChild(img);
 
-          // load later (don’t block UI)
           openSignedAttachmentAsObjectUrl({ rawCode, signedEnvelopeId: envelopeId, attachment: a })
             .then((url) => { img.src = url; })
             .catch(() => { img.remove(); });
