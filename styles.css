@@ -1,16 +1,19 @@
 /* styles.css (Setfeed) — FULL FILE REPLACEMENT
-   Update:
-   - Fix dark-logo halo by removing drop-shadow and preventing background ring.
-   - Add styles for signed image preview card on send.html.
-   - ✅ Add polished signed-in banner layout (email + actions) used on send.html.
+   Update requested:
+   - ✅ Default to LIGHT theme (no longer auto-dark by system unless explicitly set).
+   - ✅ Light theme surfaces tuned to match Setfeed app “private session” vibe:
+       - background: softer off-white (less bright; closer to a bottom-bar tint)
+       - cards/panels: calm greys (modern-neutral)
+   - ✅ Dark theme left unchanged.
 */
 
 :root{
-  --bg: #FFFBFE;
-  --surface: #FFFBFE;
-  --surface-1: #FFFFFF;
-  --surface-2: #F6F3FA;
-  --surface-variant: #E7E0EC;
+  /* ✅ LIGHT DEFAULT (app-consistent, less bright than pure white) */
+  --bg: #FCFCFD;              /* off-white (ModernLight background) */
+  --surface: #FCFCFD;
+  --surface-1: #F7F8FA;       /* soft card base (not pure white) */
+  --surface-2: #F2F3F6;       /* secondary surface */
+  --surface-variant: #EDEEF1; /* “private session” grey card tone */
   --line: rgba(28,27,31,0.12);
 
   --text: rgba(28,27,31,0.92);
@@ -50,38 +53,23 @@
   --fw-bold: 520;
 }
 
+/* ✅ IMPORTANT: dark theme does NOT auto-apply anymore.
+   We keep this media block ONLY to avoid surprises if any selectors rely on it,
+   but we *gate* it behind "no explicit light override" AND we DO NOT change :root by default.
+   (So system-dark won’t switch the site unless JS sets data-theme="dark".) */
 @media (prefers-color-scheme: dark){
-  :root{
-    --bg: #0F1114;
-    --surface: #0F1114;
-    --surface-1: #0F1114;
-    --surface-2: #12151A;
-    --surface-variant: #1A1D22;
-    --line: rgba(255,255,255,0.12);
-
-    --text: rgba(255,255,255,0.92);
-    --muted: rgba(203,208,216,0.86);
-    --soft: rgba(203,208,216,0.68);
-
-    --primary: #3F7BFF;
-    --on-primary: #FFFFFF;
-    --primary-soft: rgba(63,123,255,0.20);
-
-    --secondary: #2B2F36;
-    --on-secondary: rgba(255,255,255,0.92);
-    --secondary-soft: rgba(180,190,210,0.12);
-
-    --danger: #F2B8B5;
-    --good: #86EFAC;
+  :root:not([data-theme="light"]):not([data-theme="dark"]){
+    /* Intentionally empty: default remains light. */
   }
 }
 
+/* Explicit LIGHT */
 :root[data-theme="light"]{
-  --bg: #FFFBFE;
-  --surface: #FFFBFE;
-  --surface-1: #FFFFFF;
-  --surface-2: #F6F3FA;
-  --surface-variant: #E7E0EC;
+  --bg: #FCFCFD;
+  --surface: #FCFCFD;
+  --surface-1: #F7F8FA;
+  --surface-2: #F2F3F6;
+  --surface-variant: #EDEEF1;
   --line: rgba(28,27,31,0.12);
 
   --text: rgba(28,27,31,0.92);
@@ -100,6 +88,7 @@
   --good: #0F7B3D;
 }
 
+/* Explicit DARK (UNCHANGED) */
 :root[data-theme="dark"]{
   --bg: #0F1114;
   --surface: #0F1114;
@@ -178,20 +167,9 @@ select:focus-visible,
       rgba(255,255,255,0.022) 0%,
       rgba(255,255,255,0.00) 28%);
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]) .page-bg{
-    background:
-      radial-gradient(900px 520px at 18% -10%,
-        color-mix(in srgb, var(--primary) 6%, transparent) 0%,
-        transparent 56%),
-      radial-gradient(700px 460px at 85% 0%,
-        rgba(255,255,255,0.045) 0%,
-        transparent 62%),
-      linear-gradient(180deg,
-        rgba(255,255,255,0.022) 0%,
-        rgba(255,255,255,0.00) 28%);
-  }
-}
+
+/* (Optional) If you ever want “System” again, add JS that sets data-theme="dark"
+   when matchMedia('(prefers-color-scheme: dark)') is true. */
 
 .wrap{
   max-width: var(--max);
@@ -317,7 +295,7 @@ select:focus-visible,
 /* Card / typography */
 .card{
   margin-top: var(--s-5);
-  background: color-mix(in srgb, var(--surface-1) 90%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
   border: 1px solid var(--line);
   border-radius: var(--radius-3);
   padding: var(--s-6);
@@ -325,14 +303,11 @@ select:focus-visible,
     0 1px 0 rgba(255,255,255,0.26) inset,
     0 12px 32px rgba(0,0,0,0.09);
 }
-:root[data-theme="dark"] .card,
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]) .card{
-    background: color-mix(in srgb, var(--surface-2) 86%, transparent);
-    box-shadow:
-      0 1px 0 rgba(255,255,255,0.045) inset,
-      0 16px 36px rgba(0,0,0,0.28);
-  }
+:root[data-theme="dark"] .card{
+  background: color-mix(in srgb, var(--surface-2) 86%, transparent);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.045) inset,
+    0 16px 36px rgba(0,0,0,0.28);
 }
 
 h1{
@@ -374,9 +349,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   min-width: 320px;
 }
 @media (max-width: 720px){
-  .col{
-    min-width: 100%;
-  }
+  .col{ min-width: 100%; }
 }
 
 /* Tabs */
@@ -467,9 +440,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 }
 .btn-primary:hover{ background: color-mix(in srgb, var(--primary) 92%, white); }
 :root[data-theme="dark"] .btn-primary:hover{ background: color-mix(in srgb, var(--primary) 90%, black); }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]) .btn-primary:hover{ background: color-mix(in srgb, var(--primary) 90%, black); }
-}
+
 .btn-primary:disabled{
   background: color-mix(in srgb, var(--primary) 24%, var(--surface-variant));
   border-color: color-mix(in srgb, var(--primary) 22%, var(--line));
@@ -525,7 +496,7 @@ input, textarea, select{
   width: 100%;
   border-radius: var(--radius-1);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-1) 90%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
   color: var(--text);
   padding: 10px 12px;
   font-size: 14.5px;
@@ -603,11 +574,8 @@ small.help{
   background: color-mix(in srgb, var(--surface-variant) 9%, transparent);
   padding: var(--s-5);
 }
-:root[data-theme="dark"] .video-card,
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]) .video-card{
-    background: color-mix(in srgb, var(--surface-2) 78%, transparent);
-  }
+:root[data-theme="dark"] .video-card{
+  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
 }
 .video-frame{
   margin-top: var(--s-4);
@@ -688,12 +656,8 @@ footer a:hover{ color: var(--text); text-decoration: none; }
     flex-direction: column;
     align-items: stretch;
   }
-  .sf-auth-actions{
-    justify-content: stretch;
-  }
-  .sf-auth-actions .btn{
-    width: 100%;
-  }
+  .sf-auth-actions{ justify-content: stretch; }
+  .sf-auth-actions .btn{ width: 100%; }
   .sf-auth-email{
     white-space: normal;
     overflow: visible;
@@ -719,7 +683,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   margin-top: 12px;
   border-radius: var(--radius-2);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-1) 90%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
   overflow:hidden;
   height: 220px;
   display:flex;
