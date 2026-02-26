@@ -1,11 +1,12 @@
 /* styles.css (Setfeed) — FULL FILE REPLACEMENT
-   Update requested:
-   - ✅ Default to LIGHT (do not auto-switch to dark via system unless explicitly set).
-   - ✅ Light theme less bright + more “private session” professional greys:
-       - page background: soft warm-grey (not white)
-       - cards/sections/panels: consistent calm grey surfaces
-       - reduced “glare” by toning down highlights + gradients
-   - ✅ Dark theme left unchanged.
+   Goals:
+   - ✅ Default to LIGHT (never auto-dark from system unless data-theme="dark" is set)
+   - ✅ Light theme matches app “Private session” look:
+       - calm off-white background (no yellow/pink cast)
+       - sections/cards use the same “nice grey” as the Private session card
+       - headings less bold (more professional)
+       - reduce glow/gradients that tint the page
+   - ✅ Dark theme unchanged
 */
 
 /* =========================
@@ -13,17 +14,20 @@
    ========================= */
 
 :root{
-  /* ✅ LIGHT DEFAULT (calmer + greyer, less glare) */
-  --bg: #F2F3F5;              /* app-like soft background (less bright) */
-  --surface: #F2F3F5;
-  --surface-1: #F7F8FA;       /* elevated surface (inputs / inner cards) */
-  --surface-2: #EEF0F3;       /* section surface */
-  --surface-variant: #E6E9EE; /* “private session” grey for cards/panels */
-  --line: rgba(28,27,31,0.10);
+  /* LIGHT DEFAULT (app-like) */
+  --bg: #EEF3F6;              /* calm off-white/blue-grey like app background */
+  --surface: #EEF3F6;
 
-  --text: rgba(28,27,31,0.92);
-  --muted: rgba(73,69,79,0.84);
-  --soft: rgba(73,69,79,0.68);
+  /* The “Private session” card grey vibe */
+  --surface-variant: #DCE4EA; /* primary card/section grey */
+  --surface-2: #E4EBF0;       /* slightly lighter secondary surface */
+  --surface-1: #F3F7FA;       /* input/inner elevated surface (soft, not white) */
+
+  --line: rgba(15,23,32,0.10);
+
+  --text: rgba(15,23,32,0.92);
+  --muted: rgba(48,58,70,0.78);
+  --soft: rgba(48,58,70,0.62);
 
   --primary: #4C8DFF;
   --on-primary: #FFFFFF;
@@ -53,9 +57,10 @@
 
   --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 
+  /* Less-bold typography (more like the app) */
   --fw-regular: 420;
-  --fw-medium: 520; /* slightly stronger = more “pro” */
-  --fw-bold: 650;
+  --fw-medium: 520;
+  --fw-bold: 620;
 }
 
 /* ✅ Do NOT auto-dark on system preference. */
@@ -67,16 +72,17 @@
 
 /* Explicit LIGHT */
 :root[data-theme="light"]{
-  --bg: #F2F3F5;
-  --surface: #F2F3F5;
-  --surface-1: #F7F8FA;
-  --surface-2: #EEF0F3;
-  --surface-variant: #E6E9EE;
-  --line: rgba(28,27,31,0.10);
+  --bg: #EEF3F6;
+  --surface: #EEF3F6;
+  --surface-variant: #DCE4EA;
+  --surface-2: #E4EBF0;
+  --surface-1: #F3F7FA;
 
-  --text: rgba(28,27,31,0.92);
-  --muted: rgba(73,69,79,0.84);
-  --soft: rgba(73,69,79,0.68);
+  --line: rgba(15,23,32,0.10);
+
+  --text: rgba(15,23,32,0.92);
+  --muted: rgba(48,58,70,0.78);
+  --soft: rgba(48,58,70,0.62);
 
   --primary: #4C8DFF;
   --on-primary: #FFFFFF;
@@ -147,18 +153,18 @@ select:focus-visible,
 
 ::selection{ background: var(--primary-soft); }
 
-/* ✅ Calmer light background texture (less white glow) */
+/* ✅ Remove tinty/pinky glow: keep very neutral, very subtle texture */
 .page-bg{
   min-height: 100vh;
   background:
-    radial-gradient(920px 560px at 16% -12%,
-      color-mix(in srgb, var(--primary) 4%, transparent) 0%,
+    radial-gradient(900px 560px at 20% -15%,
+      rgba(76,141,255,0.035) 0%,
+      transparent 58%),
+    radial-gradient(760px 520px at 90% 0%,
+      rgba(15,23,32,0.035) 0%,
       transparent 60%),
-    radial-gradient(720px 520px at 86% 0%,
-      rgba(0,0,0,0.035) 0%,
-      transparent 62%),
     linear-gradient(180deg,
-      rgba(255,255,255,0.015) 0%,
+      rgba(255,255,255,0.08) 0%,
       rgba(255,255,255,0.00) 32%);
 }
 :root[data-theme="dark"] .page-bg{
@@ -218,7 +224,7 @@ select:focus-visible,
   text-decoration: none;
 }
 
-/* Logo */
+/* Logo (no halo) */
 .logo{
   width: 36px;
   height: 36px;
@@ -235,7 +241,7 @@ select:focus-visible,
   text-decoration: none;
   letter-spacing: -0.12px;
   font-weight: var(--fw-medium);
-  font-size: 14.6px;
+  font-size: 14.4px;
   line-height: 1;
   padding: 8px 10px;
   border-radius: 999px;
@@ -262,13 +268,13 @@ select:focus-visible,
   font-size: 13.5px;
 }
 .nav a:hover{
-  background: color-mix(in srgb, var(--surface-variant) 28%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 30%, transparent);
   color: var(--text);
   text-decoration: none;
 }
 .nav a[aria-current="page"]{
   color: var(--text);
-  background: color-mix(in srgb, var(--surface-variant) 34%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 40%, transparent);
   border-color: var(--line);
 }
 
@@ -302,16 +308,16 @@ select:focus-visible,
    CARD / TYPOGRAPHY
    ========================= */
 
-/* ✅ Make main container itself a calm grey surface (not white) */
+/* Main “page card” should feel like the app’s grey surface */
 .card{
   margin-top: var(--s-5);
-  background: color-mix(in srgb, var(--surface-variant) 74%, var(--surface-1));
+  background: var(--surface-variant);
   border: 1px solid var(--line);
   border-radius: var(--radius-3);
   padding: var(--s-6);
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.18) inset,
-    0 16px 42px rgba(0,0,0,0.08);
+    0 1px 0 rgba(255,255,255,0.22) inset,
+    0 18px 46px rgba(15,23,32,0.08);
 }
 :root[data-theme="dark"] .card{
   background: color-mix(in srgb, var(--surface-2) 86%, transparent);
@@ -320,30 +326,31 @@ select:focus-visible,
     0 16px 36px rgba(0,0,0,0.28);
 }
 
+/* Headings less bold + slightly tighter like the app */
 h1{
   margin: 0 0 var(--s-2) 0;
-  font-size: 28.5px;
-  letter-spacing: -0.46px;
+  font-size: 28px;
+  letter-spacing: -0.42px;
   line-height: 1.14;
-  font-weight: var(--fw-bold);
+  font-weight: var(--fw-medium); /* ✅ less bold */
 }
 .lead{
   margin: 0 0 var(--s-4) 0;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 14.9px;
   line-height: 1.72;
   max-width: 72ch;
 }
 h2{
   margin: var(--s-6) 0 var(--s-2) 0;
-  font-size: 14.9px;
+  font-size: 14.6px;
   letter-spacing: -0.06px;
-  font-weight: var(--fw-bold);
+  font-weight: var(--fw-medium); /* ✅ less bold */
 }
 p, li, label{
   color: var(--muted);
   line-height: 1.72;
-  font-size: 14.6px;
+  font-size: 14.5px;
 }
 ul{ margin: 0 0 0 18px; padding: 0; }
 
@@ -375,16 +382,16 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 .tab{
   appearance: none;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 26%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
   color: var(--soft);
   border-radius: 999px;
   padding: 9px 12px;
   cursor: pointer;
   user-select: none;
-  font-size: 13.5px;
+  font-size: 13.4px;
 }
 .tab:hover{
-  background: color-mix(in srgb, var(--surface-variant) 34%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 86%, transparent);
   color: var(--text);
 }
 .tab[aria-selected="true"]{
@@ -402,22 +409,22 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 .chip{
   appearance: none;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 26%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
   color: var(--soft);
   border-radius: 999px;
   padding: 9px 12px;
   cursor: pointer;
   user-select: none;
-  font-size: 13.5px;
+  font-size: 13.4px;
 }
 .chip:hover{
-  background: color-mix(in srgb, var(--surface-variant) 34%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 86%, transparent);
   color: var(--text);
 }
 .chip[aria-pressed="true"]{
-  background: color-mix(in srgb, var(--primary) 18%, var(--surface-variant));
+  background: color-mix(in srgb, var(--primary) 16%, var(--surface-2));
   color: var(--text);
-  border-color: color-mix(in srgb, var(--primary) 44%, var(--line));
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--line));
 }
 
 /* =========================
@@ -439,28 +446,24 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   padding: 10px 14px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 22%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
   color: var(--text);
   font-size: 14px;
   text-decoration: none;
   cursor: pointer;
   user-select: none;
-  transition:
-    background 120ms ease,
-    transform 80ms ease,
-    box-shadow 120ms ease,
-    border-color 120ms ease;
+  transition: background 120ms ease, transform 80ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
 .btn:hover{
-  background: color-mix(in srgb, var(--surface-variant) 30%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 88%, transparent);
   text-decoration: none;
 }
 .btn:active{ transform: translateY(0.5px); }
-.btn:disabled{ cursor: not-allowed; transform: none; opacity: 1; box-shadow: none; }
+.btn:disabled{ cursor: not-allowed; transform: none; opacity: 0.60; box-shadow: none; }
 
 .btn-lg{
   padding: 12px 18px;
-  font-size: 14.4px;
+  font-size: 14.2px;
   min-height: 44px;
   line-height: 1.2;
 }
@@ -469,7 +472,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   background: var(--primary);
   color: var(--on-primary);
   border-color: color-mix(in srgb, var(--primary) 58%, var(--line));
-  box-shadow: 0 12px 26px rgba(0,0,0,0.10);
+  box-shadow: 0 12px 26px rgba(15,23,32,0.12);
 }
 .btn-primary:hover{ background: color-mix(in srgb, var(--primary) 92%, white); }
 :root[data-theme="dark"] .btn-primary:hover{ background: color-mix(in srgb, var(--primary) 90%, black); }
@@ -480,14 +483,14 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 }
 
 .btn-secondary{
-  background: color-mix(in srgb, var(--primary) 12%, var(--surface-variant));
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-2));
   color: var(--text);
   border-color: color-mix(in srgb, var(--primary) 22%, var(--line));
 }
-.btn-secondary:hover{ background: color-mix(in srgb, var(--primary) 16%, var(--surface-variant)); }
+.btn-secondary:hover{ background: color-mix(in srgb, var(--primary) 16%, var(--surface-2)); }
 
-.btn-quiet{ background: color-mix(in srgb, var(--surface-variant) 18%, transparent); }
-.btn-quiet:hover{ background: color-mix(in srgb, var(--surface-variant) 26%, transparent); }
+.btn-quiet{ background: color-mix(in srgb, var(--surface-2) 62%, transparent); }
+.btn-quiet:hover{ background: color-mix(in srgb, var(--surface-2) 80%, transparent); }
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce){
@@ -509,13 +512,13 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   gap: 6px;
   margin-top: var(--s-3);
 }
-label{ color: var(--soft); font-size: 13.2px; }
+label{ color: var(--soft); font-size: 13.1px; }
 
 input, textarea, select{
   width: 100%;
   border-radius: var(--radius-1);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: var(--surface-1);
   color: var(--text);
   padding: 10px 12px;
   font-size: 14.5px;
@@ -534,25 +537,25 @@ small.help{
   color: var(--soft);
   margin-top: 10px;
   line-height: 1.55;
-  font-size: 13.2px;
+  font-size: 13.1px;
 }
 
 /* =========================
    PANELS / STATUS (sections)
    ========================= */
 
-/* ✅ Sections should be the “nice grey” */
+/* ✅ Sections should match the “Private session” grey */
 .panel{
   border-radius: var(--radius-2);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 72%, var(--surface-2));
+  background: var(--surface-variant);
   padding: var(--s-5);
 }
 .panel-title{
   margin: 0 0 8px 0;
   font-size: 13.8px;
   letter-spacing: -0.05px;
-  font-weight: var(--fw-bold);
+  font-weight: var(--fw-medium); /* ✅ less bold */
   color: var(--text);
 }
 .panel-sub{ margin: 0 0 var(--s-4) 0; color: var(--muted); }
@@ -567,7 +570,7 @@ small.help{
   margin-top: var(--s-4);
   border-radius: var(--radius-2);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 58%, var(--surface-2));
+  background: color-mix(in srgb, var(--surface-variant) 86%, var(--surface-2));
   padding: 12px;
 }
 .status-title{
@@ -578,7 +581,7 @@ small.help{
   color: var(--text);
   font-size: 14px;
   letter-spacing: -0.06px;
-  font-weight: var(--fw-bold);
+  font-weight: var(--fw-medium); /* ✅ less bold */
 }
 .status-line{ color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0; }
 
@@ -600,7 +603,7 @@ small.help{
   margin-top: var(--s-6);
   border-radius: var(--radius-3);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 62%, var(--surface-2));
+  background: var(--surface-variant);
   padding: var(--s-5);
 }
 :root[data-theme="dark"] .video-card{
@@ -611,7 +614,7 @@ small.help{
   border-radius: var(--radius-2);
   overflow: hidden;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 22%, transparent);
+  background: var(--surface-1);
 }
 .video-frame video{ width: 100%; height: auto; display: block; }
 
@@ -646,10 +649,10 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--primary) 9%, var(--surface-variant));
+  background: color-mix(in srgb, var(--surface-variant) 88%, var(--surface-2));
   color: var(--text);
-  font-weight: var(--fw-bold);
-  font-size: 13.6px;
+  font-weight: var(--fw-medium); /* ✅ less bold */
+  font-size: 13.5px;
   letter-spacing: -0.05px;
 }
 
@@ -663,7 +666,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   margin-top: 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 58%, var(--surface-2));
+  background: var(--surface-variant);
 }
 .sf-auth-left{
   min-width: 0;
@@ -677,7 +680,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 14px;
-  color: color-mix(in srgb, var(--text) 85%, transparent);
+  color: color-mix(in srgb, var(--text) 82%, transparent);
 }
 .sf-auth-actions{
   display:flex;
@@ -704,7 +707,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
 .sf-pulse-image-card{
   border-radius: var(--radius-3);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 66%, var(--surface-2));
+  background: var(--surface-variant);
   padding: var(--s-5);
   margin-top: var(--s-3);
 }
@@ -718,7 +721,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   margin-top: 12px;
   border-radius: var(--radius-2);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: var(--surface-1);
   overflow:hidden;
   height: 220px;
   display:flex;
