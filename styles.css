@@ -1,24 +1,29 @@
 /* styles.css (Setfeed) — FULL FILE REPLACEMENT
    Update requested:
-   - ✅ Default to LIGHT theme (no longer auto-dark by system unless explicitly set).
-   - ✅ Light theme surfaces tuned to match Setfeed app “private session” vibe:
-       - background: softer off-white (less bright; closer to a bottom-bar tint)
-       - cards/panels: calm greys (modern-neutral)
+   - ✅ Default to LIGHT (do not auto-switch to dark via system unless explicitly set).
+   - ✅ Light theme less bright + more “private session” professional greys:
+       - page background: soft warm-grey (not white)
+       - cards/sections/panels: consistent calm grey surfaces
+       - reduced “glare” by toning down highlights + gradients
    - ✅ Dark theme left unchanged.
 */
 
+/* =========================
+   TOKENS
+   ========================= */
+
 :root{
-  /* ✅ LIGHT DEFAULT (app-consistent, less bright than pure white) */
-  --bg: #FCFCFD;              /* off-white (ModernLight background) */
-  --surface: #FCFCFD;
-  --surface-1: #F7F8FA;       /* soft card base (not pure white) */
-  --surface-2: #F2F3F6;       /* secondary surface */
-  --surface-variant: #EDEEF1; /* “private session” grey card tone */
-  --line: rgba(28,27,31,0.12);
+  /* ✅ LIGHT DEFAULT (calmer + greyer, less glare) */
+  --bg: #F2F3F5;              /* app-like soft background (less bright) */
+  --surface: #F2F3F5;
+  --surface-1: #F7F8FA;       /* elevated surface (inputs / inner cards) */
+  --surface-2: #EEF0F3;       /* section surface */
+  --surface-variant: #E6E9EE; /* “private session” grey for cards/panels */
+  --line: rgba(28,27,31,0.10);
 
   --text: rgba(28,27,31,0.92);
-  --muted: rgba(73,69,79,0.86);
-  --soft: rgba(73,69,79,0.70);
+  --muted: rgba(73,69,79,0.84);
+  --soft: rgba(73,69,79,0.68);
 
   --primary: #4C8DFF;
   --on-primary: #FFFFFF;
@@ -49,14 +54,11 @@
   --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 
   --fw-regular: 420;
-  --fw-medium: 480;
-  --fw-bold: 520;
+  --fw-medium: 520; /* slightly stronger = more “pro” */
+  --fw-bold: 650;
 }
 
-/* ✅ IMPORTANT: dark theme does NOT auto-apply anymore.
-   We keep this media block ONLY to avoid surprises if any selectors rely on it,
-   but we *gate* it behind "no explicit light override" AND we DO NOT change :root by default.
-   (So system-dark won’t switch the site unless JS sets data-theme="dark".) */
+/* ✅ Do NOT auto-dark on system preference. */
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]):not([data-theme="dark"]){
     /* Intentionally empty: default remains light. */
@@ -65,16 +67,16 @@
 
 /* Explicit LIGHT */
 :root[data-theme="light"]{
-  --bg: #FCFCFD;
-  --surface: #FCFCFD;
+  --bg: #F2F3F5;
+  --surface: #F2F3F5;
   --surface-1: #F7F8FA;
-  --surface-2: #F2F3F6;
-  --surface-variant: #EDEEF1;
-  --line: rgba(28,27,31,0.12);
+  --surface-2: #EEF0F3;
+  --surface-variant: #E6E9EE;
+  --line: rgba(28,27,31,0.10);
 
   --text: rgba(28,27,31,0.92);
-  --muted: rgba(73,69,79,0.86);
-  --soft: rgba(73,69,79,0.70);
+  --muted: rgba(73,69,79,0.84);
+  --soft: rgba(73,69,79,0.68);
 
   --primary: #4C8DFF;
   --on-primary: #FFFFFF;
@@ -113,7 +115,10 @@
   --good: #86EFAC;
 }
 
-/* Base */
+/* =========================
+   BASE
+   ========================= */
+
 *{ box-sizing: border-box; }
 
 html, body{
@@ -129,6 +134,7 @@ strong, b{ font-weight: var(--fw-bold); }
 
 a{ color: var(--primary); text-decoration: none; }
 a:hover{ text-decoration: underline; }
+
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
@@ -141,19 +147,19 @@ select:focus-visible,
 
 ::selection{ background: var(--primary-soft); }
 
-/* Background texture */
+/* ✅ Calmer light background texture (less white glow) */
 .page-bg{
   min-height: 100vh;
   background:
-    radial-gradient(900px 520px at 18% -10%,
-      color-mix(in srgb, var(--primary) 5%, transparent) 0%,
-      transparent 54%),
-    radial-gradient(700px 460px at 85% 0%,
-      rgba(0,0,0,0.05) 0%,
+    radial-gradient(920px 560px at 16% -12%,
+      color-mix(in srgb, var(--primary) 4%, transparent) 0%,
+      transparent 60%),
+    radial-gradient(720px 520px at 86% 0%,
+      rgba(0,0,0,0.035) 0%,
       transparent 62%),
     linear-gradient(180deg,
-      rgba(255,255,255,0.025) 0%,
-      rgba(255,255,255,0.00) 28%);
+      rgba(255,255,255,0.015) 0%,
+      rgba(255,255,255,0.00) 32%);
 }
 :root[data-theme="dark"] .page-bg{
   background:
@@ -168,22 +174,23 @@ select:focus-visible,
       rgba(255,255,255,0.00) 28%);
 }
 
-/* (Optional) If you ever want “System” again, add JS that sets data-theme="dark"
-   when matchMedia('(prefers-color-scheme: dark)') is true. */
-
 .wrap{
   max-width: var(--max);
   margin: 0 auto;
   padding: var(--s-6) var(--s-4) var(--s-8);
 }
 
-/* Header */
+/* =========================
+   HEADER
+   ========================= */
+
 .site-header{
   position: sticky;
   top: 0;
   z-index: 20;
   backdrop-filter: blur(10px);
-  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
   border-bottom: 1px solid var(--line);
 }
 
@@ -207,11 +214,11 @@ select:focus-visible,
   background: transparent;
 }
 .brand-mark:hover{
-  background: color-mix(in srgb, var(--surface-variant) 14%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 22%, transparent);
   text-decoration: none;
 }
 
-/* ✅ Remove halo/ring look in dark theme */
+/* Logo */
 .logo{
   width: 36px;
   height: 36px;
@@ -226,16 +233,16 @@ select:focus-visible,
   justify-self: center;
   color: var(--text);
   text-decoration: none;
-  letter-spacing: -0.10px;
+  letter-spacing: -0.12px;
   font-weight: var(--fw-medium);
   font-size: 14.6px;
   line-height: 1;
   padding: 8px 10px;
   border-radius: 999px;
-  opacity: 0.90;
+  opacity: 0.88;
 }
 .brand-title:hover{
-  background: color-mix(in srgb, var(--surface-variant) 20%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 26%, transparent);
   text-decoration: none;
   opacity: 1;
 }
@@ -247,7 +254,6 @@ select:focus-visible,
   justify-content: flex-end;
   align-items: center;
 }
-
 .nav a{
   color: var(--soft);
   padding: 8px 10px;
@@ -256,23 +262,23 @@ select:focus-visible,
   font-size: 13.5px;
 }
 .nav a:hover{
-  background: color-mix(in srgb, var(--surface-variant) 22%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 28%, transparent);
   color: var(--text);
   text-decoration: none;
 }
 .nav a[aria-current="page"]{
   color: var(--text);
-  background: color-mix(in srgb, var(--surface-variant) 26%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 34%, transparent);
   border-color: var(--line);
 }
 
 .nav a.nav-cta{
-  background: color-mix(in srgb, var(--primary) 14%, var(--surface-variant));
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-variant));
   border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--line));
   color: var(--text);
 }
 .nav a.nav-cta:hover{
-  background: color-mix(in srgb, var(--primary) 18%, var(--surface-variant));
+  background: color-mix(in srgb, var(--primary) 16%, var(--surface-variant));
 }
 
 @media (max-width: 720px){
@@ -292,16 +298,20 @@ select:focus-visible,
   }
 }
 
-/* Card / typography */
+/* =========================
+   CARD / TYPOGRAPHY
+   ========================= */
+
+/* ✅ Make main container itself a calm grey surface (not white) */
 .card{
   margin-top: var(--s-5);
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 74%, var(--surface-1));
   border: 1px solid var(--line);
   border-radius: var(--radius-3);
   padding: var(--s-6);
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.26) inset,
-    0 12px 32px rgba(0,0,0,0.09);
+    0 1px 0 rgba(255,255,255,0.18) inset,
+    0 16px 42px rgba(0,0,0,0.08);
 }
 :root[data-theme="dark"] .card{
   background: color-mix(in srgb, var(--surface-2) 86%, transparent);
@@ -313,9 +323,9 @@ select:focus-visible,
 h1{
   margin: 0 0 var(--s-2) 0;
   font-size: 28.5px;
-  letter-spacing: -0.34px;
-  line-height: 1.18;
-  font-weight: var(--fw-medium);
+  letter-spacing: -0.46px;
+  line-height: 1.14;
+  font-weight: var(--fw-bold);
 }
 .lead{
   margin: 0 0 var(--s-4) 0;
@@ -328,7 +338,7 @@ h2{
   margin: var(--s-6) 0 var(--s-2) 0;
   font-size: 14.9px;
   letter-spacing: -0.06px;
-  font-weight: var(--fw-medium);
+  font-weight: var(--fw-bold);
 }
 p, li, label{
   color: var(--muted);
@@ -352,7 +362,10 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   .col{ min-width: 100%; }
 }
 
-/* Tabs */
+/* =========================
+   TABS / CHIPS
+   ========================= */
+
 .tabs{
   display: flex;
   gap: 10px;
@@ -362,7 +375,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 .tab{
   appearance: none;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 12%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 26%, transparent);
   color: var(--soft);
   border-radius: 999px;
   padding: 9px 12px;
@@ -371,7 +384,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   font-size: 13.5px;
 }
 .tab:hover{
-  background: color-mix(in srgb, var(--surface-variant) 20%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 34%, transparent);
   color: var(--text);
 }
 .tab[aria-selected="true"]{
@@ -380,7 +393,37 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   border-color: color-mix(in srgb, var(--primary) 34%, var(--line));
 }
 
-/* Buttons */
+.chips{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: var(--s-3);
+}
+.chip{
+  appearance: none;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-variant) 26%, transparent);
+  color: var(--soft);
+  border-radius: 999px;
+  padding: 9px 12px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13.5px;
+}
+.chip:hover{
+  background: color-mix(in srgb, var(--surface-variant) 34%, transparent);
+  color: var(--text);
+}
+.chip[aria-pressed="true"]{
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface-variant));
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--primary) 44%, var(--line));
+}
+
+/* =========================
+   BUTTONS
+   ========================= */
+
 .actions{
   display: flex;
   flex-wrap: wrap;
@@ -396,7 +439,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   padding: 10px 14px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 22%, transparent);
   color: var(--text);
   font-size: 14px;
   text-decoration: none;
@@ -404,26 +447,16 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   user-select: none;
   transition:
     background 120ms ease,
-    opacity 120ms ease,
     transform 80ms ease,
     box-shadow 120ms ease,
     border-color 120ms ease;
 }
 .btn:hover{
-  background: color-mix(in srgb, var(--surface-variant) 16%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 30%, transparent);
   text-decoration: none;
 }
 .btn:active{ transform: translateY(0.5px); }
 .btn:disabled{ cursor: not-allowed; transform: none; opacity: 1; box-shadow: none; }
-
-@media (prefers-reduced-motion: reduce){
-  *, *::before, *::after{
-    animation: none !important;
-    transition-duration: 0.01ms !important;
-    transition-delay: 0ms !important;
-    scroll-behavior: auto !important;
-  }
-}
 
 .btn-lg{
   padding: 12px 18px;
@@ -436,11 +469,10 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   background: var(--primary);
   color: var(--on-primary);
   border-color: color-mix(in srgb, var(--primary) 58%, var(--line));
-  box-shadow: 0 10px 22px rgba(0,0,0,0.10);
+  box-shadow: 0 12px 26px rgba(0,0,0,0.10);
 }
 .btn-primary:hover{ background: color-mix(in srgb, var(--primary) 92%, white); }
 :root[data-theme="dark"] .btn-primary:hover{ background: color-mix(in srgb, var(--primary) 90%, black); }
-
 .btn-primary:disabled{
   background: color-mix(in srgb, var(--primary) 24%, var(--surface-variant));
   border-color: color-mix(in srgb, var(--primary) 22%, var(--line));
@@ -448,43 +480,29 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 }
 
 .btn-secondary{
-  background: color-mix(in srgb, var(--primary) 14%, var(--surface-variant));
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-variant));
   color: var(--text);
   border-color: color-mix(in srgb, var(--primary) 22%, var(--line));
 }
-.btn-secondary:hover{ background: color-mix(in srgb, var(--primary) 18%, var(--surface-variant)); }
-.btn-quiet{ background: color-mix(in srgb, var(--surface-variant) 8%, transparent); }
-.btn-quiet:hover{ background: color-mix(in srgb, var(--surface-variant) 14%, transparent); }
+.btn-secondary:hover{ background: color-mix(in srgb, var(--primary) 16%, var(--surface-variant)); }
 
-/* Chips */
-.chips{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: var(--s-3);
-}
-.chip{
-  appearance: none;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 12%, transparent);
-  color: var(--soft);
-  border-radius: 999px;
-  padding: 9px 12px;
-  cursor: pointer;
-  user-select: none;
-  font-size: 13.5px;
-}
-.chip:hover{
-  background: color-mix(in srgb, var(--surface-variant) 20%, transparent);
-  color: var(--text);
-}
-.chip[aria-pressed="true"]{
-  background: color-mix(in srgb, var(--primary) 22%, var(--surface-variant));
-  color: var(--text);
-  border-color: color-mix(in srgb, var(--primary) 46%, var(--line));
+.btn-quiet{ background: color-mix(in srgb, var(--surface-variant) 18%, transparent); }
+.btn-quiet:hover{ background: color-mix(in srgb, var(--surface-variant) 26%, transparent); }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
-/* Forms */
+/* =========================
+   FORMS
+   ========================= */
+
 .field{
   display: flex;
   flex-direction: column;
@@ -492,6 +510,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
   margin-top: var(--s-3);
 }
 label{ color: var(--soft); font-size: 13.2px; }
+
 input, textarea, select{
   width: 100%;
   border-radius: var(--radius-1);
@@ -504,10 +523,12 @@ input, textarea, select{
   outline: none;
 }
 textarea{ min-height: 120px; resize: vertical; }
+
 input:focus, textarea:focus, select:focus{
   border-color: color-mix(in srgb, var(--primary) 56%, var(--line));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
 }
+
 small.help{
   display: block;
   color: var(--soft);
@@ -516,32 +537,37 @@ small.help{
   font-size: 13.2px;
 }
 
-/* Panels / status */
-.note{
-  border-left: 3px solid color-mix(in srgb, var(--primary) 34%, transparent);
-  padding-left: 12px;
-  margin-top: var(--s-4);
-}
+/* =========================
+   PANELS / STATUS (sections)
+   ========================= */
+
+/* ✅ Sections should be the “nice grey” */
 .panel{
   border-radius: var(--radius-2);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 13%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 72%, var(--surface-2));
   padding: var(--s-5);
 }
 .panel-title{
   margin: 0 0 8px 0;
   font-size: 13.8px;
   letter-spacing: -0.05px;
-  font-weight: var(--fw-medium);
+  font-weight: var(--fw-bold);
   color: var(--text);
 }
 .panel-sub{ margin: 0 0 var(--s-4) 0; color: var(--muted); }
+
+.note{
+  border-left: 3px solid color-mix(in srgb, var(--primary) 34%, transparent);
+  padding-left: 12px;
+  margin-top: var(--s-4);
+}
 
 .status{
   margin-top: var(--s-4);
   border-radius: var(--radius-2);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 9%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 58%, var(--surface-2));
   padding: 12px;
 }
 .status-title{
@@ -552,7 +578,7 @@ small.help{
   color: var(--text);
   font-size: 14px;
   letter-spacing: -0.06px;
-  font-weight: var(--fw-medium);
+  font-weight: var(--fw-bold);
 }
 .status-line{ color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0; }
 
@@ -566,12 +592,15 @@ small.help{
 .dot.good{ background: var(--good); }
 .dot.warn{ background: color-mix(in srgb, var(--danger) 78%, #D67A7A); }
 
-/* Video */
+/* =========================
+   VIDEO
+   ========================= */
+
 .video-card{
   margin-top: var(--s-6);
   border-radius: var(--radius-3);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 9%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 62%, var(--surface-2));
   padding: var(--s-5);
 }
 :root[data-theme="dark"] .video-card{
@@ -582,11 +611,14 @@ small.help{
   border-radius: var(--radius-2);
   overflow: hidden;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 12%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 22%, transparent);
 }
 .video-frame video{ width: 100%; height: auto; display: block; }
 
-/* Footer */
+/* =========================
+   FOOTER
+   ========================= */
+
 footer{
   margin-top: var(--s-6);
   color: var(--soft);
@@ -605,20 +637,23 @@ footer a:hover{ color: var(--text); text-decoration: none; }
 
 .hidden{ display: none !important; }
 
-/* NEW: subhead for Signed panel */
+/* =========================
+   SIGNED UI EXTRAS
+   ========================= */
+
 .sf-subhead{
   margin-top: 0;
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--primary) 10%, var(--surface-variant));
+  background: color-mix(in srgb, var(--primary) 9%, var(--surface-variant));
   color: var(--text);
-  font-weight: var(--fw-medium);
+  font-weight: var(--fw-bold);
   font-size: 13.6px;
   letter-spacing: -0.05px;
 }
 
-/* ✅ Signed-in banner (send.html) */
+/* Signed-in banner (send.html) */
 .sf-auth-banner{
   display:flex;
   align-items:center;
@@ -628,7 +663,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   margin-top: 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 58%, var(--surface-2));
 }
 .sf-auth-left{
   min-width: 0;
@@ -665,11 +700,11 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   }
 }
 
-/* NEW: image preview card */
+/* Image preview card */
 .sf-pulse-image-card{
   border-radius: var(--radius-3);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 9%, transparent);
+  background: color-mix(in srgb, var(--surface-variant) 66%, var(--surface-2));
   padding: var(--s-5);
   margin-top: var(--s-3);
 }
