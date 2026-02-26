@@ -687,7 +687,7 @@
             </p>
             <small class="help">
               Hidden senders filter applies everywhere (Pinned/Upcoming/Awaiting/Released).<br/>
-              <strong>Delvee summaries:</strong> Open will load images directly from your Delvee account inbox doc (users/{uid}/delvee_account_inbox/{sessionId}).<br/>
+              <strong>Delvee summaries:</strong> Open will load images from your Delvee docs (prefers account inbox; falls back to delivery job).<br/>
               <strong>Important:</strong> If Delvee images were uploaded without iv/salt metadata, this inbox will still show them (treated as plaintext bytes).
             </small>
           </div>
@@ -1252,7 +1252,7 @@
     }
 
     // -------------------------
-    // Delvee account inbox images (KEY FIX + robustness)
+    // Delvee account inbox images (WEB FALLBACK: account_inbox -> delivery_jobs)
     // -------------------------
     const delveeAccountInboxCache = new Map(); // sessionId -> { images: [], imagesCount, fetchedAtMs }
     const delveeAccountInboxBusy = new Set();  // sessionId
@@ -1274,8 +1274,7 @@
       return null;
     }
 
-    // ✅ IMPORTANT: allow iv/salt to be null.
-    // If iv/salt are missing, we treat the downloaded bytes as plaintext image bytes.
+    // ✅ allow iv/salt to be null (treat bytes as plaintext if missing)
     function normalizeJobImages(raw){
       return asArr(raw).map(x => (x || {})).map(m => ({
         storagePath: asStr(m.storagePath),
@@ -1286,6 +1285,7 @@
       })).filter(x => x.storagePath);
     }
 
+    // ✅ Replacement: prefer /delvee_account_inbox/{sid}; fallback to /delvee_delivery_jobs/{sid}
     async function fetchDelveeAccountInboxDoc(sessionId){
       const sid = asStr(sessionId);
       if (!sid) return { images: [], imagesCount: 0, fetchedAtMs: Date.now() };
@@ -1304,22 +1304,39 @@
       delveeAccountInboxBusy.add(sid);
       try {
         const uid = auth.currentUser.uid;
-        const ref = db.collection("users").doc(uid).collection("delvee_account_inbox").doc(sid);
-        const snap = await ref.get();
-        if (!snap.exists) {
-          const empty = { images: [], imagesCount: 0, fetchedAtMs: Date.now() };
-          delveeAccountInboxCache.set(sid, empty);
-          return empty;
+
+        // 1) Prefer account inbox doc (newer/cleaner contract)
+        try {
+          const ref = db.collection("users").doc(uid).collection("delvee_account_inbox").doc(sid);
+          const snap = await ref.get();
+          if (snap.exists) {
+            const d = snap.data() || {};
+            const images = normalizeJobImages(d.images);
+            const imagesCount = (typeof d.imagesCount === "number" && Number.isFinite(d.imagesCount)) ? d.imagesCount : images.length;
+            const out = { images, imagesCount, fetchedAtMs: Date.now() };
+            delveeAccountInboxCache.set(sid, out);
+            return out;
+          }
+        } catch (e) {
+          console.warn("[fetchDelveeAccountInboxDoc] account_inbox read failed", e);
         }
 
-        const d = snap.data() || {};
-        const images = normalizeJobImages(d.images);
-        const imagesCount = (typeof d.imagesCount === "number" && Number.isFinite(d.imagesCount)) ? d.imagesCount : images.length;
-        const out = { images, imagesCount, fetchedAtMs: Date.now() };
-        delveeAccountInboxCache.set(sid, out);
-        return out;
-      } catch (e) {
-        console.warn("[fetchDelveeAccountInboxDoc] failed", e);
+        // 2) ✅ Fallback: delivery job doc (what backend always creates)
+        try {
+          const jref = db.collection("users").doc(uid).collection("delvee_delivery_jobs").doc(sid);
+          const jsnap = await jref.get();
+          if (jsnap.exists) {
+            const d = jsnap.data() || {};
+            const images = normalizeJobImages(d.images);
+            const imagesCount = (typeof d.imagesCount === "number" && Number.isFinite(d.imagesCount)) ? d.imagesCount : images.length;
+            const out = { images, imagesCount, fetchedAtMs: Date.now() };
+            delveeAccountInboxCache.set(sid, out);
+            return out;
+          }
+        } catch (e) {
+          console.warn("[fetchDelveeAccountInboxDoc] delivery_jobs fallback read failed", e);
+        }
+
         const empty = { images: [], imagesCount: 0, fetchedAtMs: Date.now() };
         delveeAccountInboxCache.set(sid, empty);
         return empty;
@@ -1363,8 +1380,6 @@
         const hasIvSalt = !!(imgMeta && imgMeta.ivB64 && imgMeta.saltB64);
 
         if (hasIvSalt) {
-          // Try decrypt with inbox code (best-effort).
-          // If this fails (e.g. Delvee used a different session key), we fall back to showing nothing.
           try {
             bytesToShow = await decryptAttachmentBytesForCode(rawCode, encBuf, imgMeta.ivB64, imgMeta.saltB64);
           } catch (e) {
@@ -1372,7 +1387,6 @@
             throw e;
           }
         } else {
-          // ✅ KEY FIX: if Delvee wrote iv/salt as null, treat bytes as plaintext image bytes.
           bytesToShow = new Uint8Array(encBuf);
         }
 
@@ -1486,16 +1500,13 @@
       const pt = String(bodyText || "");
       const container = document.createElement("div");
 
-      // Determine sessionId (prefer stored on item, else parse from text)
       const sessionId =
         (item && item.delveeSessionId) ? item.delveeSessionId :
         extractDelveeSessionIdFromSummaryText(pt);
 
-      // Fetch account inbox doc images
       const doc = sessionId ? await fetchDelveeAccountInboxDoc(sessionId) : { images: [], imagesCount: 0 };
       const images = doc && Array.isArray(doc.images) ? doc.images : [];
 
-      // Inline replace: map each "[image]" placeholder to next image in images[]
       const lines = pt.split("\n");
       let imgIndex = 0;
 
@@ -1533,7 +1544,6 @@
         container.appendChild(div);
       }
 
-      // Also populate the modal “Images” section from the same account doc
       if (sessionId) {
         await renderDelveeAccountImagesUI({ sessionId, rawCode, images });
       } else {
@@ -1574,7 +1584,6 @@
             delveeText.appendChild(node);
           } else {
             delveeText.textContent = body || "";
-            // For non-Delvee messages: show signed attachments as the “Images” section, if any
             await renderModalAttachmentsForSignedEnvelope(envelopeId);
           }
         }
@@ -1758,8 +1767,6 @@
     }
 
     async function deliverJobIntoSignedInbox(job, rawCode){
-      // NOTE: We still deliver summary text into signed inbox.
-      // Images are NOT required here anymore for inbox rendering; images will be loaded from /delvee_account_inbox/{sessionId}.
       const summaryText = asStr(job.summaryText) || null;
       if (!summaryText) throw new Error("Job missing summaryText");
 
@@ -1780,7 +1787,7 @@
         deliverAtLocalIso,
         userTimezone,
         clientRequestId,
-        attachments: [], // ✅ leave empty; UI will fetch Delvee images from account inbox doc
+        attachments: [],
       });
 
       const sendPayload = (sendRes && sendRes.data) ? sendRes.data : {};
@@ -1900,10 +1907,9 @@
 
         const k = detectKindFromPlaintext(pt);
 
-        // If this is a Delvee summary, derive its sessionId from the plaintext
         const delveeSessionId = (k.kind === "delvee_summary") ? extractDelveeSessionIdFromSummaryText(pt) : null;
 
-        const attachments = normalizeAttachments(env.attachments); // still used for non-Delvee image messages
+        const attachments = normalizeAttachments(env.attachments);
 
         decryptedById.set(id, pt);
         out.push({
@@ -2125,8 +2131,6 @@
           ? `<span class="sf-kind delvee">${safeText(item.kindPillText || "Delvee")}</span>`
           : ``;
 
-      // For Delvee summaries: show "Images: …" once we hydrate from account inbox doc.
-      // For normal messages: use signed attachments count.
       const isDelvee = (item && item.kind === "delvee_summary");
       const signedAttachmentCount = Array.isArray(item.attachments) ? item.attachments.length : 0;
 
@@ -2232,7 +2236,6 @@
     }
 
     async function hydrateDelveeImageCounts(){
-      // Update "Images: …" for visible released/pinned Delvee summaries.
       const cards = document.querySelectorAll('.sf-msg-card[data-mode="released"], .sf-msg-card[data-mode="pinned"]');
       const sidSet = new Set();
 
@@ -2253,7 +2256,6 @@
           const doc = await fetchDelveeAccountInboxDoc(sid);
           const n = (doc && typeof doc.imagesCount === "number") ? doc.imagesCount : (doc.images ? doc.images.length : 0);
 
-          // Write into all cards with this sid
           document.querySelectorAll(`[data-attach-line="1"][data-sid="${CSS.escape(sid)}"]`).forEach(line => {
             const span = line.querySelector('[data-attach-text="1"]');
             if (span) span.textContent = `Images: ${n}`;
@@ -2299,7 +2301,6 @@
 
       if (currentRoute() === "hidden") renderHidden();
 
-      // ✅ After render, hydrate Delvee image counts in list cards.
       hydrateDelveeImageCounts().catch(() => {});
     }
 
@@ -2491,10 +2492,8 @@
         const rawCode = (codeInput && codeInput.value) ? codeInput.value.trim() : "";
         if (!rawCode) return;
 
-        // 1) Try to deliver pending Delvee jobs (quiet)
         try { await processDelveeJobsOnce(rawCode, { quiet:true }); } catch (_) {}
 
-        // 2) Refresh signed inbox
         await doFetch(rawCode, { quiet: true });
       }, 15000);
     }
@@ -2596,8 +2595,6 @@
       }
     });
 
-    // ✅ Fetch summaries now also delivers pending Delvee delivery jobs first (safe state machine),
-    // then fetches signed inbox and switches to Summaries-only view.
     btnFetchSummaries.addEventListener("click", async () => {
       btnFetchSummaries.disabled = true;
       const prev = btnFetchSummaries.textContent;
@@ -2605,13 +2602,10 @@
       try {
         const raw = (codeInput && codeInput.value) ? codeInput.value.trim() : "";
 
-        // 1) Deliver Delvee jobs into this inbox (non-quiet)
         try { await processDelveeJobsOnce(raw, { quiet:false }); } catch (e) { console.error(e); }
 
-        // 2) Fetch signed inbox
         await doFetch(raw, { quiet:false });
 
-        // 3) Show summaries
         summariesOnly = true;
         applyToggleUI();
         renderAll();
