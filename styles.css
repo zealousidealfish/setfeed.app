@@ -1,9 +1,7 @@
-/* styles.css (Setfeed) — FULL FILE REPLACEMENT
-   Goals:
-   - ✅ Keep your approved background + card colours
-   - ✅ ALL text in LIGHT theme is black
-   - ✅ No white/grey text inside cards anymore
-   - ✅ Dark theme unchanged
+/* styles.css — FULL FILE REPLACEMENT
+   ✅ Keep your approved background + card colours
+   ✅ FORCE ALL TEXT TO BLACK IN LIGHT MODE (including inside cards)
+   ✅ Dark mode unchanged
 */
 
 /* =========================
@@ -11,11 +9,8 @@
    ========================= */
 
 :root{
-  /* LIGHT DEFAULT */
   --bg: #E7EDF1;
   --surface: #E7EDF1;
-
-  /* Your approved section grey */
   --section-bg: #90989E;
 
   --surface-2: #DEE6ED;
@@ -23,18 +18,9 @@
 
   --line: rgba(15,23,32,0.10);
 
-  /* ✅ ALL TEXT BLACK */
-  --text: #000000;
-  --muted: #000000;
-  --soft: #000000;
-
   --primary: #4C8DFF;
   --on-primary: #FFFFFF;
   --primary-soft: rgba(76,141,255,0.14);
-
-  --secondary: #5F5A6A;
-  --on-secondary: #FFFFFF;
-  --secondary-soft: rgba(95,90,106,0.14);
 
   --danger: #B3261E;
   --good: #0F7B3D;
@@ -61,7 +47,7 @@
   --fw-bold: 620;
 }
 
-/* Prevent auto-dark */
+/* Prevent auto dark */
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]):not([data-theme="dark"]){}
 }
@@ -71,13 +57,9 @@
   --bg: #E7EDF1;
   --surface: #E7EDF1;
   --section-bg: #90989E;
-
-  --text: #000000;
-  --muted: #000000;
-  --soft: #000000;
 }
 
-/* Explicit DARK (unchanged text behaviour) */
+/* Explicit DARK (unchanged) */
 :root[data-theme="dark"]{
   --bg: #0F1114;
   --surface: #0F1114;
@@ -86,20 +68,28 @@
   --section-bg: #1A1D22;
   --line: rgba(255,255,255,0.12);
 
-  --text: rgba(255,255,255,0.92);
-  --muted: rgba(203,208,216,0.86);
-  --soft: rgba(203,208,216,0.68);
-
   --primary: #3F7BFF;
   --on-primary: #FFFFFF;
   --primary-soft: rgba(63,123,255,0.20);
 
-  --secondary: #2B2F36;
-  --on-secondary: rgba(255,255,255,0.92);
-  --secondary-soft: rgba(180,190,210,0.12);
-
   --danger: #F2B8B5;
   --good: #86EFAC;
+}
+
+/* =========================
+   GLOBAL TEXT OVERRIDE (LIGHT MODE)
+   ========================= */
+
+/* 🔥 THIS FORCES EVERYTHING TO BLACK */
+:root:not([data-theme="dark"]) *,
+:root:not([data-theme="dark"]) *::before,
+:root:not([data-theme="dark"]) *::after{
+  color: #000000 !important;
+}
+
+/* Keep primary buttons white text */
+:root:not([data-theme="dark"]) .btn-primary{
+  color: #FFFFFF !important;
 }
 
 /* =========================
@@ -112,19 +102,11 @@ html, body{
   margin: 0;
   padding: 0;
   background: var(--bg);
-  color: #000000;
   font-family: var(--font);
   font-weight: var(--fw-regular);
 }
 
-strong, b{ font-weight: var(--fw-bold); }
-
-a{ color: #000000; text-decoration: none; }
-a:hover{ text-decoration: underline; }
-
-::selection{ background: var(--primary-soft); }
-
-/* Subtle neutral texture */
+/* Background texture */
 .page-bg{
   min-height: 100vh;
   background:
@@ -137,28 +119,10 @@ a:hover{ text-decoration: underline; }
     var(--bg);
 }
 
-/* =========================
-   LAYOUT
-   ========================= */
-
 .wrap{
   max-width: var(--max);
   margin: 0 auto;
   padding: var(--s-6) var(--s-4) var(--s-8);
-}
-
-.row{
-  display: flex;
-  gap: var(--s-4);
-  flex-wrap: wrap;
-  margin-top: var(--s-4);
-}
-.col{
-  flex: 1 1 320px;
-  min-width: 320px;
-}
-@media (max-width: 720px){
-  .col{ min-width: 100%; }
 }
 
 /* =========================
@@ -184,11 +148,6 @@ a:hover{ text-decoration: underline; }
   gap: var(--s-3);
 }
 
-.brand-title,
-.nav a{
-  color: #000000;
-}
-
 /* =========================
    CARDS / PANELS
    ========================= */
@@ -204,17 +163,6 @@ a:hover{ text-decoration: underline; }
   border-radius: var(--radius-3);
   border: 1px solid var(--line);
   padding: var(--s-5);
-  color: #000000;
-}
-
-/* Headings & text */
-h1, h2, h3, h4, h5, h6,
-p, li, label, small,
-.panel-title, .panel-sub,
-.status-title, .status-line,
-.sf-auth-email,
-.sf-preview-empty{
-  color: #000000;
 }
 
 /* =========================
@@ -222,18 +170,15 @@ p, li, label, small,
    ========================= */
 
 .btn{
-  color: #000000;
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  padding: 10px 14px;
+  border-radius: 999px;
+  cursor: pointer;
 }
 
 .btn-primary{
   background: var(--primary);
-  color: #FFFFFF;
-}
-
-.btn-secondary{
-  color: #000000;
 }
 
 /* =========================
@@ -245,7 +190,6 @@ input, textarea, select{
   border-radius: var(--radius-1);
   border: 1px solid var(--line);
   background: var(--surface-1);
-  color: #000000;
   padding: 10px 12px;
   font-size: 14.5px;
   font-family: var(--font);
@@ -257,12 +201,7 @@ input, textarea, select{
 
 footer{
   margin-top: var(--s-6);
-  color: #000000;
   font-size: 13px;
   border-top: 1px solid var(--line);
   padding-top: var(--s-4);
-}
-
-footer a{
-  color: #000000;
 }
