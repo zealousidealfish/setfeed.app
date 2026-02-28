@@ -1,9 +1,9 @@
 /* styles.css (Setfeed) — FULL FILE REPLACEMENT
    Goals:
    - ✅ Default to LIGHT (never auto-dark from system unless data-theme="dark" is set)
-   - ✅ Light theme background matches the attached “soft white” vibe (less bright / less glare)
-   - ✅ Keep surfaces/cards in the same neutral grey family (no warm cast)
-   - ✅ Reduce/avoid any brightening gradients that make the page feel “too white”
+   - ✅ Light theme background stays the softer off-white you approved
+   - ✅ ALL “sections” (card/panel/status/video/auth/etc) use your attached grey: #90989E
+   - ✅ Ensure readable contrast inside those grey sections (light text inside sections)
    - ✅ Dark theme unchanged
 */
 
@@ -12,20 +12,30 @@
    ========================= */
 
 :root{
-  /* LIGHT DEFAULT (softer, slightly dimmer off-white) */
-  --bg: #E7EDF1;              /* softer than before (less bright glare) */
+  /* LIGHT DEFAULT (soft off-white) */
+  --bg: #E7EDF1;
   --surface: #E7EDF1;
 
-  /* Neutral “Private session” card grey vibe */
-  --surface-variant: #D6DEE6; /* primary card/section grey (slightly deeper) */
+  /* ✅ SECTION GREY (from your image) */
+  --section-bg: #90989E;
+
+  /* Light supporting surfaces (inputs/inner areas inside grey sections) */
   --surface-2: #DEE6ED;       /* secondary surface */
   --surface-1: #EEF2F5;       /* input/inner elevated surface (soft, not white) */
 
+  /* Lines on light page */
   --line: rgba(15,23,32,0.10);
 
+  /* Default text (on page background) */
   --text: rgba(15,23,32,0.92);
   --muted: rgba(48,58,70,0.78);
   --soft: rgba(48,58,70,0.62);
+
+  /* ✅ Text ON section grey */
+  --section-text: rgba(255,255,255,0.92);
+  --section-muted: rgba(255,255,255,0.78);
+  --section-soft: rgba(255,255,255,0.66);
+  --section-line: rgba(255,255,255,0.18);
 
   --primary: #4C8DFF;
   --on-primary: #FFFFFF;
@@ -55,7 +65,7 @@
 
   --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 
-  /* Less-bold typography (more like the app) */
+  /* Less-bold typography */
   --fw-regular: 420;
   --fw-medium: 520;
   --fw-bold: 620;
@@ -72,7 +82,9 @@
 :root[data-theme="light"]{
   --bg: #E7EDF1;
   --surface: #E7EDF1;
-  --surface-variant: #D6DEE6;
+
+  --section-bg: #90989E;
+
   --surface-2: #DEE6ED;
   --surface-1: #EEF2F5;
 
@@ -81,6 +93,11 @@
   --text: rgba(15,23,32,0.92);
   --muted: rgba(48,58,70,0.78);
   --soft: rgba(48,58,70,0.62);
+
+  --section-text: rgba(255,255,255,0.92);
+  --section-muted: rgba(255,255,255,0.78);
+  --section-soft: rgba(255,255,255,0.66);
+  --section-line: rgba(255,255,255,0.18);
 
   --primary: #4C8DFF;
   --on-primary: #FFFFFF;
@@ -100,7 +117,7 @@
   --surface: #0F1114;
   --surface-1: #0F1114;
   --surface-2: #12151A;
-  --surface-variant: #1A1D22;
+  --section-bg: #1A1D22; /* not used directly in dark, but safe */
   --line: rgba(255,255,255,0.12);
 
   --text: rgba(255,255,255,0.92);
@@ -151,23 +168,18 @@ select:focus-visible,
 
 ::selection{ background: var(--primary-soft); }
 
-/* ✅ Light theme: remove any “brightening” white overlay.
-   Keep a very subtle neutral texture that DOES NOT increase perceived brightness. */
+/* Neutral, subtle texture (no bright white wash) */
 .page-bg{
   min-height: 100vh;
   background:
-    /* extremely subtle cool tint, low alpha */
     radial-gradient(900px 560px at 20% -15%,
       rgba(76,141,255,0.018) 0%,
       transparent 60%),
-    /* subtle neutral shadowing to reduce glare */
     radial-gradient(760px 520px at 90% 0%,
       rgba(15,23,32,0.020) 0%,
       transparent 62%),
-    /* base color */
     var(--bg);
 }
-
 :root[data-theme="dark"] .page-bg{
   background:
     radial-gradient(900px 520px at 18% -10%,
@@ -221,7 +233,7 @@ select:focus-visible,
   background: transparent;
 }
 .brand-mark:hover{
-  background: color-mix(in srgb, var(--surface-variant) 22%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 28%, transparent);
   text-decoration: none;
 }
 
@@ -249,7 +261,7 @@ select:focus-visible,
   opacity: 0.88;
 }
 .brand-title:hover{
-  background: color-mix(in srgb, var(--surface-variant) 26%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 30%, transparent);
   text-decoration: none;
   opacity: 1;
 }
@@ -269,23 +281,23 @@ select:focus-visible,
   font-size: 13.5px;
 }
 .nav a:hover{
-  background: color-mix(in srgb, var(--surface-variant) 30%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 34%, transparent);
   color: var(--text);
   text-decoration: none;
 }
 .nav a[aria-current="page"]{
   color: var(--text);
-  background: color-mix(in srgb, var(--surface-variant) 40%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 44%, transparent);
   border-color: var(--line);
 }
 
 .nav a.nav-cta{
-  background: color-mix(in srgb, var(--primary) 12%, var(--surface-variant));
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-2));
   border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--line));
   color: var(--text);
 }
 .nav a.nav-cta:hover{
-  background: color-mix(in srgb, var(--primary) 16%, var(--surface-variant));
+  background: color-mix(in srgb, var(--primary) 16%, var(--surface-2));
 }
 
 @media (max-width: 720px){
@@ -309,25 +321,26 @@ select:focus-visible,
    CARD / TYPOGRAPHY
    ========================= */
 
-/* Main “page card” should feel like the app’s grey surface */
+/* ✅ Main “page card” matches your grey */
 .card{
   margin-top: var(--s-5);
-  background: var(--surface-variant);
-  border: 1px solid var(--line);
+  background: var(--section-bg);
+  border: 1px solid var(--section-line);
   border-radius: var(--radius-3);
   padding: var(--s-6);
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.18) inset,
-    0 18px 46px rgba(15,23,32,0.08);
+    0 1px 0 rgba(255,255,255,0.12) inset,
+    0 18px 46px rgba(15,23,32,0.10);
 }
 :root[data-theme="dark"] .card{
   background: color-mix(in srgb, var(--surface-2) 86%, transparent);
+  border-color: var(--line);
   box-shadow:
     0 1px 0 rgba(255,255,255,0.045) inset,
     0 16px 36px rgba(0,0,0,0.28);
 }
 
-/* Headings less bold + slightly tighter like the app */
+/* Headings */
 h1{
   margin: 0 0 var(--s-2) 0;
   font-size: 28px;
@@ -354,6 +367,29 @@ p, li, label{
   font-size: 14.5px;
 }
 ul{ margin: 0 0 0 18px; padding: 0; }
+
+/* ✅ Make text readable inside grey “sections” */
+.card, .panel, .status, .video-card, .sf-subhead, .sf-auth-banner, .sf-pulse-image-card{
+  color: var(--section-text);
+}
+.card p, .card li, .card .lead,
+.panel p, .panel li, .panel-sub,
+.status-line,
+.video-card p, .video-card li,
+.sf-subhead,
+.sf-auth-email,
+.sf-preview-empty{
+  color: var(--section-muted);
+}
+.card label, .panel label{
+  color: var(--section-soft);
+}
+.card a, .panel a, .status a, .video-card a{
+  color: color-mix(in srgb, var(--primary) 78%, white);
+}
+.card a:hover, .panel a:hover, .status a:hover, .video-card a:hover{
+  text-decoration: underline;
+}
 
 /* Layout */
 .row{
@@ -478,7 +514,7 @@ ul{ margin: 0 0 0 18px; padding: 0; }
 .btn-primary:hover{ background: color-mix(in srgb, var(--primary) 92%, white); }
 :root[data-theme="dark"] .btn-primary:hover{ background: color-mix(in srgb, var(--primary) 90%, black); }
 .btn-primary:disabled{
-  background: color-mix(in srgb, var(--primary) 24%, var(--surface-variant));
+  background: color-mix(in srgb, var(--primary) 24%, rgba(255,255,255,0.18));
   border-color: color-mix(in srgb, var(--primary) 22%, var(--line));
   color: color-mix(in srgb, var(--on-primary) 72%, transparent);
 }
@@ -541,15 +577,20 @@ small.help{
   font-size: 13.1px;
 }
 
+/* ✅ Forms inside grey sections: make labels readable */
+.card label, .panel label, .status label, .video-card label{
+  color: var(--section-soft);
+}
+
 /* =========================
    PANELS / STATUS (sections)
    ========================= */
 
-/* ✅ Sections should match the “Private session” grey */
+/* ✅ Panels match your grey */
 .panel{
   border-radius: var(--radius-2);
-  border: 1px solid var(--line);
-  background: var(--surface-variant);
+  border: 1px solid var(--section-line);
+  background: var(--section-bg);
   padding: var(--s-5);
 }
 .panel-title{
@@ -557,9 +598,9 @@ small.help{
   font-size: 13.8px;
   letter-spacing: -0.05px;
   font-weight: var(--fw-medium);
-  color: var(--text);
+  color: var(--section-text);
 }
-.panel-sub{ margin: 0 0 var(--s-4) 0; color: var(--muted); }
+.panel-sub{ margin: 0 0 var(--s-4) 0; color: var(--section-muted); }
 
 .note{
   border-left: 3px solid color-mix(in srgb, var(--primary) 34%, transparent);
@@ -567,11 +608,12 @@ small.help{
   margin-top: var(--s-4);
 }
 
+/* ✅ Status blocks also match your grey */
 .status{
   margin-top: var(--s-4);
   border-radius: var(--radius-2);
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 86%, var(--surface-2));
+  border: 1px solid var(--section-line);
+  background: var(--section-bg);
   padding: 12px;
 }
 .status-title{
@@ -579,19 +621,19 @@ small.help{
   align-items: center;
   gap: 10px;
   margin-bottom: 6px;
-  color: var(--text);
+  color: var(--section-text);
   font-size: 14px;
   letter-spacing: -0.06px;
   font-weight: var(--fw-medium);
 }
-.status-line{ color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0; }
+.status-line{ color: var(--section-muted); font-size: 14px; line-height: 1.6; margin: 0; }
 
 /* Dots */
 .dot{
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--soft) 72%, transparent);
+  background: color-mix(in srgb, var(--section-soft) 72%, transparent);
 }
 .dot.good{ background: var(--good); }
 .dot.warn{ background: color-mix(in srgb, var(--danger) 78%, #D67A7A); }
@@ -603,13 +645,15 @@ small.help{
 .video-card{
   margin-top: var(--s-6);
   border-radius: var(--radius-3);
-  border: 1px solid var(--line);
-  background: var(--surface-variant);
+  border: 1px solid var(--section-line);
+  background: var(--section-bg);
   padding: var(--s-5);
 }
 :root[data-theme="dark"] .video-card{
+  border-color: var(--line);
   background: color-mix(in srgb, var(--surface-2) 78%, transparent);
 }
+
 .video-frame{
   margin-top: var(--s-4);
   border-radius: var(--radius-2);
@@ -649,9 +693,9 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   margin-top: 0;
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-variant) 88%, var(--surface-2));
-  color: var(--text);
+  border: 1px solid var(--section-line);
+  background: var(--section-bg);
+  color: var(--section-text);
   font-weight: var(--fw-medium);
   font-size: 13.5px;
   letter-spacing: -0.05px;
@@ -666,8 +710,8 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   padding: 10px 12px;
   margin-top: 12px;
   border-radius: 14px;
-  border: 1px solid var(--line);
-  background: var(--surface-variant);
+  border: 1px solid var(--section-line);
+  background: var(--section-bg);
 }
 .sf-auth-left{
   min-width: 0;
@@ -681,7 +725,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 14px;
-  color: color-mix(in srgb, var(--text) 82%, transparent);
+  color: var(--section-muted);
 }
 .sf-auth-actions{
   display:flex;
@@ -690,6 +734,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+
 @media (max-width: 520px){
   .sf-auth-banner{
     flex-direction: column;
@@ -707,8 +752,8 @@ footer a:hover{ color: var(--text); text-decoration: none; }
 /* Image preview card */
 .sf-pulse-image-card{
   border-radius: var(--radius-3);
-  border: 1px solid var(--line);
-  background: var(--surface-variant);
+  border: 1px solid var(--section-line);
+  background: var(--section-bg);
   padding: var(--s-5);
   margin-top: var(--s-3);
 }
@@ -730,7 +775,7 @@ footer a:hover{ color: var(--text); text-decoration: none; }
   justify-content:center;
 }
 .sf-preview-empty{
-  color: var(--soft);
+  color: var(--section-muted);
   font-size: 13px;
   padding: 12px;
 }
