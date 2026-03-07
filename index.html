@@ -86,12 +86,13 @@
   <style>
     .hidden{ display:none !important; }
 
+    /* Premium hero layout */
     .sf-hero-2col{
       display:grid;
-      grid-template-columns: 1.2fr 0.8fr;
+      grid-template-columns: 1.3fr 0.7fr;
       gap: var(--s-6);
       align-items:start;
-      margin-top: var(--s-5);
+      margin-top: 0;
     }
     @media (max-width: 860px){
       .sf-hero-2col{ grid-template-columns: 1fr; }
@@ -101,26 +102,37 @@
       display:inline-flex;
       gap:8px;
       align-items:center;
-      padding: 6px 10px;
+      padding: 6px 14px;
       border-radius: 999px;
-      border: 1px solid var(--line);
-      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
-      color: var(--soft);
-      font-size: 13px;
+      border: 1px solid rgba(76,141,255,0.22);
+      background: rgba(76,141,255,0.09);
+      color: color-mix(in srgb, var(--primary) 80%, var(--text));
+      font-size: 12.8px;
+      font-weight: var(--fw-medium);
       margin-bottom: var(--s-3);
+      letter-spacing: -0.01em;
     }
 
+    /* Pricing grid inside panel */
     .sf-price-grid{
       display:grid;
       grid-template-columns: 1fr;
-      gap: 10px;
+      gap: 8px;
       margin-top: 12px;
     }
     .sf-price-card{
       border-radius: var(--radius-2);
-      border: 1px solid var(--line);
-      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
-      padding: 14px;
+      border: 1px solid rgba(255,255,255,0.30);
+      background: rgba(255,255,255,0.28);
+      padding: 14px 16px;
+      transition: background 120ms ease;
+    }
+    .sf-price-card:hover{
+      background: rgba(255,255,255,0.42);
+    }
+    [data-theme="dark"] .sf-price-card{
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.10);
     }
     .sf-price-top{
       display:flex;
@@ -128,15 +140,15 @@
       gap: 10px;
       align-items:baseline;
     }
-    .sf-price-name{ font-weight: var(--fw-medium); color: var(--text); }
-    .sf-price-val{ font-weight: var(--fw-medium); color: var(--text); }
-    .sf-price-sub{ margin: 6px 0 0 0; font-size: 13.6px; color: var(--muted); line-height: 1.55; }
+    .sf-price-name{ font-weight: var(--fw-bold); color: var(--text); font-size: 14.5px; }
+    .sf-price-val{ font-weight: var(--fw-medium); color: var(--text); font-size: 14px; opacity: 0.85; }
+    .sf-price-sub{ margin: 5px 0 0 0; font-size: 13.4px; color: var(--text); line-height: 1.5; opacity: 0.72; }
 
     .sf-price-actions{
       display:flex;
       justify-content:flex-end;
-      gap: 10px;
-      margin-top: 10px;
+      gap: 8px;
+      margin-top: 12px;
       flex-wrap: wrap;
     }
 
@@ -144,67 +156,77 @@
       display:inline-flex;
       gap:8px;
       align-items:center;
-      padding: 8px 12px;
+      padding: 8px 14px;
       border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06);
-      color: rgba(233,238,246,0.9);
-      font-weight: 600;
-      font-size: 13px;
-    }
-    :root[data-theme="light"] .sf-auth-pill{
-      border-color: rgba(0,0,0,0.10);
-      background: rgba(0,0,0,0.03);
-      color: rgba(28,27,31,0.90);
+      border: 1px solid rgba(76,141,255,0.22);
+      background: rgba(76,141,255,0.10);
+      color: var(--text);
+      font-weight: var(--fw-medium);
+      font-size: 13.2px;
     }
 
     .sf-mini{
       font-size: 13px;
-      color: var(--muted);
+      color: var(--text);
       line-height: 1.6;
       margin-top: 10px;
+      opacity: 0.72;
     }
 
     .sf-pay-status{
       margin-top: 10px;
       font-size: 13px;
-      color: var(--muted);
+      color: var(--text);
       line-height: 1.6;
+      opacity: 0.80;
     }
     .sf-danger{
-      color: color-mix(in srgb, #ff4d4d 70%, var(--text));
+      color: var(--danger);
     }
 
+    /* Plan details section */
     .sf-plans{
-      margin-top: var(--s-7);
+      margin-top: var(--s-5);
       scroll-margin-top: 90px;
     }
     .sf-plan-detail{
       border-radius: var(--radius-2);
-      border: 1px solid var(--line);
-      background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
-      padding: 16px;
-      margin-top: 12px;
+      border: 1px solid rgba(255,255,255,0.30);
+      background: rgba(255,255,255,0.28);
+      padding: 18px;
+      margin-top: 10px;
+      transition: background 120ms ease;
+    }
+    .sf-plan-detail:hover{
+      background: rgba(255,255,255,0.40);
+    }
+    [data-theme="dark"] .sf-plan-detail{
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.10);
     }
     .sf-plan-detail h3{
       margin: 0 0 6px 0;
-      font-size: 16px;
+      font-size: 15.5px;
+      font-weight: var(--fw-bold);
       color: var(--text);
+      letter-spacing: -0.02em;
     }
     .sf-plan-detail p{
       margin: 0;
-      color: var(--muted);
+      color: var(--text);
       line-height: 1.6;
-      font-size: 13.6px;
+      font-size: 13.8px;
+      opacity: 0.78;
     }
     .sf-bullets{
-      margin: 10px 0 0 0;
+      margin: 8px 0 0 0;
       padding-left: 18px;
-      color: var(--muted);
-      line-height: 1.6;
+      color: var(--text);
+      line-height: 1.65;
       font-size: 13.6px;
+      opacity: 0.78;
     }
-    .sf-bullets li{ margin: 4px 0; }
+    .sf-bullets li{ margin: 3px 0; }
   </style>
 </head>
 
@@ -232,23 +254,25 @@
 
   <div class="wrap">
     <div class="card">
-      <div class="sf-kicker">Setfeed → send · Delvee → paid pulses</div>
+      <!-- Premium hero section — sits on the white bg -->
+      <div class="sf-page-hero">
+        <div class="sf-kicker">Setfeed → send · Delvee → paid pulses</div>
 
-      <h1>Send scheduled messages.</h1>
-      <p class="lead">
-        Use Setfeed web to send encrypted scheduled messages.
-        If you want <b>pulsed messaging</b> sessions, images, and summaries — that’s <b>Delvee</b>.
-      </p>
+        <h1>Send scheduled messages.</h1>
+        <p class="lead">
+          Use Setfeed web to send encrypted scheduled messages.
+          If you want <b>pulsed messaging</b> sessions, images, and summaries — that’s <b>Delvee</b>.
+        </p>
+
+        <div class="actions" style="margin-top: 0;">
+          <a class="btn btn-lg btn-primary" href="./send.html">Send a message</a>
+          <a class="btn btn-lg btn-secondary" href="./receive.html">Get a receive code</a>
+        </div>
+      </div>
 
       <div class="sf-hero-2col">
         <div>
-          <div class="actions" style="margin-top: 0;">
-            <a class="btn btn-lg btn-primary" href="./send.html">Send a message</a>
-            <a class="btn btn-lg btn-secondary" href="./receive.html">Get a receive code</a>
-            <a class="btn btn-lg btn-quiet" href="./security.html">Security</a>
-          </div>
-
-          <div class="panel" style="margin-top: var(--s-6);">
+          <div class="panel" style="margin-top: 0;">
             <p class="panel-title" style="margin-top:0;">Delvee plans</p>
             <p class="panel-sub">
               Choose a plan for your pulse experience. Tap <b>See more</b> for plan details.
@@ -334,8 +358,8 @@
             </div>
           </div>
 
-          <section class="sf-plans" id="plans">
-            <h2 style="margin:0;">Plan details</h2>
+          <section class="sf-plans panel" id="plans">
+            <h2 style="margin:0;" class="panel-title">Plan details</h2>
             <p class="sf-mini" style="margin-top:8px;">
               All plans unlock paid pulse experiences in Delvee. Cancel anytime from the Stripe billing portal.
             </p>
@@ -372,28 +396,43 @@
           </section>
         </div>
 
-        <aside class="panel">
-          <p class="panel-title">What’s the “Open Delvee” button?</p>
-          <p class="panel-sub">
-            Right now it opens Delvee — the paid pulse experience. You can ship Android/web first, no iOS required.
-          </p>
-
-          <div class="note">
-            <p style="margin:0;">
-              Setfeed web focuses on sending. Delvee is where you host/join lobbies.
+        <aside>
+          <div class=”panel” style=”margin-top: 0;”>
+            <p class=”panel-title”>What’s Delvee?</p>
+            <p class=”panel-sub”>
+              Delvee is the paid pulse experience — host/join lobbies, share images, and get AI summaries.
             </p>
+
+            <div class=”actions” style=”margin-top: var(--s-3);”>
+              <a class=”btn btn-primary” href=”https://delvee.app” rel=”noreferrer” aria-label=”Open Delvee”>Open Delvee</a>
+            </div>
+
+            <div class=”note”>
+              <p style=”margin:0;”>
+                Setfeed web focuses on sending. Delvee is where you host/join lobbies.
+              </p>
+            </div>
+          </div>
+
+          <div class=”panel”>
+            <p class=”panel-title”>Quick links</p>
+            <div class=”actions” style=”flex-direction: column; align-items: stretch; gap: 8px;”>
+              <a class=”btn btn-secondary” href=”./send.html”>Send a message</a>
+              <a class=”btn btn-secondary” href=”./receive.html”>Get a receive code</a>
+              <a class=”btn btn-quiet” href=”./security.html”>Security &amp; privacy</a>
+            </div>
           </div>
         </aside>
       </div>
 
       <footer>
-        <div>© <span id="y"></span> Setfeed</div>
+        <div>© <span id=”y”></span> Setfeed</div>
         <div>
-          <a href="./security.html">Security</a>
-          <span class="sep">·</span>
-          <a href="./privacy.html">Privacy</a>
-          <span class="sep">·</span>
-          <a href="mailto:security@setfeed.app">security@setfeed.app</a>
+          <a href=”./security.html”>Security</a>
+          <span class=”sep”>·</span>
+          <a href=”./privacy.html”>Privacy</a>
+          <span class=”sep”>·</span>
+          <a href=”mailto:security@setfeed.app”>security@setfeed.app</a>
         </div>
       </footer>
     </div>
