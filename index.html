@@ -274,8 +274,11 @@
         <div>
           <div class="panel" style="margin-top: 0;">
             <p class="panel-title" style="margin-top:0;">Setfeed plans</p>
-            <p class="panel-sub">
+            <p class="panel-sub auth-only hidden">
               Choose a plan for your pulse experience. Tap <b>See more</b> for plan details.
+            </p>
+            <p class="panel-sub no-auth-only">
+              Sign in below to purchase a plan.
             </p>
 
             <div class="sf-price-grid" aria-label="Delvee pricing">
@@ -490,8 +493,16 @@
       }
     }
 
+    // Apply cached auth state immediately to prevent sign-in flash
+    (function() {
+      try {
+        if (localStorage.getItem("sf_authed") === "1") setSignedAuthedFlag(true);
+      } catch (_) {}
+    })();
+
     function renderAuthed(user) {
       const isAuthed = !!user;
+      try { localStorage.setItem("sf_authed", isAuthed ? "1" : "0"); } catch (_) {}
       setSignedAuthedFlag(isAuthed);
       setPayStatus("", false);
       setAuthStatus("", false);
