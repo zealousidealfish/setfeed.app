@@ -457,7 +457,7 @@
     .delvee-stage.is-revealed .delvee-reveal{ display:block; }
     .delvee-stage.is-revealed .sf-vault-overlay{ opacity: 0; }
 
-    /* Attachments in modal (OK after opening — surprise preserved) */
+    /* Attachments in modal — big images like summary images */
     .delvee-attachments{
       margin-top: 12px;
       padding-top: 12px;
@@ -469,27 +469,30 @@
       color: var(--text);
       letter-spacing: -0.01em;
     }
+    /* Full-width image grid (stacked) — like summary inline images */
     .delvee-thumb-grid{
       display:flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items:center;
+      flex-direction: column;
+      gap: 12px;
+      align-items: stretch;
     }
     .sf-thumb{
-      width: 84px;
-      height: 84px;
-      border-radius: 16px;
+      width: 100%;
+      height: auto;
+      max-height: 480px;
+      border-radius: var(--radius-2);
       border: 1px solid var(--line);
       background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
-      object-fit: cover;
+      object-fit: contain;
+      display: block;
       cursor: pointer;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.15);
     }
-    .sf-thumb:active{ transform: translateY(0.5px); }
+    .sf-thumb:active{ transform: scale(0.99); }
     .sf-thumb-skel{
-      width: 84px;
-      height: 84px;
-      border-radius: 16px;
+      width: 100%;
+      height: 180px;
+      border-radius: var(--radius-2);
       border: 1px solid var(--line);
       background: color-mix(in srgb, var(--surface-variant) 10%, transparent);
       display:flex;
@@ -595,7 +598,9 @@
 
   <div class="wrap">
     <div class="card">
-      <h1>Inbox</h1>
+      <div class="sf-page-hero" style="padding-bottom: var(--s-3);">
+        <h1>Inbox</h1>
+      </div>
 
       <div class="status" role="status" aria-live="polite" id="status-bar">
         <div class="status-title">
