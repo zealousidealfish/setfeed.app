@@ -97,6 +97,30 @@
       .sf-hero-2col{ grid-template-columns: 1fr; }
     }
 
+    /* Index hero tweaks */
+    .sf-page-hero .actions{
+      gap: 16px;
+    }
+    .sf-page-hero h1{
+      max-width: none;
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+      text-wrap: balance;
+    }
+    @media (min-width: 900px){
+      .sf-page-hero .actions{
+        gap: 20px;
+      }
+      .sf-page-hero h1{
+        white-space: nowrap;
+      }
+    }
+    @media (max-width: 899px){
+      .sf-page-hero h1{
+        white-space: normal;
+      }
+    }
+
     /* Pricing grid inside panel */
     .sf-price-grid{
       display:grid;
@@ -104,6 +128,16 @@
       gap: 8px;
       margin-top: 12px;
     }
+    @media (min-width: 900px){
+      .sf-price-grid{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .sf-price-grid .sf-price-card:last-child{
+        grid-column: 1 / -1;
+      }
+    }
+
     .sf-price-card{
       border-radius: var(--radius-2);
       border: 1px solid rgba(255,255,255,0.30);
