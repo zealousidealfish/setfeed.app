@@ -3,8 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+
   <title>Privacy Policy — Setfeed</title>
-  <meta name="description" content="Privacy Policy for Setfeed" />
+  <meta
+    name="description"
+    content="Privacy Policy for the Setfeed iOS app, Android app and web services."
+  />
 
   <meta name="theme-color" content="#FFFBFE" id="meta-theme-color" />
 
@@ -16,32 +20,46 @@
   <link rel="stylesheet" href="./styles.css" />
 
   <script>
-    (function(){
-      const themeKey = "sf_theme_mode"; // "system" | "light" | "dark"
+    (function () {
+      const themeKey = "sf_theme_mode";
       const stored = localStorage.getItem(themeKey) || "system";
       const root = document.documentElement;
 
-      if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
-      else root.removeAttribute("data-theme");
+      if (stored === "light" || stored === "dark") {
+        root.setAttribute("data-theme", stored);
+      } else {
+        root.removeAttribute("data-theme");
+      }
 
       const effective =
         root.getAttribute("data-theme") ||
-        (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        (
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light"
+        );
 
       const meta = document.getElementById("meta-theme-color");
-      if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
 
-      function applyAuthVisibility(){
+      if (meta) {
+        meta.content = effective === "dark" ? "#0F1114" : "#FFFBFE";
+      }
+
+      function applyAuthVisibility() {
         const authed = localStorage.getItem("sf_signed_authed") === "true";
-        document.querySelectorAll(".auth-only").forEach(el => {
-          el.classList.toggle("hidden", !authed);
+
+        document.querySelectorAll(".auth-only").forEach((element) => {
+          element.classList.toggle("hidden", !authed);
         });
       }
 
       document.addEventListener("DOMContentLoaded", applyAuthVisibility);
 
-      window.addEventListener("storage", (e) => {
-        if (e && e.key === "sf_signed_authed") applyAuthVisibility();
+      window.addEventListener("storage", (event) => {
+        if (event && event.key === "sf_signed_authed") {
+          applyAuthVisibility();
+        }
       });
     })();
   </script>
@@ -63,154 +81,628 @@
         <a class="auth-only hidden" href="./inbox.html">Inbox</a>
         <a href="./security.html">Security</a>
         <a href="./privacy.html" aria-current="page">Privacy</a>
-        <a class="nav-cta" href="#" aria-label="Download Setfeed app">Download app</a>
+        <a
+          class="nav-cta"
+          href="#"
+          aria-label="Download Setfeed app"
+        >
+          Download app
+        </a>
       </nav>
     </div>
   </header>
 
-  <div class="wrap">
+  <main class="wrap">
     <div class="card">
       <div class="sf-page-hero">
         <h1>Privacy Policy</h1>
-        <p class="lead">Effective date: <strong>2026-02-15</strong></p>
+        <p class="lead">
+          Effective date: <strong>9 July 2026</strong>
+        </p>
       </div>
 
       <p>
-        This policy explains what data is processed when you use the Setfeed Android app and the Setfeed web bridge
-        (<strong>setfeed.app</strong>). Our goal is minimal data, explicit boundaries, and ciphertext-only transport
-        wherever possible.
+        This Privacy Policy explains how data is processed when you use the
+        Setfeed iOS app, Android app, website and associated services,
+        including <strong>setfeed.app</strong>.
+      </p>
+
+      <p>
+        Setfeed is designed around data minimisation, local-first storage and
+        client-side encryption for cloud-delivered messages wherever the
+        relevant feature supports it.
       </p>
 
       <h2>Who we are</h2>
+
       <p>
-        “Setfeed” refers to the Setfeed app and services operated by Setfeed. If you have questions, contact
-        <a href="mailto:privacy@setfeed.app">privacy@setfeed.app</a>.
+        “Setfeed”, “we”, “us” and “our” refer to the Setfeed apps, website and
+        services operated by Setfeed.
+      </p>
+
+      <p>
+        For privacy enquiries, data requests or account-deletion requests,
+        contact:
+        <a href="mailto:hello@setfeed.app">hello@setfeed.app</a>.
       </p>
 
       <h2>What Setfeed is designed to do</h2>
+
       <ul>
-        <li>Help you schedule and receive messages.</li>
-        <li>Use calm, deterministic flows (no “growth” mechanics).</li>
-        <li>Use encryption boundaries so message content does not need to be readable by Setfeed servers.</li>
+        <li>Allow users to schedule messages for themselves.</li>
+        <li>
+          Allow users to send scheduled messages to another person using a
+          Setfeed receive code.
+        </li>
+        <li>
+          Store local messages, memories, preferences and delivery state on
+          the user’s device.
+        </li>
+        <li>
+          Deliver supported messages and attachments through encrypted cloud
+          envelopes.
+        </li>
+        <li>
+          Protect the service against spam, automated abuse and unauthorised
+          access.
+        </li>
       </ul>
 
-      <h2>Message content</h2>
+      <h2>Message content and encryption</h2>
+
       <p>
-        Messages sent through setfeed.app are encrypted in your browser before they reach our servers.
-        When encrypted delivery is used, Setfeed stores and transports only encrypted ciphertext (plus required
-        cryptographic metadata such as IV and salt) and cannot read message contents.
+        Messages and supported attachments sent through Setfeed’s encrypted
+        cloud-delivery features are encrypted on the sender’s device or in the
+        sender’s browser before being uploaded.
+      </p>
+
+      <p>
+        Encryption keys are derived from the recipient’s Setfeed receive code.
+        The plaintext receive code is not intentionally uploaded as part of
+        the encrypted envelope. A cryptographic hash or lookup reference may
+        be sent so that the service can route the encrypted envelope to the
+        intended recipient.
+      </p>
+
+      <p>
+        For these encrypted delivery flows, Setfeed’s servers receive
+        ciphertext and the technical metadata required to store, route and
+        deliver it. Setfeed is not designed to have plaintext access to the
+        standard encrypted message body or encrypted attachment.
       </p>
 
       <div class="note">
         <p style="margin:0;">
-          Private encryption keys are stored only on recipient devices and are never intentionally uploaded to Setfeed servers.
+          A recipient must possess the appropriate receive code to derive the
+          key needed to decrypt an encrypted message.
         </p>
       </div>
 
+      <p>
+        Messages scheduled only for yourself may remain stored locally on your
+        device and may not be uploaded to Setfeed’s servers.
+      </p>
+
       <h2>Data we process</h2>
+
       <p>
-        Setfeed is built to minimize personal data. Some data is still processed to operate the service and to protect it from abuse.
-        The categories below describe what may be processed depending on the feature you use.
+        The data processed depends on which Setfeed features you use. We may
+        process the following categories.
       </p>
 
-      <h3>1) Encrypted envelope metadata</h3>
+      <h3>1) Messages and user-provided content</h3>
+
       <ul>
-        <li><strong>Encrypted payload:</strong> ciphertext.</li>
-        <li><strong>Encryption parameters:</strong> IV / salt (and similar values required for decryption).</li>
-        <li><strong>Delivery state:</strong> whether an envelope has been consumed, and a timestamp when consumed.</li>
+        <li>
+          <strong>Message text:</strong> text you write for yourself or send
+          to another recipient.
+        </li>
+        <li>
+          <strong>Attachments:</strong> images or other supported files you
+          deliberately select for a message or memory.
+        </li>
+        <li>
+          <strong>Session content:</strong> text, images, summaries or other
+          content created when using a Setfeed session feature.
+        </li>
+        <li>
+          <strong>Support communications:</strong> information you provide
+          when contacting us for help.
+        </li>
       </ul>
+
       <p>
-        This data is used to deliver messages and enforce one-time consumption (replay protection). It is not used for advertising.
+        Cloud-delivered message bodies and supported attachments are encrypted
+        before upload where the encrypted-delivery feature is used.
       </p>
 
-      <h3>2) Device / app integrity and abuse prevention data</h3>
+      <h3>2) Encrypted envelope and delivery metadata</h3>
+
       <p>
-        We use Firebase App Check to reduce automated abuse. On Android, App Check can use Play Integrity; on the web bridge it can use
-        reCAPTCHA. These systems may process signals and tokens that help verify requests come from an authentic app/browser environment.
+        Setfeed may process metadata needed to deliver encrypted content,
+        including:
       </p>
+
       <ul>
-        <li><strong>App Check / Integrity tokens</strong> (short-lived attestation tokens).</li>
-        <li><strong>Basic device/app signals</strong> needed for integrity verification (handled by Google’s services).</li>
+        <li>Encrypted ciphertext.</li>
+        <li>
+          Cryptographic parameters such as an initialisation vector, salt and
+          authentication tag.
+        </li>
+        <li>A hashed receive-code reference.</li>
+        <li>A message, attachment or request identifier.</li>
+        <li>The scheduled delivery date and time.</li>
+        <li>The user’s selected time zone.</li>
+        <li>The message source or delivery mode.</li>
+        <li>Attachment type, encrypted size and storage reference.</li>
+        <li>Delivery, consumption, retry and expiry state.</li>
+        <li>
+          Session or participant identifiers where a session feature is used.
+        </li>
       </ul>
 
-      <h3>3) Operational and security logs</h3>
       <p>
-        Our backend infrastructure (Firebase / Google Cloud) generates logs for reliability and security (for example, to diagnose failures,
-        measure rate limits, and investigate abuse). These logs may include technical identifiers such as IP address and request metadata.
+        This metadata is used for message routing, scheduling, delivery,
+        deduplication, expiry, retry handling and replay protection.
       </p>
 
-      <h3>4) Local device storage</h3>
+      <h3>3) Anonymous authentication information</h3>
+
       <p>
-        The Setfeed Android app stores some data locally on your device (for example, scheduled messages, inbox state, and app preferences)
-        so the app can function. Local data can typically be removed by clearing app storage or uninstalling the app.
+        The mobile apps may create an anonymous Firebase authentication
+        identity so that cloud features can operate without requiring you to
+        provide an email address, username or password.
       </p>
 
-      <h2>What we do not do</h2>
+      <p>
+        This may include:
+      </p>
+
       <ul>
-        <li><strong>No ads:</strong> Setfeed does not serve third-party ads.</li>
-        <li><strong>No selling of personal data.</strong></li>
-        <li><strong>No reading encrypted message content</strong> where end-to-end encryption is used.</li>
+        <li>A randomly generated anonymous user identifier.</li>
+        <li>Authentication and session tokens.</li>
+        <li>IP address and user-agent information processed for security.</li>
+        <li>Authentication timestamps and account status.</li>
       </ul>
+
+      <p>
+        An anonymous identifier is still a persistent technical identifier and
+        may be associated with cloud records created by that installation.
+      </p>
+
+      <h3>4) App and device integrity information</h3>
+
+      <p>
+        Setfeed uses Firebase App Check and platform integrity services to
+        reduce automated abuse and unauthorised requests.
+      </p>
+
+      <p>
+        Depending on the platform, these services may include:
+      </p>
+
+      <ul>
+        <li>
+          <strong>iOS:</strong> Apple App Attest or another supported Apple
+          integrity provider.
+        </li>
+        <li>
+          <strong>Android:</strong> Google Play Integrity or another supported
+          Android integrity provider.
+        </li>
+        <li>
+          <strong>Web:</strong> reCAPTCHA or another supported browser
+          integrity provider.
+        </li>
+      </ul>
+
+      <p>
+        These services may process device or app attestation material,
+        integrity results, short-lived App Check tokens and basic technical
+        signals needed to verify that a request comes from an authentic app or
+        browser environment.
+      </p>
+
+      <h3>5) Operational and security information</h3>
+
+      <p>
+        Setfeed and its infrastructure providers may generate limited
+        operational records to provide and protect the service. These may
+        include:
+      </p>
+
+      <ul>
+        <li>IP address.</li>
+        <li>Request date and time.</li>
+        <li>Request or transaction identifier.</li>
+        <li>App version, platform and basic device information.</li>
+        <li>Response status, error information and rate-limit information.</li>
+        <li>Security and abuse-prevention events.</li>
+      </ul>
+
+      <p>
+        These records are used for reliability, debugging, fraud prevention,
+        rate limiting and security investigations.
+      </p>
+
+      <h3>6) Data stored locally on your device</h3>
+
+      <p>
+        Setfeed stores information locally so the app can function. Depending
+        on the platform and features used, this may include:
+      </p>
+
+      <ul>
+        <li>Scheduled and released messages.</li>
+        <li>Inbox, Future, Awaiting, Feed and message-lifecycle state.</li>
+        <li>Memories and locally retained attachments.</li>
+        <li>Receive codes and related metadata.</li>
+        <li>Saved Setfeed contacts and aliases.</li>
+        <li>Pending encrypted-send jobs.</li>
+        <li>Notification and delivery-time preferences.</li>
+        <li>Theme and other app settings.</li>
+      </ul>
+
+      <p>
+        Sensitive local values, including receive codes and protected media,
+        may be stored using platform security facilities such as the iOS
+        Keychain or protected application files.
+      </p>
+
+      <p>
+        Setfeed contacts are contacts created inside Setfeed. The app does not
+        need to upload your device’s system address book to provide this
+        feature.
+      </p>
+
+      <h3>7) Optional permissions</h3>
+
+      <p>
+        Setfeed may request permission to use selected device features,
+        including:
+      </p>
+
+      <ul>
+        <li>
+          <strong>Photos:</strong> to let you choose an image to attach to a
+          message or save as a memory.
+        </li>
+        <li>
+          <strong>Notifications:</strong> to notify you when an eligible
+          message is ready.
+        </li>
+      </ul>
+
+      <p>
+        These permissions are optional and can be changed through your device
+        settings. Setfeed does not require notification permission for its
+        basic scheduling features.
+      </p>
+
+      <h3>8) Website storage and browser technologies</h3>
+
+      <p>
+        The Setfeed website may use browser storage such as localStorage to
+        remember settings, authentication state and theme preferences.
+      </p>
+
+      <p>
+        Security services such as reCAPTCHA may use cookies, browser storage
+        or similar technologies according to the provider’s own terms and
+        privacy practices.
+      </p>
 
       <h2>How we use data</h2>
+
+      <p>We process data to:</p>
+
       <ul>
-        <li><strong>Provide the service:</strong> store and deliver encrypted envelopes, and manage consumption state.</li>
-        <li><strong>Security and abuse prevention:</strong> verify requests and reduce automated attacks (App Check / Play Integrity / reCAPTCHA).</li>
-        <li><strong>Reliability:</strong> diagnose errors, monitor service health, and improve stability.</li>
+        <li>Provide local and encrypted message-scheduling features.</li>
+        <li>Store, route and deliver encrypted envelopes.</li>
+        <li>Manage receive codes and delivery state.</li>
+        <li>Upload and retrieve encrypted attachments.</li>
+        <li>Prevent duplicate or replayed deliveries.</li>
+        <li>Provide optional notifications.</li>
+        <li>Maintain security and prevent abuse.</li>
+        <li>Diagnose errors and maintain service reliability.</li>
+        <li>Respond to support, privacy and legal requests.</li>
       </ul>
 
-      <h2>Sharing and third-party processors</h2>
+      <h2>Legal bases where applicable</h2>
+
       <p>
-        Setfeed uses Google Firebase and Google Cloud to operate the service (for example: Cloud Functions and Firestore).
-        These providers process data on our behalf as service providers/processors.
+        Where data-protection law requires a legal basis, we generally rely
+        on one or more of the following:
       </p>
+
+      <ul>
+        <li>
+          <strong>Performance of a service:</strong> processing needed to
+          provide the Setfeed features you request.
+        </li>
+        <li>
+          <strong>Legitimate interests:</strong> maintaining security,
+          preventing abuse, diagnosing failures and operating the service
+          efficiently.
+        </li>
+        <li>
+          <strong>Consent:</strong> for optional device permissions or where
+          consent is otherwise required.
+        </li>
+        <li>
+          <strong>Legal obligations:</strong> processing needed to comply with
+          applicable law or valid legal requests.
+        </li>
+      </ul>
+
+      <h2>What we do not do</h2>
+
+      <ul>
+        <li>
+          <strong>No third-party advertising:</strong> Setfeed does not serve
+          third-party advertisements in the app.
+        </li>
+        <li>
+          <strong>No sale of personal data:</strong> Setfeed does not sell
+          personal information.
+        </li>
+        <li>
+          <strong>No cross-app advertising tracking:</strong> Setfeed does not
+          use message content for behavioural advertising or track users
+          across unrelated apps and websites for advertising.
+        </li>
+        <li>
+          <strong>No plaintext receive-code upload:</strong> plaintext receive
+          codes are not intentionally uploaded as part of encrypted message
+          delivery.
+        </li>
+        <li>
+          <strong>No server-side reading of standard encrypted messages:</strong>
+          Setfeed is not designed to read the plaintext body or attachment of
+          standard encrypted cloud-delivery envelopes.
+        </li>
+      </ul>
+
+      <h2>Service providers and sharing</h2>
+
       <p>
-        We do not share personal data with advertisers. We may disclose information if required by law, or to protect the rights and safety of users
-        and the service (for example, responding to valid legal requests).
+        Setfeed uses service providers to operate and protect the service.
+        These providers may process data on our behalf according to their
+        contracts and privacy terms.
+      </p>
+
+      <p>Current providers may include:</p>
+
+      <ul>
+        <li>
+          <strong>Google Firebase and Google Cloud:</strong> for anonymous
+          authentication, database storage, cloud functions, encrypted-file
+          storage, hosting, integrity checks and operational security.
+        </li>
+        <li>
+          <strong>Apple:</strong> for iOS platform services, App Attest,
+          App Store distribution and device permissions.
+        </li>
+        <li>
+          <strong>Google:</strong> for Android platform services, Play
+          Integrity and Google Play distribution.
+        </li>
+      </ul>
+
+      <p>
+        Setfeed does not share personal data with advertisers. We may disclose
+        information when reasonably necessary to:
+      </p>
+
+      <ul>
+        <li>Comply with applicable law or a valid legal request.</li>
+        <li>Protect users, Setfeed or the public from harm or abuse.</li>
+        <li>Investigate fraud, security incidents or misuse.</li>
+        <li>
+          Complete a business reorganisation, subject to appropriate privacy
+          protections.
+        </li>
+      </ul>
+
+      <h2>International processing</h2>
+
+      <p>
+        Setfeed’s infrastructure providers operate internationally. Data may
+        therefore be processed in countries other than the country where you
+        live, including locations where Google, Apple or their service
+        providers operate facilities.
+      </p>
+
+      <p>
+        Where required, such processing is subject to the contractual and
+        legal safeguards provided by the relevant service provider and
+        applicable law.
       </p>
 
       <h2>Retention</h2>
+
       <p>
-        We retain encrypted envelopes and related metadata only as long as needed to provide delivery and prevent replay.
-        Operational logs may be retained for a limited period for security and reliability.
+        We retain data only for as long as reasonably necessary for the
+        purposes described in this policy, including delivery, security,
+        dispute resolution and legal compliance.
       </p>
 
-      <h2>Security</h2>
-      <p>
-        We use industry-standard protections for data in transit and for backend access controls. Where end-to-end encryption is used,
-        message content remains encrypted on our servers. No system is perfectly secure; we continually work to reduce risk.
-      </p>
-
-      <h2>Your choices</h2>
       <ul>
-        <li><strong>Local data:</strong> you can remove local app data by clearing storage or uninstalling.</li>
-        <li><strong>Contact:</strong> you can request help or ask privacy questions at <a href="mailto:privacy@setfeed.app">privacy@setfeed.app</a>.</li>
+        <li>
+          <strong>Local data</strong> generally remains on your device until
+          you delete it, clear the app’s data or uninstall the app.
+        </li>
+        <li>
+          <strong>Encrypted envelopes and attachments</strong> are retained
+          for the time needed to schedule, deliver, retrieve, expire or protect
+          the relevant message.
+        </li>
+        <li>
+          <strong>Anonymous authentication records</strong> may remain until
+          the associated anonymous account is deleted.
+        </li>
+        <li>
+          <strong>Operational and security logs</strong> are retained for
+          limited periods according to operational, security and provider
+          requirements.
+        </li>
+        <li>
+          <strong>Legal records</strong> may be retained longer where required
+          by law or needed to establish, exercise or defend legal claims.
+        </li>
       </ul>
 
-      <h2>Children</h2>
+      <h2>Security</h2>
+
       <p>
-        Setfeed is not designed for children and is not directed to children under 13. If you believe a child has provided personal information
-        to Setfeed, contact us and we will take appropriate steps.
+        We use technical and organisational measures intended to protect data,
+        including:
       </p>
 
-      <h2>Changes to this policy</h2>
+      <ul>
+        <li>Client-side authenticated encryption for supported messages.</li>
+        <li>Encrypted transport using HTTPS.</li>
+        <li>Cloud access controls and security rules.</li>
+        <li>Platform app-integrity verification.</li>
+        <li>Protected local application storage.</li>
+        <li>Rate limiting and abuse-prevention controls.</li>
+      </ul>
+
       <p>
-        If we change this policy, we will update the effective date above and publish the updated version on this page.
+        No service can guarantee absolute security. Users should keep receive
+        codes private and share them only with intended senders.
+      </p>
+
+      <h2 id="your-choices">Your choices and privacy rights</h2>
+
+      <p>
+        Depending on your location, you may have rights relating to your
+        personal data, including rights to request access, correction,
+        deletion, restriction, objection or portability.
+      </p>
+
+      <p>You can also:</p>
+
+      <ul>
+        <li>
+          Remove local app data by deleting messages, clearing application
+          storage or uninstalling the app.
+        </li>
+        <li>
+          Change photo and notification permissions through your device
+          settings.
+        </li>
+        <li>Regenerate or stop sharing a receive code where supported.</li>
+        <li>
+          Contact us to request deletion of an anonymous cloud identity and
+          associated data that we are able to identify.
+        </li>
+        <li>
+          Contact your local data-protection authority if you believe your
+          rights have been infringed.
+        </li>
+      </ul>
+
+      <p>
+        Because Setfeed does not require a conventional named account, we may
+        need technical information from you to locate an anonymous identity or
+        associated cloud record. We may also need to verify that the request
+        relates to you before fulfilling it.
+      </p>
+
+      <p>
+        To make a privacy request, email
+        <a href="mailto:hello@setfeed.app">hello@setfeed.app</a>.
+      </p>
+
+      <h2>Children</h2>
+
+      <p>
+        Setfeed is not designed for children and is not directed to children
+        under 13.
+      </p>
+
+      <p>
+        If you believe a child has provided personal information to Setfeed,
+        contact
+        <a href="mailto:hello@setfeed.app">hello@setfeed.app</a>
+        and we will take appropriate steps.
+      </p>
+
+      <h2>Third-party privacy information</h2>
+
+      <p>
+        Additional information about our principal technology providers is
+        available from:
+      </p>
+
+      <ul>
+        <li>
+          <a
+            href="https://firebase.google.com/support/privacy"
+            rel="noreferrer"
+          >
+            Firebase Privacy and Security
+          </a>
+        </li>
+        <li>
+          <a
+            href="https://policies.google.com/privacy"
+            rel="noreferrer"
+          >
+            Google Privacy Policy
+          </a>
+        </li>
+        <li>
+          <a
+            href="https://www.apple.com/legal/privacy/"
+            rel="noreferrer"
+          >
+            Apple Privacy Policy
+          </a>
+        </li>
+      </ul>
+
+      <h2>Changes to this policy</h2>
+
+      <p>
+        We may update this Privacy Policy when Setfeed’s features, service
+        providers or legal obligations change.
+      </p>
+
+      <p>
+        When we make changes, we will publish the updated policy on this page
+        and revise the effective date above. Material changes may also be
+        communicated through the app or website where appropriate.
+      </p>
+
+      <h2>Contact</h2>
+
+      <p>
+        For privacy questions, data requests or complaints, contact:
+      </p>
+
+      <p>
+        <a href="mailto:hello@setfeed.app">hello@setfeed.app</a>
       </p>
 
       <footer>
         <div>© <span id="y"></span> Setfeed</div>
+
         <div>
           <a href="./security.html">Security</a>
           <span class="sep">·</span>
-          <a href="mailto:privacy@setfeed.app">privacy@setfeed.app</a>
+          <a href="#your-choices">Privacy choices</a>
+          <span class="sep">·</span>
+          <a href="mailto:hello@setfeed.app">hello@setfeed.app</a>
         </div>
       </footer>
     </div>
-  </div>
+  </main>
 
   <script>
-    document.getElementById("y").textContent = new Date().getFullYear();
+    document.getElementById("y").textContent =
+      new Date().getFullYear();
   </script>
 </body>
 </html>
