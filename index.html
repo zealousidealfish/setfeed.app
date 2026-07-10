@@ -4,7 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Setfeed: Delayed Messaging</title>
-  <meta name="description" content="Setfeed lets you write now and deliver later with private, encrypted messages." />
+  <meta
+    name="description"
+    content="Setfeed lets you write now and deliver later with private, encrypted messages."
+  />
 
   <meta name="theme-color" content="#FFFBFE" id="meta-theme-color" />
 
@@ -32,19 +35,24 @@
     const RECAPTCHA_SITE_KEY = "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI";
     const SITE_ORIGIN = window.location.origin;
 
-    if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps || firebase.apps.length === 0) {
+      firebase.initializeApp(firebaseConfig);
+    }
 
     window.sfAuth = firebase.auth();
-    window.sfAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+    window.sfAuth
+      .setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+      .catch(() => {});
 
     function startAppCheck() {
       try {
         firebase.appCheck().activate(RECAPTCHA_SITE_KEY, true);
         console.log("[AppCheck] activated");
-      } catch (e) {
-        console.warn("[AppCheck] init failed:", e);
+      } catch (error) {
+        console.warn("[AppCheck] init failed:", error);
       }
     }
+
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", startAppCheck, { once: true });
     } else {
@@ -53,27 +61,43 @@
   </script>
 
   <script>
-    (function(){
+    (function () {
       const THEME_KEY = "sf_theme_mode";
       const root = document.documentElement;
 
-      function applyTheme(){
+      function applyTheme() {
         let stored = "system";
-        try { stored = localStorage.getItem(THEME_KEY) || "system"; } catch (_) {}
+        try {
+          stored = localStorage.getItem(THEME_KEY) || "system";
+        } catch (_) {}
 
-        if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
-        else root.removeAttribute("data-theme");
+        if (stored === "light" || stored === "dark") {
+          root.setAttribute("data-theme", stored);
+        } else {
+          root.removeAttribute("data-theme");
+        }
 
         const effective =
           root.getAttribute("data-theme") ||
-          (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          (
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light"
+          );
 
         const meta = document.getElementById("meta-theme-color");
-        if (meta) meta.content = (effective === "dark") ? "#0F1114" : "#FFFBFE";
+        if (meta) {
+          meta.content = effective === "dark" ? "#0F1114" : "#FFFBFE";
+        }
       }
 
       applyTheme();
-      window.addEventListener("storage", (e) => { if (e && e.key === THEME_KEY) applyTheme(); });
+      window.addEventListener("storage", (event) => {
+        if (event && event.key === THEME_KEY) {
+          applyTheme();
+        }
+      });
     })();
   </script>
 </head>
@@ -94,7 +118,11 @@
         <a class="auth-only hidden" href="./inbox.html">Inbox</a>
         <a href="./security.html">Security</a>
         <a href="./privacy.html">Privacy</a>
-        <a class="nav-cta" href="./open-setfeed.html" aria-label="Open Setfeed">Open Setfeed</a>
+        <a
+          class="nav-cta"
+          href="./open-setfeed.html"
+          aria-label="Open Setfeed"
+        >Open Setfeed</a>
       </nav>
     </div>
   </header>
@@ -106,37 +134,80 @@
           <div class="sf-page-hero">
             <h1>Send delayed messages</h1>
             <p class="lead">
-              Write now and deliver later with private, encrypted messages. Setfeed is free on Android, with iPhone and iPad coming soon.
+              Write now and deliver later with private, encrypted messages.
+              Setfeed is free on Android. Choose Open Setfeed to check
+              availability for your device.
             </p>
           </div>
 
-          <section class="panel no-auth-only hidden" id="signin" aria-labelledby="signin-title" style="margin-top: var(--s-5); scroll-margin-top: 90px;">
-            <p class="panel-title" id="signin-title" tabindex="-1">Sign in to continue</p>
-            <p class="panel-sub">Sign in with Google or email link to continue to your selected Setfeed action.</p>
+          <section
+            class="panel hidden"
+            id="signin"
+            aria-labelledby="signin-title"
+            style="margin-top: var(--s-5); scroll-margin-top: 90px;"
+          >
+            <p class="panel-title" id="signin-title" tabindex="-1">
+              Sign in to continue
+            </p>
+            <p class="panel-sub">
+              Sign in with Google or an email link to continue to your selected
+              Setfeed action.
+            </p>
 
             <div class="actions" style="align-items: stretch;">
-              <button class="btn btn-lg btn-primary" id="btn-google" type="button">Continue with Google</button>
+              <button
+                class="btn btn-lg btn-primary"
+                id="btn-google"
+                type="button"
+              >Continue with Google</button>
             </div>
 
             <div class="field" style="margin-top: var(--s-3);">
               <label for="signin-email">Email address</label>
-              <input id="signin-email" type="email" autocomplete="email" placeholder="you@example.com" />
+              <input
+                id="signin-email"
+                type="email"
+                autocomplete="email"
+                placeholder="you@example.com"
+              />
             </div>
 
-            <div class="actions" style="margin-top: var(--s-3); align-items: stretch;">
-              <button class="btn btn-lg btn-secondary" id="btn-send-link" type="button">Send email sign-in link</button>
+            <div
+              class="actions"
+              style="margin-top: var(--s-3); align-items: stretch;"
+            >
+              <button
+                class="btn btn-lg btn-secondary"
+                id="btn-send-link"
+                type="button"
+              >Send email sign-in link</button>
             </div>
           </section>
 
-          <section class="panel auth-only hidden" aria-label="Signed-in status" style="margin-top: var(--s-5);">
-            <p class="panel-title" style="margin-top:0;">Signed in</p>
+          <section
+            class="panel auth-only hidden"
+            aria-label="Signed-in status"
+            style="margin-top: var(--s-5);"
+          >
+            <p class="panel-title" style="margin-top: 0;">Signed in</p>
             <p class="panel-sub" id="sf-auth-label">Ready to continue.</p>
+
             <div class="actions" style="margin-top: var(--s-3);">
-              <button class="btn btn-lg btn-quiet" id="btn-signout" type="button">Sign out</button>
+              <button
+                class="btn btn-lg btn-quiet"
+                id="btn-signout"
+                type="button"
+              >Sign out</button>
             </div>
           </section>
 
-          <div class="status hidden" id="sf-auth-status" role="status" aria-live="polite" style="margin-top: var(--s-4);">
+          <div
+            class="status hidden"
+            id="sf-auth-status"
+            role="status"
+            aria-live="polite"
+            style="margin-top: var(--s-4);"
+          >
             <div class="status-title">
               <span class="dot" id="sf-auth-dot"></span>
               <span id="sf-auth-status-title">Status</span>
@@ -148,10 +219,28 @@
         <aside>
           <div class="panel" style="margin-top: 0;">
             <p class="panel-title">Quick links</p>
-            <div class="actions" style="flex-direction: column; align-items: stretch; gap: 10px;">
-              <button class="btn btn-lg btn-primary" id="btn-delay-message" type="button" style="width:100%;">Delay Message</button>
-              <button class="btn btn-lg btn-secondary" id="btn-get-receive-code" type="button" style="width:100%;">Get Receive Code</button>
-              <a class="btn btn-quiet" href="./security.html">Security &amp; privacy</a>
+
+            <div
+              class="actions"
+              style="flex-direction: column; align-items: stretch; gap: 10px;"
+            >
+              <button
+                class="btn btn-lg btn-primary"
+                id="btn-delay-message"
+                type="button"
+                style="width: 100%;"
+              >Delay Message</button>
+
+              <button
+                class="btn btn-lg btn-secondary"
+                id="btn-get-receive-code"
+                type="button"
+                style="width: 100%;"
+              >Get Receive Code</button>
+
+              <a class="btn btn-quiet" href="./security.html">
+                Security &amp; privacy
+              </a>
             </div>
           </div>
         </aside>
@@ -171,12 +260,19 @@
   </div>
 
   <script>
-    const yearEl = document.getElementById("y");
-    if (yearEl) yearEl.textContent = new Date().getFullYear();
+    const yearElement = document.getElementById("y");
+    if (yearElement) {
+      yearElement.textContent = new Date().getFullYear();
+    }
 
     const auth = window.sfAuth;
+
     const PENDING_DESTINATION_KEY = "sf_homepage_pending_destination";
     const EMAIL_FOR_SIGNIN_KEY = "sf_homepage_email_for_signin";
+    const ALLOWED_DESTINATIONS = new Set([
+      "./send.html",
+      "./receive.html"
+    ]);
 
     const signinPanel = document.getElementById("signin");
     const signinTitle = document.getElementById("signin-title");
@@ -193,13 +289,33 @@
     const authStatusLine = document.getElementById("sf-auth-status-line");
 
     function setSignedAuthedFlag(isAuthed) {
-      try { localStorage.setItem("sf_authed", isAuthed ? "1" : "0"); } catch (_) {}
-      document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !isAuthed));
-      document.querySelectorAll(".no-auth-only").forEach(el => el.classList.toggle("hidden", isAuthed));
+      try {
+        localStorage.setItem("sf_authed", isAuthed ? "1" : "0");
+      } catch (_) {}
+
+      document
+        .querySelectorAll(".auth-only")
+        .forEach((element) => {
+          element.classList.toggle("hidden", !isAuthed);
+        });
+
+      document
+        .querySelectorAll(".no-auth-only")
+        .forEach((element) => {
+          element.classList.toggle("hidden", isAuthed);
+        });
     }
 
     function setAuthStatus(kind, title, line) {
-      if (!authStatus || !authDot || !authStatusTitle || !authStatusLine) return;
+      if (
+        !authStatus ||
+        !authDot ||
+        !authStatusTitle ||
+        !authStatusLine
+      ) {
+        return;
+      }
+
       if (!title && !line) {
         authStatus.classList.add("hidden");
         authStatusTitle.textContent = "Status";
@@ -207,108 +323,250 @@
         authDot.className = "dot";
         return;
       }
+
       authStatus.classList.remove("hidden");
       authDot.className = "dot";
-      if (kind === "good") authDot.classList.add("good");
-      if (kind === "warn") authDot.classList.add("warn");
+
+      if (kind === "good") {
+        authDot.classList.add("good");
+      }
+
+      if (kind === "warn") {
+        authDot.classList.add("warn");
+      }
+
       authStatusTitle.textContent = title || "Status";
       authStatusLine.textContent = line || "";
     }
 
     function getPendingDestination() {
-      try { return localStorage.getItem(PENDING_DESTINATION_KEY) || ""; } catch (_) { return ""; }
+      try {
+        const destination =
+          localStorage.getItem(PENDING_DESTINATION_KEY) || "";
+
+        return ALLOWED_DESTINATIONS.has(destination)
+          ? destination
+          : "";
+      } catch (_) {
+        return "";
+      }
     }
 
     function setPendingDestination(destination) {
-      try { localStorage.setItem(PENDING_DESTINATION_KEY, destination); } catch (_) {}
+      if (!ALLOWED_DESTINATIONS.has(destination)) {
+        return;
+      }
+
+      try {
+        localStorage.setItem(PENDING_DESTINATION_KEY, destination);
+      } catch (_) {}
     }
 
     function clearPendingDestination() {
-      try { localStorage.removeItem(PENDING_DESTINATION_KEY); } catch (_) {}
+      try {
+        localStorage.removeItem(PENDING_DESTINATION_KEY);
+      } catch (_) {}
     }
 
     function revealSignIn() {
-      if (signinPanel) signinPanel.classList.remove("hidden");
-      if (signinPanel && typeof signinPanel.scrollIntoView === "function") signinPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (signinPanel) {
+        signinPanel.classList.remove("hidden");
+      }
+
+      if (
+        signinPanel &&
+        typeof signinPanel.scrollIntoView === "function"
+      ) {
+        signinPanel.scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
+      }
+
       const focusTarget = signinTitle || btnGoogle || signinEmail;
-      if (focusTarget && typeof focusTarget.focus === "function") focusTarget.focus({ preventScroll: true });
+      if (
+        focusTarget &&
+        typeof focusTarget.focus === "function"
+      ) {
+        focusTarget.focus({ preventScroll: true });
+      }
+    }
+
+    function hideSignIn() {
+      if (signinPanel) {
+        signinPanel.classList.add("hidden");
+      }
     }
 
     function useStoredDestinationIfReady(user) {
-      if (!user) return false;
+      if (!user) {
+        return false;
+      }
+
       const destination = getPendingDestination();
-      if (!destination) return false;
+      if (!destination) {
+        clearPendingDestination();
+        return false;
+      }
+
       clearPendingDestination();
       window.location.href = destination;
       return true;
     }
 
     function requireAuthForDestination(destination) {
+      if (!ALLOWED_DESTINATIONS.has(destination)) {
+        return;
+      }
+
       if (auth && auth.currentUser) {
         window.location.href = destination;
         return;
       }
+
       setPendingDestination(destination);
-      setAuthStatus("warn", "Sign-in required", "Sign in to continue to your selected action.");
+      setAuthStatus(
+        "warn",
+        "Sign-in required",
+        "Sign in to continue to your selected action."
+      );
       revealSignIn();
     }
 
     if (btnDelayMessage) {
-      btnDelayMessage.addEventListener("click", () => requireAuthForDestination("./send.html"));
+      btnDelayMessage.addEventListener("click", () => {
+        requireAuthForDestination("./send.html");
+      });
     }
+
     if (btnGetReceiveCode) {
-      btnGetReceiveCode.addEventListener("click", () => requireAuthForDestination("./receive.html"));
+      btnGetReceiveCode.addEventListener("click", () => {
+        requireAuthForDestination("./receive.html");
+      });
     }
 
     if (auth) {
-      auth.getRedirectResult().then((result) => {
-        if (result && result.user) {
-          setAuthStatus("good", "Signed in", "Continuing to your selected action…");
-          useStoredDestinationIfReady(result.user);
-        }
-      }).catch((e) => {
-        console.error(e);
-        const code = (e && e.code) ? String(e.code) : "";
-        if (code === "auth/unauthorized-domain") {
-          setAuthStatus("warn", "Auth domain not authorized", "Add setfeed.app in Firebase Auth → Authorized domains.");
-        } else if (code) {
-          setAuthStatus("warn", "Sign-in failed", code);
-        }
-      });
+      auth
+        .getRedirectResult()
+        .then((result) => {
+          if (result && result.user) {
+            hideSignIn();
+            setAuthStatus(
+              "good",
+              "Signed in",
+              "Continuing to your selected action…"
+            );
+            useStoredDestinationIfReady(result.user);
+          }
+        })
+        .catch((error) => {
+          console.error(error);
+
+          const code =
+            error && error.code
+              ? String(error.code)
+              : "";
+
+          if (code === "auth/unauthorized-domain") {
+            setAuthStatus(
+              "warn",
+              "Auth domain not authorized",
+              "Add setfeed.app in Firebase Auth → Authorized domains."
+            );
+          } else if (code) {
+            setAuthStatus("warn", "Sign-in failed", code);
+          }
+        });
 
       auth.onAuthStateChanged((user) => {
-        setSignedAuthedFlag(!!user);
-        if (user && authLabel) authLabel.textContent = user.email || "Ready to continue.";
-        if (user && useStoredDestinationIfReady(user)) return;
+        setSignedAuthedFlag(Boolean(user));
+
+        if (user) {
+          hideSignIn();
+
+          if (authLabel) {
+            authLabel.textContent =
+              user.email || "Ready to continue.";
+          }
+
+          useStoredDestinationIfReady(user);
+        }
       });
     } else {
-      setAuthStatus("warn", "Auth unavailable", "Firebase Auth failed to initialize.");
+      setAuthStatus(
+        "warn",
+        "Auth unavailable",
+        "Firebase Auth failed to initialize."
+      );
     }
 
     async function signInGooglePopupFirst() {
       if (!auth) {
-        setAuthStatus("warn", "Auth unavailable", "Firebase Auth failed to initialize.");
+        setAuthStatus(
+          "warn",
+          "Auth unavailable",
+          "Firebase Auth failed to initialize."
+        );
         return;
       }
-      try { await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch (_) {}
+
+      try {
+        await auth.setPersistence(
+          firebase.auth.Auth.Persistence.LOCAL
+        );
+      } catch (_) {}
 
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
 
       try {
-        setAuthStatus("good", "Signing in…", "Opening Google sign-in…");
+        setAuthStatus(
+          "good",
+          "Signing in…",
+          "Opening Google sign-in…"
+        );
+
         const result = await auth.signInWithPopup(provider);
-        setAuthStatus("good", "Signed in", "Continuing to your selected action…");
-        useStoredDestinationIfReady(result && result.user ? result.user : auth.currentUser);
-      } catch (e) {
-        console.warn("[popup] failed:", e);
-        const code = (e && e.code) ? String(e.code) : "";
-        if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
-          setAuthStatus("warn", "Sign-in cancelled", "You stayed on the homepage. Choose an action when you are ready to try again.");
+
+        hideSignIn();
+        setAuthStatus(
+          "good",
+          "Signed in",
+          "Continuing to your selected action…"
+        );
+
+        useStoredDestinationIfReady(
+          result && result.user
+            ? result.user
+            : auth.currentUser
+        );
+      } catch (error) {
+        console.warn("[popup] failed:", error);
+
+        const code =
+          error && error.code
+            ? String(error.code)
+            : "";
+
+        if (
+          code === "auth/popup-closed-by-user" ||
+          code === "auth/cancelled-popup-request"
+        ) {
+          clearPendingDestination();
+          setAuthStatus(
+            "warn",
+            "Sign-in cancelled",
+            "You stayed on the homepage. Choose an action when you are ready to try again."
+          );
           return;
         }
+
         if (code === "auth/unauthorized-domain") {
-          setAuthStatus("warn", "Auth domain not authorized", "Add setfeed.app in Firebase Auth → Authorized domains.");
+          setAuthStatus(
+            "warn",
+            "Auth domain not authorized",
+            "Add setfeed.app in Firebase Auth → Authorized domains."
+          );
           return;
         }
 
@@ -318,17 +576,34 @@
           !code;
 
         if (!shouldRedirect) {
-          setAuthStatus("warn", "Couldn’t sign in", code || "Google sign-in failed.");
+          setAuthStatus(
+            "warn",
+            "Couldn’t sign in",
+            code || "Google sign-in failed."
+          );
           return;
         }
 
         try {
-          setAuthStatus("good", "Redirecting…", "Opening Google sign-in in this tab.");
+          setAuthStatus(
+            "good",
+            "Redirecting…",
+            "Opening Google sign-in in this tab."
+          );
           await auth.signInWithRedirect(provider);
-        } catch (err) {
-          console.error(err);
-          const c = (err && err.code) ? String(err.code) : "";
-          setAuthStatus("warn", "Couldn’t sign in", c || "Google sign-in failed.");
+        } catch (redirectError) {
+          console.error(redirectError);
+
+          const redirectCode =
+            redirectError && redirectError.code
+              ? String(redirectError.code)
+              : "";
+
+          setAuthStatus(
+            "warn",
+            "Couldn’t sign in",
+            redirectCode || "Google sign-in failed."
+          );
         }
       }
     }
@@ -342,67 +617,184 @@
 
     if (btnSendLink) {
       btnSendLink.addEventListener("click", async () => {
-        if (!auth) return;
-        const email = signinEmail && signinEmail.value ? signinEmail.value.trim() : "";
-        if (!email) {
-          setAuthStatus("warn", "Email needed", "Enter your email to request a sign-in link.");
-          if (signinEmail) signinEmail.focus();
+        if (!auth) {
           return;
         }
+
+        const email =
+          signinEmail && signinEmail.value
+            ? signinEmail.value.trim()
+            : "";
+
+        if (!email) {
+          setAuthStatus(
+            "warn",
+            "Email needed",
+            "Enter your email to request a sign-in link."
+          );
+
+          if (signinEmail) {
+            signinEmail.focus();
+          }
+          return;
+        }
+
         try {
-          await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-          setAuthStatus("good", "Sending link…", "Check your inbox for the sign-in link.");
-          const actionCodeSettings = { url: `${SITE_ORIGIN}/#finishSignIn`, handleCodeInApp: true };
-          await auth.sendSignInLinkToEmail(email, actionCodeSettings);
-          try { localStorage.setItem(EMAIL_FOR_SIGNIN_KEY, email); } catch (_) {}
-          setAuthStatus("good", "Link sent", "Open the link from your email on this device to finish signing in.");
-        } catch (e) {
-          console.error(e);
-          const code = (e && e.code) ? String(e.code) : "";
-          setAuthStatus("warn", "Couldn’t send link", code || "Email-link sign-in failed. Verify Auth is enabled and the domain is authorized.");
+          await auth.setPersistence(
+            firebase.auth.Auth.Persistence.LOCAL
+          );
+
+          setAuthStatus(
+            "good",
+            "Sending link…",
+            "Check your inbox for the sign-in link."
+          );
+
+          const actionCodeSettings = {
+            url: `${SITE_ORIGIN}/#finishSignIn`,
+            handleCodeInApp: true
+          };
+
+          await auth.sendSignInLinkToEmail(
+            email,
+            actionCodeSettings
+          );
+
+          try {
+            localStorage.setItem(
+              EMAIL_FOR_SIGNIN_KEY,
+              email
+            );
+          } catch (_) {}
+
+          setAuthStatus(
+            "good",
+            "Link sent",
+            "Open the link from your email on this device to finish signing in."
+          );
+        } catch (error) {
+          console.error(error);
+
+          const code =
+            error && error.code
+              ? String(error.code)
+              : "";
+
+          setAuthStatus(
+            "warn",
+            "Couldn’t send link",
+            code ||
+              "Email-link sign-in failed. Verify Auth is enabled and the domain is authorized."
+          );
         }
       });
     }
 
-    (async function finishEmailLinkIfPresent(){
-      if (!auth) return;
+    (async function finishEmailLinkIfPresent() {
+      if (!auth) {
+        return;
+      }
+
       try {
         const href = window.location.href;
-        if (!auth.isSignInWithEmailLink(href)) return;
+        if (!auth.isSignInWithEmailLink(href)) {
+          return;
+        }
 
         let email = "";
-        try { email = localStorage.getItem(EMAIL_FOR_SIGNIN_KEY) || ""; } catch (_) {}
+        try {
+          email =
+            localStorage.getItem(EMAIL_FOR_SIGNIN_KEY) || "";
+        } catch (_) {}
+
         if (!email) {
-          email = window.prompt("Confirm your email to finish sign-in:");
+          email = window.prompt(
+            "Confirm your email to finish sign-in:"
+          );
+
           if (!email) {
-            setAuthStatus("warn", "Sign-in not finished", "Email is required to finish sign-in.");
+            setAuthStatus(
+              "warn",
+              "Sign-in not finished",
+              "Email is required to finish sign-in."
+            );
             return;
           }
         }
-        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-        setAuthStatus("good", "Signing in…", "Finishing email-link sign-in…");
-        const result = await auth.signInWithEmailLink(email, href);
-        try { localStorage.removeItem(EMAIL_FOR_SIGNIN_KEY); } catch (_) {}
+
+        await auth.setPersistence(
+          firebase.auth.Auth.Persistence.LOCAL
+        );
+
+        setAuthStatus(
+          "good",
+          "Signing in…",
+          "Finishing email-link sign-in…"
+        );
+
+        const result = await auth.signInWithEmailLink(
+          email,
+          href
+        );
+
+        try {
+          localStorage.removeItem(EMAIL_FOR_SIGNIN_KEY);
+        } catch (_) {}
+
         history.replaceState(null, "", "./#signin");
-        setAuthStatus("good", "Signed in", "Continuing to your selected action…");
-        useStoredDestinationIfReady(result && result.user ? result.user : auth.currentUser);
-      } catch (e) {
-        console.error(e);
-        const code = (e && e.code) ? String(e.code) : "";
-        setAuthStatus("warn", "Sign-in failed", code || "Couldn’t finish email-link sign-in. Try sending a new link.");
+        hideSignIn();
+
+        setAuthStatus(
+          "good",
+          "Signed in",
+          "Continuing to your selected action…"
+        );
+
+        useStoredDestinationIfReady(
+          result && result.user
+            ? result.user
+            : auth.currentUser
+        );
+      } catch (error) {
+        console.error(error);
+
+        const code =
+          error && error.code
+            ? String(error.code)
+            : "";
+
+        setAuthStatus(
+          "warn",
+          "Sign-in failed",
+          code ||
+            "Couldn’t finish email-link sign-in. Try sending a new link."
+        );
       }
     })();
 
     if (btnSignout) {
       btnSignout.addEventListener("click", async () => {
-        if (!auth) return;
+        if (!auth) {
+          return;
+        }
+
         try {
           await auth.signOut();
           clearPendingDestination();
-          setAuthStatus("warn", "Signed out", "Choose an action and sign in again to continue.");
-        } catch (e) {
-          console.error(e);
-          setAuthStatus("warn", "Couldn’t sign out", "Try again.");
+          hideSignIn();
+
+          setAuthStatus(
+            "warn",
+            "Signed out",
+            "Choose an action and sign in again to continue."
+          );
+        } catch (error) {
+          console.error(error);
+          setAuthStatus(
+            "warn",
+            "Couldn’t sign out",
+            "Try again."
+          );
         }
       });
     }
