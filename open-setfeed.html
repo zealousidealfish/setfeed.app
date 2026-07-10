@@ -14,43 +14,86 @@
   <link rel="stylesheet" href="./styles.css" />
 
   <script>
-    (function(){
+    (function () {
       const THEME_KEY = "sf_theme_mode";
       const root = document.documentElement;
 
-      function applyTheme(){
+      function applyTheme() {
         let stored = "system";
-        try { stored = localStorage.getItem(THEME_KEY) || "system"; } catch (_) {}
-        if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
-        else root.removeAttribute("data-theme");
+        try {
+          stored = localStorage.getItem(THEME_KEY) || "system";
+        } catch (_) {}
+
+        if (stored === "light" || stored === "dark") {
+          root.setAttribute("data-theme", stored);
+        } else {
+          root.removeAttribute("data-theme");
+        }
+
         const effective =
           root.getAttribute("data-theme") ||
-          (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          (
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light"
+          );
+
         const meta = document.getElementById("meta-theme-color");
-        if (meta) meta.content = effective === "dark" ? "#0F1114" : "#FFFBFE";
+        if (meta) {
+          meta.content = effective === "dark" ? "#0F1114" : "#FFFBFE";
+        }
       }
 
       applyTheme();
-      window.addEventListener("storage", (e) => { if (e && e.key === THEME_KEY) applyTheme(); });
+      window.addEventListener("storage", (event) => {
+        if (event && event.key === THEME_KEY) {
+          applyTheme();
+        }
+      });
     })();
   </script>
 </head>
+
 <body class="page-bg">
   <main class="wrap">
     <div class="card">
-      <section class="sf-page-hero" id="apple-fallback" hidden aria-labelledby="open-title">
-        <h1 id="open-title">Setfeed for iPhone and iPad is coming soon.</h1>
-        <p class="lead">Setfeed is available on Android while the Apple version is being prepared.</p>
+      <section
+        class="sf-page-hero"
+        id="apple-fallback"
+        hidden
+        aria-labelledby="apple-title"
+      >
+        <h1 id="apple-title">
+          Setfeed for iPhone and iPad is coming soon.
+        </h1>
+
+        <p class="lead">
+          Setfeed is free on Android while the Apple version is being prepared.
+        </p>
+
         <div class="actions">
-          <a class="btn btn-lg btn-secondary" href="./">Back to Setfeed</a>
+          <a class="btn btn-lg btn-secondary" href="./">
+            Back to Setfeed
+          </a>
         </div>
       </section>
 
-      <section class="sf-page-hero" id="redirecting" aria-labelledby="redirect-title">
+      <section
+        class="sf-page-hero"
+        id="redirecting"
+        aria-labelledby="redirect-title"
+      >
         <h1 id="redirect-title">Opening Setfeed…</h1>
-        <p class="lead">You are being sent to the current Setfeed store listing.</p>
+
+        <p class="lead">
+          You are being sent to the current Setfeed store listing.
+        </p>
+
         <div class="actions">
-          <a class="btn btn-lg btn-secondary" href="./">Back to Setfeed</a>
+          <a class="btn btn-lg btn-secondary" href="./">
+            Back to Setfeed
+          </a>
         </div>
       </section>
     </div>
@@ -60,28 +103,49 @@
     const GOOGLE_PLAY_URL =
       "https://play.google.com/store/apps/details?id=com.zealy.setfeed";
 
-    // When the Apple version is public, update only this APP_STORE_URL value.
+    // When the Apple version is public, change only this line.
     const APP_STORE_URL = "";
 
-    const ua = navigator.userAgent || "";
+    const userAgent = navigator.userAgent || "";
     const platform = navigator.platform || "";
     const maxTouchPoints = navigator.maxTouchPoints || 0;
-    const isAndroid = /Android/i.test(ua);
-    const isAppleMobile = /iPhone|iPod|iPad/i.test(ua) || (platform === "MacIntel" && maxTouchPoints > 1);
+
+    const isAndroid = /Android/i.test(userAgent);
+
+    const isAppleMobile =
+      /iPhone|iPod|iPad/i.test(userAgent) ||
+      (platform === "MacIntel" && maxTouchPoints > 1);
+
+    const isMacDesktop =
+      !isAppleMobile &&
+      (
+        /Macintosh|Mac OS X/i.test(userAgent) ||
+        platform === "MacIntel"
+      );
+
+    function showAppleFallback() {
+      const redirecting = document.getElementById("redirecting");
+      const fallback = document.getElementById("apple-fallback");
+
+      if (redirecting) {
+        redirecting.hidden = true;
+      }
+
+      if (fallback) {
+        fallback.hidden = false;
+      }
+    }
 
     if (isAndroid) {
-      location.replace(GOOGLE_PLAY_URL);
-    } else if (isAppleMobile) {
-      if (APP_STORE_URL) {
-        location.replace(APP_STORE_URL);
+      window.location.replace(GOOGLE_PLAY_URL);
+    } else if (isAppleMobile || isMacDesktop) {
+      if (APP_STORE_URL.trim()) {
+        window.location.replace(APP_STORE_URL.trim());
       } else {
-        const redirecting = document.getElementById("redirecting");
-        const fallback = document.getElementById("apple-fallback");
-        if (redirecting) redirecting.hidden = true;
-        if (fallback) fallback.hidden = false;
+        showAppleFallback();
       }
     } else {
-      location.replace(GOOGLE_PLAY_URL);
+      window.location.replace(GOOGLE_PLAY_URL);
     }
   </script>
 </body>
