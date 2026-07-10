@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Link Discord to Setfeed</title>
+  <meta name="description" content="Securely link your Discord account to your signed-in Setfeed account." />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="theme-color" content="#FFFBFE" id="meta-theme-color" />
+  <meta name="robots" content="noindex,nofollow" />
+  <script>
+    (function () {
+      const TOKEN_SESSION_KEY = "sf_discord_link_token_v1";
+      const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+      const url = new URL(window.location.href);
+      const queryToken = url.searchParams.get("token") || "";
+      if (!queryToken) return;
+      url.searchParams.delete("token");
+      history.replaceState(null, "", url.pathname + url.search + url.hash);
+      try {
+        if (TOKEN_PATTERN.test(queryToken)) sessionStorage.setItem(TOKEN_SESSION_KEY, queryToken);
+        else sessionStorage.removeItem(TOKEN_SESSION_KEY);
+      } catch (_) {}
+    })();
+  </script>
+
+  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="./favicon-16.png" sizes="16x16">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180">
+  <link rel="stylesheet" href="./styles.css" />
+
+  <style>
+    .discord-link-card { max-width: 760px; margin: 0 auto; }
+    .account-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: var(--s-3); }
+    .consent-row { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; margin-top: var(--s-4); }
+    .consent-row input { width: 20px; height: 20px; margin-top: 3px; box-shadow: none; }
+    .security-list { margin: var(--s-3) 0 0; padding-left: 20px; color: var(--muted); }
+    .security-list li { color: var(--muted); }
+    .status[aria-live="assertive"] { border-color: color-mix(in srgb, var(--danger) 36%, rgba(255,255,255,0.18)); }
+    @media (max-width: 620px) { .discord-link-card .actions { align-items: stretch; } .discord-link-card .actions .btn { width: 100%; } }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU",
+      authDomain: "setfeed-fcd7a.firebaseapp.com",
+      projectId: "setfeed-fcd7a",
+      storageBucket: "setfeed-fcd7a.firebasestorage.app",
+      messagingSenderId: "553573263069",
+      appId: "1:553573263069:web:e5c9884101ca38eaee1d34"
+    };
+
+    const RECAPTCHA_SITE_KEY = "6LfgvG0sAAAAANQjlRbdsWx6GMQw1kP2kuOPjeJI";
+    const SITE_ORIGIN = window.location.origin;
+    const INTEGRATION_API_BASE_URL = "https://setfeed-integrations-ocsbsvnzsa-nw.a.run.app";
+
+    if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
+    window.sfAuth = firebase.auth();
+    window.sfAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+
+    function startAppCheck() {
+      try { firebase.appCheck().activate(RECAPTCHA_SITE_KEY, true); }
+      catch (_) {}
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", startAppCheck, { once: true });
+    else startAppCheck();
+  </script>
+
+  <script>
+    (function () {
+      const THEME_KEY = "sf_theme_mode";
+      const root = document.documentElement;
+      function applyTheme() {
+        let stored = "system";
+        try { stored = localStorage.getItem(THEME_KEY) || "system"; } catch (_) {}
+        if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
+        else root.removeAttribute("data-theme");
+        const effective = root.getAttribute("data-theme") || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        const meta = document.getElementById("meta-theme-color");
+        if (meta) meta.content = effective === "dark" ? "#0F1114" : "#FFFBFE";
+      }
+      applyTheme();
+      window.addEventListener("storage", (event) => { if (event && event.key === THEME_KEY) applyTheme(); });
+    })();
+  </script>
+</head>
+<body class="page-bg">
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand-mark" href="./" aria-label="Setfeed home"><img class="logo" src="./logo.png" alt="" aria-hidden="true" /></a>
+      <a class="brand-title" href="./">Setfeed</a>
+      <nav class="nav" aria-label="Primary">
+        <a href="./">Home</a>
+        <a href="./send.html">Send</a>
+        <a href="./receive.html">Receive</a>
+        <a class="auth-only hidden" href="./inbox.html">Inbox</a>
+        <a href="./security.html">Security</a>
+        <a href="./privacy.html">Privacy</a>
+        <a class="nav-cta" href="./open-setfeed.html" aria-label="Open Setfeed">Open Setfeed</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="card discord-link-card">
+      <section class="sf-page-hero" aria-labelledby="page-title">
+        <h1 id="page-title">Link Discord</h1>
+        <p class="lead">Connect the Discord account that opened this link to your signed-in Setfeed account.</p>
+      </section>
+
+      <section class="panel hidden" id="signin-panel" aria-labelledby="signin-title">
+        <p class="panel-title" id="signin-title" tabindex="-1">Sign in to continue</p>
+        <p class="panel-sub">Use one of Setfeed’s supported sign-in methods. Your Discord linking token is kept off the visible URL while sign-in completes.</p>
+        <div class="actions" style="align-items: stretch;"><button class="btn btn-lg btn-primary" id="btn-google" type="button">Continue with Google</button></div>
+        <div class="field"><label for="signin-email">Email address</label><input id="signin-email" type="email" autocomplete="email" placeholder="you@example.com" /></div>
+        <div class="actions" style="align-items: stretch;"><button class="btn btn-lg btn-secondary" id="btn-send-link" type="button">Send email sign-in link</button></div>
+      </section>
+
+      <section class="panel hidden" id="link-panel" aria-labelledby="link-title">
+        <p class="panel-title" id="link-title">Confirm Discord link</p>
+        <p class="panel-sub">You are about to link the current Discord account to this Setfeed account. Setfeed will verify the Discord account with the secure token from the link; the browser never sends a Discord user ID.</p>
+        <div class="account-row" aria-label="Signed-in account"><span class="kbd">Signed in</span><strong id="account-label">Setfeed account</strong></div>
+        <label class="consent-row" for="receiving-enabled"><input id="receiving-enabled" type="checkbox" /><span>Allow Setfeed messages to be delivered to me through Discord</span></label>
+        <div class="actions"><button class="btn btn-lg btn-primary" id="btn-link" type="button">Link account</button><button class="btn btn-lg btn-quiet" id="btn-signout" type="button">Use a different Setfeed account</button></div>
+        <ul class="security-list">
+          <li>The link token is single-purpose and is not written to localStorage.</li>
+          <li>Refreshes cannot submit automatically; you must press Link account.</li>
+        </ul>
+      </section>
+
+      <section class="panel hidden" id="success-panel" aria-labelledby="success-title" tabindex="-1">
+        <p class="panel-title" id="success-title">Your Setfeed account is linked to Discord.</p>
+        <p class="panel-sub" id="success-detail"></p>
+        <div class="actions"><a class="btn btn-lg btn-primary" href="./inbox.html">Go to Inbox</a><a class="btn btn-lg btn-secondary" href="./">Back to Setfeed</a></div>
+      </section>
+
+      <section class="panel hidden" id="email-complete-panel" aria-labelledby="email-complete-title" tabindex="-1">
+        <p class="panel-title" id="email-complete-title">Sign-in complete.</p>
+        <p class="panel-sub">Return to your original Discord linking tab to finish linking. If that tab was closed, return to Discord and request a new link.</p>
+        <div class="actions"><a class="btn btn-lg btn-secondary" href="./">Back to Setfeed</a></div>
+      </section>
+
+      <div class="status" id="status" role="status" aria-live="polite">
+        <div class="status-title"><span class="dot" id="status-dot"></span><span id="status-title">Checking link…</span></div>
+        <p class="status-line" id="status-line">Preparing secure account linking.</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const auth = window.sfAuth;
+    const TOKEN_SESSION_KEY = "sf_discord_link_token_v1";
+    const EMAIL_FOR_SIGNIN_KEY = "sf_email_for_signin";
+    const CONSENT_VERSION = "discord-delivery-v1";
+    const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
+    let linkToken = null;
+    let authReady = false;
+    let pendingSubmit = false;
+
+    const signinPanel = document.getElementById("signin-panel");
+    const linkPanel = document.getElementById("link-panel");
+    const successPanel = document.getElementById("success-panel");
+    const emailCompletePanel = document.getElementById("email-complete-panel");
+    const accountLabel = document.getElementById("account-label");
+    const receivingEnabled = document.getElementById("receiving-enabled");
+    const btnLink = document.getElementById("btn-link");
+    const btnGoogle = document.getElementById("btn-google");
+    const btnSendLink = document.getElementById("btn-send-link");
+    const btnSignout = document.getElementById("btn-signout");
+    const signinEmail = document.getElementById("signin-email");
+    const statusBox = document.getElementById("status");
+    const statusDot = document.getElementById("status-dot");
+    const statusTitle = document.getElementById("status-title");
+    const statusLine = document.getElementById("status-line");
+
+    function setStatus(kind, title, line, assertive) {
+      statusBox.classList.remove("hidden");
+      statusBox.setAttribute("aria-live", assertive ? "assertive" : "polite");
+      statusDot.className = "dot" + (kind === "good" ? " good" : kind === "warn" ? " warn" : "");
+      statusTitle.textContent = title;
+      statusLine.textContent = line || "";
+    }
+
+    function showOnly(panel) {
+      [signinPanel, linkPanel, successPanel, emailCompletePanel].forEach((item) => item.classList.toggle("hidden", item !== panel));
+    }
+
+    function validateToken(value) {
+      if (!value) return "missing";
+      if (value.length > 512) return "too_long";
+      if (!TOKEN_PATTERN.test(value)) return "malformed";
+      return "ok";
+    }
+
+    function readSessionToken() {
+      let storedToken = "";
+      try { storedToken = sessionStorage.getItem(TOKEN_SESSION_KEY) || ""; } catch (_) {}
+      const result = validateToken(storedToken);
+      if (result === "malformed" || result === "too_long") {
+        try { sessionStorage.removeItem(TOKEN_SESSION_KEY); } catch (_) {}
+      }
+      if (result !== "ok") return { result, token: "" };
+      return { result: "ok", token: storedToken };
+    }
+
+    function clearToken() { try { sessionStorage.removeItem(TOKEN_SESSION_KEY); } catch (_) {} linkToken = null; }
+
+    function renderForUser(user) {
+      if (!linkToken) return;
+      if (!authReady) return;
+      if (!user) {
+        showOnly(signinPanel);
+        setStatus("", "Sign in required", "Choose Google or email-link sign-in to continue linking Discord.");
+        return;
+      }
+      accountLabel.textContent = user.email || user.displayName || "Signed-in Setfeed account";
+      showOnly(linkPanel);
+      setStatus("", "Ready to link", "Review the account and delivery choice, then press Link account.");
+    }
+
+    const ERROR_MESSAGES = {
+      expired_token: ["Link expired", "This Discord linking link has expired. Return to Discord and request a new link."],
+      consumed_token: ["Link already used", "This Discord linking link was already completed. Request a new link if you need to link again."],
+      invalidated_token: ["Link replaced or cancelled", "This Discord linking link was replaced or cancelled. Return to Discord and request another link."],
+      inactive_token: ["Link inactive", "This Discord linking link is no longer active. Return to Discord and request another link."],
+      invalid_token: ["Invalid link", "This Discord linking link is invalid. Return to Discord and request a new link."],
+      conflicting_discord_account: ["Discord already linked", "This Discord account is already linked to a different Setfeed account."],
+      conflicting_firebase_uid: ["Setfeed account already linked", "This Setfeed account is already linked to a different Discord account."],
+      invalid_firebase_token: ["Sign in again", "Your Setfeed session was not accepted. Sign out, sign in again, and retry with a new Discord link."],
+      missing_auth: ["Sign in again", "Your Setfeed session was missing. Sign in again and retry with a new Discord link."],
+      anonymous_firebase_user: ["Full account required", "Use a full Google or email Setfeed account before linking Discord."],
+      rate_limited: ["Too many attempts", "Please wait a moment before trying again."],
+      wrong_origin: ["Configuration error", "This page is not configured for the Discord linking service."],
+      malformed_body: ["Invalid request", "The link request could not be understood. Request a new Discord link and try again."],
+      invalid_consent_version: ["Invalid request", "The delivery consent version is not supported. Request a new Discord link and try again."],
+      unsupported_media_type: ["Invalid request", "The link request used an unsupported content type."],
+      body_too_large: ["Invalid request", "The link request was too large. Request a new Discord link and try again."],
+      temporary_service_error: ["Service temporarily unavailable", "Please wait a moment and try again. Your account has not been linked yet."]
+    };
+
+    function normalizeBackendError(status, body) {
+      const nestedCode = body && body.error && typeof body.error.code === "string" ? body.error.code : "";
+      if (ERROR_MESSAGES[nestedCode]) return nestedCode;
+      if (status === 401 || status === 403) return "missing_auth";
+      if (status === 409) return "conflicting_discord_account";
+      if (status === 400 || status === 413 || status === 415) return "malformed_body";
+      if (status === 429) return "rate_limited";
+      if (status >= 500) return "temporary_service_error";
+      return "malformed_body";
+    }
+
+    async function completeLink() {
+      if (pendingSubmit || !auth.currentUser || !linkToken) return;
+      pendingSubmit = true;
+      btnLink.disabled = true;
+      btnSignout.disabled = true;
+      setStatus("", "Linking account…", "Securely confirming this Discord link.");
+      try {
+        const base = new URL(INTEGRATION_API_BASE_URL);
+        if (base.protocol !== "https:") throw new Error("Integration API must use HTTPS.");
+        const idToken = await auth.currentUser.getIdToken(true);
+        const payload = {
+          token: linkToken,
+          receivingEnabled: receivingEnabled.checked
+        };
+        if (receivingEnabled.checked) {
+          payload.consentVersion = CONSENT_VERSION;
+        }
+        const response = await fetch(new URL("/v1/discord-links/complete", base).toString(), {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${idToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        let body = null;
+        try { body = await response.json(); } catch (_) {}
+        if (!response.ok) {
+          const errorCode = normalizeBackendError(response.status, body);
+          const message = ERROR_MESSAGES[errorCode];
+          setStatus("warn", message[0], message[1], true);
+          return;
+        }
+        const enabled = body && typeof body.receivingEnabled === "boolean" ? body.receivingEnabled : false;
+        clearToken();
+        showOnly(successPanel);
+        document.getElementById("success-detail").textContent = enabled ? "Receiving Setfeed messages through Discord is enabled." : "Receiving Setfeed messages through Discord is not enabled.";
+        statusBox.classList.add("hidden");
+        successPanel.focus();
+      } catch (error) {
+        setStatus("warn", "Couldn’t complete link", "Please check your connection and try again. Your account has not been linked yet.", true);
+      } finally {
+        pendingSubmit = false;
+        if (linkToken) {
+          btnLink.disabled = false;
+          btnSignout.disabled = false;
+        }
+      }
+    }
+
+    async function signInGooglePopupFirst() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      try {
+        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+        await auth.signInWithPopup(provider);
+      } catch (error) {
+        const code = error && error.code ? String(error.code) : "";
+        if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+          setStatus("warn", "Sign-in cancelled", "Choose a sign-in method when you are ready to try again.", true);
+          return;
+        }
+        if (code === "auth/unauthorized-domain") {
+          setStatus("warn", "Auth domain not authorized", "Add setfeed.app in Firebase Auth → Authorized domains.", true);
+          return;
+        }
+        await auth.signInWithRedirect(provider);
+      }
+    }
+
+    btnGoogle.addEventListener("click", (event) => { event.preventDefault(); signInGooglePopupFirst(); });
+    btnSendLink.addEventListener("click", async () => {
+      const email = signinEmail.value ? signinEmail.value.trim() : "";
+      if (!email) { setStatus("warn", "Email needed", "Enter your email to request a sign-in link.", true); signinEmail.focus(); return; }
+      try {
+        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+        await auth.sendSignInLinkToEmail(email, { url: `${SITE_ORIGIN}/discord-link.html#finishSignIn`, handleCodeInApp: true });
+        try { localStorage.setItem(EMAIL_FOR_SIGNIN_KEY, email); } catch (_) {}
+        setStatus("good", "Link sent", "Open the link from your email on this device to finish signing in.");
+      } catch (_) {
+        setStatus("warn", "Couldn’t send link", "Email-link sign-in failed. Verify Auth is enabled and the domain is authorized.", true);
+      }
+    });
+    btnSignout.addEventListener("click", async () => { await auth.signOut(); });
+    btnLink.addEventListener("click", completeLink);
+
+    (async function init() {
+      let completedEmailLink = false;
+      if (auth.isSignInWithEmailLink(window.location.href)) {
+        try {
+          let email = "";
+          try { email = localStorage.getItem(EMAIL_FOR_SIGNIN_KEY) || ""; } catch (_) {}
+          email = email || window.prompt("Confirm your email to finish sign-in:");
+          if (!email) {
+            setStatus("warn", "Sign-in not finished", "Email is required to finish sign-in.", true);
+            return;
+          }
+          await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+          await auth.signInWithEmailLink(email, window.location.href);
+          completedEmailLink = true;
+          try { localStorage.removeItem(EMAIL_FOR_SIGNIN_KEY); } catch (_) {}
+          history.replaceState(null, "", "./discord-link.html#finishSignIn");
+        } catch (_) {
+          setStatus("warn", "Couldn’t finish sign-in", "The email sign-in link could not be completed. Return to the original Discord linking tab or request a new link from Discord.", true);
+          return;
+        }
+      }
+
+      const tokenResult = readSessionToken();
+      if (tokenResult.result !== "ok") {
+        if (completedEmailLink && tokenResult.result === "missing") {
+          showOnly(emailCompletePanel);
+          setStatus("good", "Sign-in complete", "Return to your original Discord linking tab to finish linking. If that tab was closed, return to Discord and request a new link.");
+          emailCompletePanel.focus();
+          return;
+        }
+        showOnly(null);
+        const reason = tokenResult.result === "missing" ? "No Discord linking token was found." : "The Discord linking token format is invalid.";
+        setStatus("warn", "Invalid Discord link", `${reason} Return to Discord and request a new link.`, true);
+        return;
+      }
+      linkToken = tokenResult.token;
+      try { await auth.getRedirectResult(); } catch (_) { setStatus("warn", "Sign-in recovery issue", "If sign-in did not complete, choose a sign-in method again.", true); }
+      auth.onAuthStateChanged((user) => {
+        authReady = true;
+        try { localStorage.setItem("sf_signed_authed", user ? "true" : "false"); } catch (_) {}
+        document.querySelectorAll(".auth-only").forEach(el => el.classList.toggle("hidden", !user));
+        renderForUser(user);
+      });
+    })();
+  </script>
+</body>
+</html>
