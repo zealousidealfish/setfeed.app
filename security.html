@@ -137,6 +137,13 @@
         <li><strong>Rate limits / constraints:</strong> conservative caps to reduce abuse and accidental overload.</li>
       </ul>
 
+      <h2>Account integrations</h2>
+      <p>
+        Invite-only account integration pages, such as Discord linking, require a signed-in Setfeed account and a short-lived linking token.
+        Linking pages validate token shape in the browser, remove the token from the visible URL, and complete the link with server-side
+        verification over HTTPS. Setfeed does not ask the browser to provide a Discord user ID for account linking.
+      </p>
+
       <h2>Reporting a vulnerability</h2>
       <p>
         If you believe you’ve found a security issue, email
