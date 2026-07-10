@@ -18,6 +18,19 @@
 
   <link rel="stylesheet" href="./styles.css" />
 
+  <style>
+    /* Keep the homepage heading on one line when there is enough room. */
+    .sf-page-hero h1 {
+      max-width: none;
+    }
+
+    @media (min-width: 760px) {
+      .sf-page-hero h1 {
+        white-space: nowrap;
+      }
+    }
+  </style>
+
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
