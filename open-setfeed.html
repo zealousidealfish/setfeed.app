@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Setfeed: Delayed Messaging</title>
+  <meta name="description" content="Open Setfeed on your device." />
+  <meta name="theme-color" content="#FFFBFE" id="meta-theme-color" />
+
+  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="./favicon-16.png" sizes="16x16">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180">
+  <link rel="stylesheet" href="./styles.css" />
+
+  <script>
+    (function(){
+      const THEME_KEY = "sf_theme_mode";
+      const root = document.documentElement;
+
+      function applyTheme(){
+        let stored = "system";
+        try { stored = localStorage.getItem(THEME_KEY) || "system"; } catch (_) {}
+        if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
+        else root.removeAttribute("data-theme");
+        const effective =
+          root.getAttribute("data-theme") ||
+          (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        const meta = document.getElementById("meta-theme-color");
+        if (meta) meta.content = effective === "dark" ? "#0F1114" : "#FFFBFE";
+      }
+
+      applyTheme();
+      window.addEventListener("storage", (e) => { if (e && e.key === THEME_KEY) applyTheme(); });
+    })();
+  </script>
+</head>
+<body class="page-bg">
+  <main class="wrap">
+    <div class="card">
+      <section class="sf-page-hero" id="apple-fallback" hidden aria-labelledby="open-title">
+        <h1 id="open-title">Setfeed for iPhone and iPad is coming soon.</h1>
+        <p class="lead">Setfeed is available on Android while the Apple version is being prepared.</p>
+        <div class="actions">
+          <a class="btn btn-lg btn-secondary" href="./">Back to Setfeed</a>
+        </div>
+      </section>
+
+      <section class="sf-page-hero" id="redirecting" aria-labelledby="redirect-title">
+        <h1 id="redirect-title">Opening Setfeed…</h1>
+        <p class="lead">You are being sent to the current Setfeed store listing.</p>
+        <div class="actions">
+          <a class="btn btn-lg btn-secondary" href="./">Back to Setfeed</a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const GOOGLE_PLAY_URL =
+      "https://play.google.com/store/apps/details?id=com.zealy.setfeed";
+
+    // When the Apple version is public, update only this APP_STORE_URL value.
+    const APP_STORE_URL = "";
+
+    const ua = navigator.userAgent || "";
+    const platform = navigator.platform || "";
+    const maxTouchPoints = navigator.maxTouchPoints || 0;
+    const isAndroid = /Android/i.test(ua);
+    const isAppleMobile = /iPhone|iPod|iPad/i.test(ua) || (platform === "MacIntel" && maxTouchPoints > 1);
+
+    if (isAndroid) {
+      location.replace(GOOGLE_PLAY_URL);
+    } else if (isAppleMobile) {
+      if (APP_STORE_URL) {
+        location.replace(APP_STORE_URL);
+      } else {
+        const redirecting = document.getElementById("redirecting");
+        const fallback = document.getElementById("apple-fallback");
+        if (redirecting) redirecting.hidden = true;
+        if (fallback) fallback.hidden = false;
+      }
+    } else {
+      location.replace(GOOGLE_PLAY_URL);
+    }
+  </script>
+</body>
+</html>
