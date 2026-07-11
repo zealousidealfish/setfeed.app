@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Completing Discord sign-in · Setfeed</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="referrer" content="no-referrer" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="./assets/discord-auth.js"></script>
+  <script>
+    const firebaseConfig = { apiKey: "AIzaSyCECKG-00tijJrt5qvRy3L27ZzE7bocNrU", authDomain: "setfeed-fcd7a.firebaseapp.com", projectId: "setfeed-fcd7a", storageBucket: "setfeed-fcd7a.firebasestorage.app", messagingSenderId: "553573263069", appId: "1:553573263069:web:e5c9884101ca38eaee1d34" };
+    if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
+    window.sfAuth = firebase.auth();
+    window.sfAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+  </script>
+</head>
+<body class="page-bg">
+  <main class="wrap">
+    <div class="card" style="max-width: 720px; margin: 0 auto;">
+      <section class="panel" aria-labelledby="title">
+        <p class="panel-title" id="title">Completing Discord sign-in…</p>
+        <p class="panel-sub" id="message" aria-live="polite">Please wait while Setfeed verifies your Discord sign-in.</p>
+        <div class="actions" style="margin-top: var(--s-3);">
+          <button class="btn btn-lg btn-secondary hidden" id="restart" type="button">Start a new Discord sign-in</button>
+          <a class="btn btn-lg btn-quiet" href="./">Back to Setfeed</a>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const auth = window.sfAuth;
+    const title = document.getElementById("title");
+    const message = document.getElementById("message");
+    const restart = document.getElementById("restart");
+    let restartDestination = window.SetfeedDiscordAuth.DEFAULT_DESTINATION;
+    function show(kind, text) { title.textContent = kind; message.textContent = text; restart.classList.remove("hidden"); }
+    restart.addEventListener("click", async () => {
+      restart.disabled = true; restart.setAttribute("aria-busy", "true");
+      try { window.location.assign(await window.SetfeedDiscordAuth.startDiscordSignIn({ auth, destination: restartDestination })); }
+      catch (error) { const mapped = window.SetfeedDiscordAuth.mapError(error && error.code, error && error.retryAfter); show(mapped.title, mapped.message); restart.disabled = false; restart.removeAttribute("aria-busy"); }
+    });
+    (async function complete() {
+      const parsed = window.SetfeedDiscordAuth.parseResultFragment(window.location.hash);
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+      if (!parsed.ok) {
+        const state = window.SetfeedDiscordAuth.validateStoredState();
+        if (state.ok) restartDestination = state.destination;
+        window.SetfeedDiscordAuth.clearState();
+        const mapped = window.SetfeedDiscordAuth.mapError(parsed.code);
+        show(mapped.title, mapped.message);
+        return;
+      }
+      try {
+        const exchanged = await window.SetfeedDiscordAuth.exchangeDiscordResult({ auth, resultCode: parsed.resultCode });
+        try {
+          await auth.signInWithCustomToken(exchanged.firebaseCustomToken);
+        } catch (_) {
+          window.SetfeedDiscordAuth.clearState();
+          const mapped = window.SetfeedDiscordAuth.mapError("firebase_custom_token_sign_in_failed");
+          show(mapped.title, mapped.message);
+          return;
+        }
+        const destination = exchanged.destination;
+        window.SetfeedDiscordAuth.clearState();
+        title.textContent = "Signed in"; message.textContent = "Redirecting you back to Setfeed…";
+        window.location.assign(destination);
+      } catch (error) {
+        const mapped = window.SetfeedDiscordAuth.mapError(error && error.code, error && error.retryAfter);
+        if (error && error.code === "firebase_custom_token_sign_in_failed") window.SetfeedDiscordAuth.clearState();
+        show(mapped.title, mapped.message);
+      }
+    })();
+  </script>
+</body>
+</html>
