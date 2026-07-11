@@ -19,6 +19,7 @@
   <!-- FIREBASE -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="./assets/discord-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 
@@ -337,6 +338,8 @@
                 <span>Continue with Google</span>
               </button>
 
+              <button class="btn btn-lg btn-secondary" id="btn-discord" type="button" aria-label="Continue with Discord">Continue with Discord</button>
+
               <button class="btn btn-lg" id="btn-send-link" type="button">Send sign-in link</button>
             </div>
 
@@ -353,7 +356,7 @@
 
             <div class="note">
               <p style="margin:0;">
-                Signed send requires sign-in (Email link or Google). It is required for Secure and Personal codes.
+                Signed send requires sign-in (Email link, Google, or Discord). It is required for Secure and Personal codes.
               </p>
             </div>
 
@@ -605,6 +608,7 @@
     const signedBody = document.getElementById("signed-body");
     const btnSendLink = document.getElementById("btn-send-link");
     const btnGoogle = document.getElementById("btn-google");
+    const btnDiscord = document.getElementById("btn-discord");
     const btnSignOut = document.getElementById("btn-sign-out");
     const btnGoInbox = document.getElementById("btn-go-inbox");
     const btnSignedSend = document.getElementById("btn-signed-send");
@@ -698,6 +702,23 @@
         }
       }
     }
+
+    if (btnDiscord) btnDiscord.addEventListener("click", async (e) => {
+      e.preventDefault();
+      if (btnDiscord.disabled) return;
+      btnDiscord.disabled = true;
+      btnDiscord.setAttribute("aria-busy", "true");
+      setStatus("good", "Opening Discord sign-in…", "You will return to Send after Discord authorization.");
+      try {
+        const url = await window.SetfeedDiscordAuth.startDiscordSignIn({ auth, destination: "./send.html#signin" });
+        window.location.assign(url);
+      } catch (error) {
+        const mapped = window.SetfeedDiscordAuth.mapError(error && error.code, error && error.retryAfter);
+        setStatus("warn", mapped.title, mapped.message);
+        btnDiscord.disabled = false;
+        btnDiscord.removeAttribute("aria-busy");
+      }
+    });
 
     btnGoogle.addEventListener("click", (e) => {
       e.preventDefault();
