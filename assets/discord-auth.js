@@ -4,6 +4,7 @@
   const VERIFIER_KEY = "sf_discord_oauth_verifier_v1";
   const STARTED_KEY = "sf_discord_oauth_started_ms_v1";
   const DESTINATION_KEY = "sf_discord_oauth_destination_v1";
+  const INTENT_KEY = "sf_discord_oauth_intent_v1";
   const IN_FLIGHT_KEY = "sf_discord_oauth_exchange_in_flight_v1";
   const STATE_TTL_MS = 10 * 60 * 1000;
   const VERIFIER_PATTERN = /^[A-Za-z0-9_-]{43}$/;
@@ -16,7 +17,15 @@
     invalid_or_expired_result: ["Sign-in expired", "This Discord sign-in result expired or was already used. Start a new Discord sign-in."],
     discord_exchange_failed: ["Discord sign-in failed", "Discord sign-in could not be completed. Start a new Discord sign-in to try again."],
     discord_profile_failed: ["Discord unavailable", "Discord profile verification failed. Try again later."],
-    discord_not_linked: ["Discord not linked", "Your Discord account is not linked to Setfeed yet. Run /setfeed link in Discord, then try again."],
+    discord_not_linked: ["Discord account not linked", "This Discord account is not linked to Setfeed. Create a new Setfeed account with Discord, or use another sign-in method for an existing account."],
+    invalid_intent: ["Restart required", "That Discord sign-in option was invalid. Start again."],
+    malformed_intent: ["Restart required", "This Discord sign-in type was invalid. Start a new Discord sign-in."],
+    already_signed_in: ["Already signed in", "Sign out before creating a separate Setfeed account with Discord."],
+    active_session_changed: ["Another Setfeed session is active", "Setfeed did not replace the active session. Sign out, then use Continue with Discord with the same Discord account."],
+    discord_already_linked: ["Use Continue with Discord", "This Discord account already has a Setfeed account. Use Continue with Discord to sign in."],
+    firebase_uid_already_linked: ["Account could not be created", "Setfeed could not safely create this account. Nothing was reassigned. Try again later."],
+    firebase_provisioning_unavailable: ["Account creation unavailable", "Setfeed could not create your account right now. Try again later."],
+    provisioning_conflict: ["Account creation could not continue", "Setfeed could not safely finish creating this account. Nothing was merged or reassigned. Try again later."],
     firebase_account_mismatch: ["Different Setfeed account", "That Discord account is associated with a different Setfeed account. Sign out only if you intentionally want to use a different account; Setfeed will not merge or switch accounts automatically."],
     firebase_user_unavailable: ["Setfeed account unavailable", "Your Setfeed session was unavailable. Sign in again, then start a new Discord sign-in."],
     rate_limited: ["Try again later", "Too many attempts. Wait a little while, then start a new Discord sign-in."],
@@ -51,18 +60,25 @@
     const allowedKey = url.pathname + url.hash;
     return ALLOWED_DESTINATIONS.has(allowedKey) && !url.search ? value : fallback;
   }
-  function clearState() { [VERIFIER_KEY, STARTED_KEY, DESTINATION_KEY, IN_FLIGHT_KEY].forEach((k) => { try { sessionStorage.removeItem(k); } catch (_) {} }); }
-  function storeState(verifier, destination) { clearState(); sessionStorage.setItem(VERIFIER_KEY, verifier); sessionStorage.setItem(STARTED_KEY, String(Date.now())); sessionStorage.setItem(DESTINATION_KEY, sanitizeDestination(destination)); }
+  function clearState() { [VERIFIER_KEY, STARTED_KEY, DESTINATION_KEY, INTENT_KEY, IN_FLIGHT_KEY].forEach((k) => { try { sessionStorage.removeItem(k); } catch (_) {} }); }
+  function validateIntent(intent) {
+    if (intent === undefined || intent === "continue") return "continue";
+    if (intent === "create_account") return "create_account";
+    throw { code:"invalid_intent" };
+  }
+  function storeState(verifier, destination, intent) { clearState(); sessionStorage.setItem(VERIFIER_KEY, verifier); sessionStorage.setItem(STARTED_KEY, String(Date.now())); sessionStorage.setItem(DESTINATION_KEY, sanitizeDestination(destination)); sessionStorage.setItem(INTENT_KEY, intent); }
   function validateStoredState() {
-    let verifier = "", started = "", destination = "";
-    try { verifier = sessionStorage.getItem(VERIFIER_KEY) || ""; started = sessionStorage.getItem(STARTED_KEY) || ""; destination = sessionStorage.getItem(DESTINATION_KEY) || ""; } catch (_) { clearState(); return { ok:false, code:"missing_verifier" }; }
+    let verifier = "", started = "", destination = "", storedIntent = null;
+    try { verifier = sessionStorage.getItem(VERIFIER_KEY) || ""; started = sessionStorage.getItem(STARTED_KEY) || ""; destination = sessionStorage.getItem(DESTINATION_KEY) || ""; storedIntent = sessionStorage.getItem(INTENT_KEY); } catch (_) { clearState(); return { ok:false, code:"missing_verifier" }; }
     if (!verifier) { clearState(); return { ok:false, code:"missing_verifier" }; }
     if (!VERIFIER_PATTERN.test(verifier)) { clearState(); return { ok:false, code:"malformed_verifier" }; }
     const startedMs = Number(started);
     if (!Number.isFinite(startedMs) || startedMs <= 0 || Date.now() - startedMs > STATE_TTL_MS) { clearState(); return { ok:false, code:"stale_verifier" }; }
     const safeDestination = sanitizeDestination(destination);
     if (!destination || safeDestination !== destination) { clearState(); return { ok:false, code:"unsafe_destination" }; }
-    return { ok:true, verifier, destination: safeDestination };
+    const intent = storedIntent === null ? "continue" : storedIntent;
+    if (intent !== "continue" && intent !== "create_account") { clearState(); return { ok:false, code:"malformed_intent" }; }
+    return { ok:true, verifier, destination: safeDestination, intent };
   }
   function validateAuthorizationUrl(value) {
     let url; try { url = new URL(value); } catch (_) { return false; }
@@ -86,16 +102,18 @@
   function responseFallbackCode(response) {
     return response && response.status >= 500 ? "backend_unavailable" : "internal_error";
   }
-  async function startDiscordSignIn({ auth, destination } = {}) {
+  async function startDiscordSignIn({ auth, destination, intent = "continue" } = {}) {
+    const safeIntent = validateIntent(intent);
+    if (safeIntent === "create_account" && auth && auth.currentUser) throw { code:"already_signed_in" };
     const verifier = generateVerifier();
     if (!VERIFIER_PATTERN.test(verifier)) throw { code:"malformed_verifier" };
     const challenge = await sha256Base64url(verifier);
-    storeState(verifier, destination);
+    storeState(verifier, destination, safeIntent);
     const headers = { "Content-Type": "application/json" };
     let token = ""; try { token = await currentIdToken(auth); } catch (error) { throw error; }
     if (token) headers.Authorization = `Bearer ${token}`;
     let response;
-    try { response = await fetch(`${API_BASE_URL}/v1/auth/discord/start`, { method:"POST", headers, body: JSON.stringify({ codeChallenge: challenge }) }); } catch (_) { clearState(); throw { code:"network_failure" }; }
+    try { response = await fetch(`${API_BASE_URL}/v1/auth/discord/start`, { method:"POST", headers, body: JSON.stringify(safeIntent === "create_account" ? { codeChallenge: challenge, intent: "create_account" } : { codeChallenge: challenge }) }); } catch (_) { clearState(); throw { code:"network_failure" }; }
     let json = null; try { json = await response.json(); } catch (_) {}
     if (!response.ok) { const code = stableErrorCode(json) || responseFallbackCode(response); clearState(); throw { code, retryAfter: parseRetryAfter(response) }; }
     if (!json || typeof json.authorizationUrl !== "string") { clearState(); throw { code:"malformed_json_response" }; }
@@ -123,8 +141,8 @@
     let json = null; try { json = await response.json(); } catch (_) {}
     if (!response.ok) { const code = stableErrorCode(json) || responseFallbackCode(response); clearState(); throw { code, retryAfter: parseRetryAfter(response) }; }
     if (!json || typeof json.firebaseCustomToken !== "string" || !json.firebaseCustomToken) { clearState(); throw { code:"malformed_json_response" }; }
-    return { firebaseCustomToken: json.firebaseCustomToken, destination: state.destination };
+    return { firebaseCustomToken: json.firebaseCustomToken, destination: state.destination, intent: state.intent };
   }
   function mapError(code, retryAfter) { const pair = errorMessages[code] || errorMessages.internal_error; const line = code === "rate_limited" && Number.isInteger(retryAfter) ? `Too many attempts. Try again in ${retryAfter} seconds.` : pair[1]; return { title: pair[0], message: line, code: errorMessages[code] ? code : "internal_error" }; }
-  window.SetfeedDiscordAuth = { API_BASE_URL, DEFAULT_DESTINATION, STATE_TTL_MS, startDiscordSignIn, exchangeDiscordResult, parseResultFragment, validateAuthorizationUrl, validateStoredState, sanitizeDestination, clearState, mapError, _test: { generateVerifier, sha256Base64url, stableErrorCode, VERIFIER_KEY, STARTED_KEY, DESTINATION_KEY, IN_FLIGHT_KEY } };
+  window.SetfeedDiscordAuth = { API_BASE_URL, DEFAULT_DESTINATION, STATE_TTL_MS, startDiscordSignIn, exchangeDiscordResult, parseResultFragment, validateAuthorizationUrl, validateStoredState, sanitizeDestination, clearState, mapError, _test: { generateVerifier, sha256Base64url, stableErrorCode, VERIFIER_KEY, STARTED_KEY, DESTINATION_KEY, INTENT_KEY, IN_FLIGHT_KEY } };
 })();

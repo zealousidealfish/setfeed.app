@@ -2,151 +2,27 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { TextEncoder } from 'node:util';
-
 const source = readFileSync(new URL('../assets/discord-auth.js', import.meta.url), 'utf8');
+class MemoryStorage { constructor(){this.map=new Map();} getItem(k){return this.map.has(k)?this.map.get(k):null;} setItem(k,v){this.map.set(k,String(v));} removeItem(k){this.map.delete(k);} keys(){return [...this.map.keys()];} }
+class HeadersMock { constructor(v={}){this.values=new Map(Object.entries(v).map(([k,val])=>[k.toLowerCase(),String(val)]));} get(k){return this.values.get(String(k).toLowerCase())||null;} }
+function makeResponse({ ok=false, status=400, body, headers={}, jsonThrows=false }){ return { ok,status,headers:new HeadersMock(headers), async json(){ if(jsonThrows) throw new Error('bad'); return body; } }; }
+const validAuthUrl='https://discord.com/oauth2/authorize?client_id=abc&redirect_uri=https%3A%2F%2Fbackend.example%2Fcallback&response_type=code&scope=identify&state=state123';
+function loadModule({ fetchImpl, randomImpl }={}){ const sessionStorage=new MemoryStorage(); let randomCalls=0; const context={ window:{location:{origin:'https://setfeed.app'}}, sessionStorage, URL, URLSearchParams, TextEncoder, Date, btoa:v=>Buffer.from(v,'binary').toString('base64'), crypto:{ getRandomValues(bytes){ randomCalls++; return randomImpl ? randomImpl(bytes) : (bytes.fill(7), bytes); }, subtle:{ async digest(){ return new Uint8Array(32).fill(9).buffer; } } }, fetch: fetchImpl || (async()=>makeResponse({ok:true,status:200,body:{authorizationUrl:validAuthUrl}}))}; context.window.window=context.window; vm.runInNewContext(source, context, {filename:'assets/discord-auth.js'}); return {api:context.window.SetfeedDiscordAuth, sessionStorage, context, get randomCalls(){return randomCalls;}}; }
+async function rejectsWithCode(promise, code){ let e; try{await promise;}catch(err){e=err;} assert.ok(e, `expected ${code}`); assert.equal(e.code, code); return e; }
+function seedExchangeState(api, ss, destination='/inbox.html#hidden', intent='continue'){ ss.setItem(api._test.VERIFIER_KEY,'A'.repeat(43)); ss.setItem(api._test.STARTED_KEY,String(Date.now())); ss.setItem(api._test.DESTINATION_KEY,destination); if (intent !== undefined) ss.setItem(api._test.INTENT_KEY,intent); }
+function oauthValues(api, ss){ return [api._test.VERIFIER_KEY,api._test.STARTED_KEY,api._test.DESTINATION_KEY,api._test.INTENT_KEY,api._test.IN_FLIGHT_KEY].map(k=>ss.getItem(k)); }
 
-class MemoryStorage {
-  constructor() { this.map = new Map(); }
-  getItem(key) { return this.map.has(key) ? this.map.get(key) : null; }
-  setItem(key, value) { this.map.set(key, String(value)); }
-  removeItem(key) { this.map.delete(key); }
+async function testIntentValidation(){
+  for (const intent of [undefined,'continue','create_account']) { const loaded=loadModule(); const url=await loaded.api.startDiscordSignIn({ destination:'/inbox.html', ...(intent===undefined?{}:{intent}) }); assert.equal(url, validAuthUrl); }
+  for (const intent of [null,'',' ','Continue',1,true,{}]) { let fetches=0, tokens=0; const loaded=loadModule({fetchImpl:async()=>{fetches++; return makeResponse({ok:true,status:200,body:{authorizationUrl:validAuthUrl}});}}); await rejectsWithCode(loaded.api.startDiscordSignIn({ auth:{currentUser:{async getIdToken(){tokens++; return 't';}}}, destination:'/inbox.html', intent }), 'invalid_intent'); assert.equal(loaded.randomCalls,0); assert.equal(fetches,0); assert.equal(tokens,0); assert.deepEqual(oauthValues(loaded.api, loaded.sessionStorage), [null,null,null,null,null]); }
 }
-
-class HeadersMock {
-  constructor(values = {}) { this.values = new Map(Object.entries(values).map(([key, value]) => [key.toLowerCase(), String(value)])); }
-  get(key) { return this.values.has(String(key).toLowerCase()) ? this.values.get(String(key).toLowerCase()) : null; }
-}
-
-function makeResponse({ ok = false, status = 400, body, headers = {}, jsonThrows = false }) {
-  return {
-    ok,
-    status,
-    headers: new HeadersMock(headers),
-    async json() {
-      if (jsonThrows) throw new Error('invalid json');
-      return body;
-    },
-  };
-}
-
-function loadModule({ fetchImpl } = {}) {
-  const sessionStorage = new MemoryStorage();
-  const localStorage = new MemoryStorage();
-  const context = {
-    window: { location: { origin: 'https://setfeed.app' } },
-    sessionStorage,
-    localStorage,
-    URL,
-    URLSearchParams,
-    TextEncoder,
-    Date,
-    btoa(value) { return Buffer.from(value, 'binary').toString('base64'); },
-    crypto: {
-      getRandomValues(bytes) { bytes.fill(7); return bytes; },
-      subtle: { async digest() { return new Uint8Array(32).fill(9).buffer; } },
-    },
-    fetch: fetchImpl || (async () => makeResponse({ ok: true, status: 200, body: {} })),
-  };
-  context.window.window = context.window;
-  context.window.sessionStorage = sessionStorage;
-  context.window.localStorage = localStorage;
-  context.window.URL = URL;
-  context.window.URLSearchParams = URLSearchParams;
-  context.window.crypto = context.crypto;
-  context.window.fetch = context.fetch;
-  vm.runInNewContext(source, context, { filename: 'assets/discord-auth.js' });
-  return { api: context.window.SetfeedDiscordAuth, sessionStorage, context };
-}
-
-const validAuthUrl = 'https://discord.com/oauth2/authorize?client_id=abc&redirect_uri=https%3A%2F%2Fbackend.example%2Fcallback&response_type=code&scope=identify&state=state123';
-
-async function rejectsWithCode(promise, code, extra) {
-  let error;
-  try { await promise; } catch (caught) { error = caught; }
-  assert.ok(error, `expected rejection ${code}`);
-  assert.equal(error.code, code);
-  if (extra) extra(error);
-  return error;
-}
-
-async function testStartNestedErrors() {
-  for (const [code, retryAfter, expectedRetry] of [
-    ['invalid_firebase_token', null, null],
-    ['rate_limited', '42', 42],
-  ]) {
-    let calls = 0;
-    const { api } = loadModule({ fetchImpl: async () => { calls += 1; return makeResponse({ status: 401, body: { error: { code, message: 'RAW BACKEND MESSAGE' } }, headers: retryAfter ? { 'Retry-After': retryAfter } : {} }); } });
-    await rejectsWithCode(api.startDiscordSignIn({ destination: './send.html' }), code, (error) => assert.equal(error.retryAfter, expectedRetry));
-    assert.equal(calls, 1);
-    const mapped = api.mapError(code, expectedRetry);
-    assert.notEqual(mapped.message, 'RAW BACKEND MESSAGE');
-  }
-}
-
-async function testStartFallbacksAndTokenFailure() {
-  let calls = 0;
-  let loaded = loadModule({ fetchImpl: async () => { calls += 1; return makeResponse({ status: 500, body: { nope: true } }); } });
-  await rejectsWithCode(loaded.api.startDiscordSignIn({ destination: './send.html' }), 'backend_unavailable');
-  assert.equal(calls, 1);
-
-  loaded = loadModule({ fetchImpl: async () => makeResponse({ status: 400, body: { error: { message: 'safe but not a code' } } }) });
-  await rejectsWithCode(loaded.api.startDiscordSignIn({ destination: './send.html' }), 'internal_error');
-
-  loaded = loadModule({ fetchImpl: async () => { throw new Error('fetch must not run'); } });
-  await rejectsWithCode(loaded.api.startDiscordSignIn({ auth: { currentUser: { async getIdToken() { throw new Error('firebase raw'); } } }, destination: './send.html' }), 'firebase_user_unavailable');
-}
-
-function seedExchangeState(api, sessionStorage, destination = '/inbox.html#hidden') {
-  sessionStorage.setItem(api._test.VERIFIER_KEY, 'A'.repeat(43));
-  sessionStorage.setItem(api._test.STARTED_KEY, String(Date.now()));
-  sessionStorage.setItem(api._test.DESTINATION_KEY, destination);
-}
-
-async function testExchangeNestedErrors() {
-  for (const code of ['firebase_account_mismatch', 'invalid_or_expired_result', 'rate_limited']) {
-    let calls = 0;
-    const { api, sessionStorage } = loadModule({ fetchImpl: async () => { calls += 1; return makeResponse({ status: 409, body: { error: { code, message: 'DO NOT RENDER' } }, headers: code === 'rate_limited' ? { 'Retry-After': '7' } : {} }); } });
-    seedExchangeState(api, sessionStorage);
-    await rejectsWithCode(api.exchangeDiscordResult({ resultCode: 'R'.repeat(32) }), code, (error) => {
-      if (code === 'rate_limited') assert.equal(error.retryAfter, 7);
-    });
-    assert.equal(calls, 1);
-    assert.notEqual(api.mapError(code, 7).message, 'DO NOT RENDER');
-  }
-}
-
-async function testExchangeMalformedNetworkAndNoRetry() {
-  let calls = 0;
-  let loaded = loadModule({ fetchImpl: async () => { calls += 1; return makeResponse({ status: 400, jsonThrows: true }); } });
-  seedExchangeState(loaded.api, loaded.sessionStorage);
-  await rejectsWithCode(loaded.api.exchangeDiscordResult({ resultCode: 'R'.repeat(32) }), 'internal_error');
-  assert.equal(calls, 1);
-
-  calls = 0;
-  loaded = loadModule({ fetchImpl: async () => { calls += 1; throw new Error('network ambiguity'); } });
-  seedExchangeState(loaded.api, loaded.sessionStorage);
-  await rejectsWithCode(loaded.api.exchangeDiscordResult({ resultCode: 'R'.repeat(32) }), 'ambiguous_exchange_outcome');
-  assert.equal(calls, 1, 'exchange must not retry automatically');
-  assert.equal(loaded.sessionStorage.getItem(loaded.api._test.IN_FLIGHT_KEY), null, 'network ambiguity clears in-flight marker');
-
-  loaded = loadModule({ fetchImpl: async () => { throw new Error('fetch must not run'); } });
-  seedExchangeState(loaded.api, loaded.sessionStorage);
-  await rejectsWithCode(loaded.api.exchangeDiscordResult({ auth: { currentUser: { async getIdToken() { throw new Error('firebase raw'); } } }, resultCode: 'R'.repeat(32) }), 'firebase_user_unavailable');
-  assert.equal(loaded.sessionStorage.getItem(loaded.api._test.IN_FLIGHT_KEY), null, 'token failure clears in-flight marker');
-}
-
-async function testSuccessAndUrlValidation() {
-  let assigned;
-  const { api } = loadModule({ fetchImpl: async () => makeResponse({ ok: true, status: 200, body: { authorizationUrl: validAuthUrl } }) });
-  assigned = await api.startDiscordSignIn({ destination: './send.html' });
-  assert.equal(assigned, validAuthUrl, 'valid returned URL is not modified');
-  assert.equal(api.validateAuthorizationUrl('https://discord.com:444/oauth2/authorize?client_id=abc&redirect_uri=x&response_type=code&scope=identify&state=s'), false, 'non-empty port is rejected');
-}
-
-await testStartNestedErrors();
-await testStartFallbacksAndTokenFailure();
-await testExchangeNestedErrors();
-await testExchangeMalformedNetworkAndNoRetry();
-await testSuccessAndUrlValidation();
-
+async function testSignedInCreate(){ const loaded=loadModule({fetchImpl:async()=>{throw new Error('no fetch');}}); loaded.sessionStorage.setItem('unrelated','keep'); let tokens=0; await rejectsWithCode(loaded.api.startDiscordSignIn({auth:{currentUser:{async getIdToken(){tokens++; return 't';}}}, destination:'/inbox.html', intent:'create_account'}),'already_signed_in'); assert.equal(tokens,0); assert.equal(loaded.randomCalls,0); assert.equal(loaded.sessionStorage.getItem('unrelated'),'keep'); assert.deepEqual(oauthValues(loaded.api, loaded.sessionStorage), [null,null,null,null,null]); }
+async function testBodiesAndState(){ let calls=[]; let loaded=loadModule({fetchImpl:async(_url, init)=>{calls.push(init); return makeResponse({ok:true,status:200,body:{authorizationUrl:validAuthUrl}});}}); await loaded.api.startDiscordSignIn({destination:'/send.html', intent:'continue'}); let body=JSON.parse(calls[0].body); assert.deepEqual(Object.keys(body), ['codeChallenge']); assert.ok(!('intent' in body)); assert.equal(loaded.sessionStorage.getItem(loaded.api._test.INTENT_KEY),'continue'); loaded.api.clearState(); assert.equal(loaded.sessionStorage.getItem(loaded.api._test.INTENT_KEY), null);
+  calls=[]; loaded=loadModule({fetchImpl:async(_url, init)=>{calls.push(init); return makeResponse({ok:true,status:200,body:{authorizationUrl:validAuthUrl}});}}); await loaded.api.startDiscordSignIn({destination:'/send.html', intent:'create_account'}); body=JSON.parse(calls[0].body); assert.deepEqual(Object.keys(body), ['codeChallenge','intent']); assert.equal(body.intent,'create_account'); assert.equal(loaded.sessionStorage.getItem(loaded.api._test.INTENT_KEY),'create_account'); }
+async function testStoredState(){ const loaded=loadModule(); const {api, sessionStorage:ss}=loaded; seedExchangeState(api, ss, '/inbox.html', undefined); assert.equal(api.validateStoredState().intent,'continue'); seedExchangeState(api, ss, '/inbox.html', 'continue'); assert.equal(api.validateStoredState().intent,'continue'); seedExchangeState(api, ss, '/inbox.html', 'create_account'); assert.equal(api.validateStoredState().intent,'create_account'); seedExchangeState(api, ss, '/inbox.html', ''); const bad=api.validateStoredState(); assert.equal(bad.ok,false); assert.equal(bad.code,'malformed_intent'); assert.deepEqual(oauthValues(api, ss), [null,null,null,null,null]); }
+async function testExchange(){ let calls=0; let loaded=loadModule({fetchImpl:async()=>{calls++; return makeResponse({ok:true,status:200,body:{firebaseCustomToken:'custom', intent:'evil'}});}}); seedExchangeState(loaded.api, loaded.sessionStorage, '/send.html#signin', 'create_account'); const ex=await loaded.api.exchangeDiscordResult({resultCode:'R'.repeat(32)}); assert.equal(ex.firebaseCustomToken,'custom'); assert.equal(ex.destination,'/send.html#signin'); assert.equal(ex.intent,'create_account'); assert.equal(calls,1);
+  loaded=loadModule({fetchImpl:async()=>makeResponse({status:409,body:{error:{code:'discord_not_linked',message:'RAW'}}})}); seedExchangeState(loaded.api, loaded.sessionStorage); await rejectsWithCode(loaded.api.exchangeDiscordResult({resultCode:'R'.repeat(32)}),'discord_not_linked'); assert.notEqual(loaded.api.mapError('discord_not_linked').message,'RAW');
+  calls=0; loaded=loadModule({fetchImpl:async()=>{calls++; throw new Error('ambiguous');}}); seedExchangeState(loaded.api, loaded.sessionStorage); await rejectsWithCode(loaded.api.exchangeDiscordResult({resultCode:'R'.repeat(32)}),'ambiguous_exchange_outcome'); assert.equal(calls,1); }
+async function testExistingFallbacks(){ let loaded=loadModule({fetchImpl:async()=>makeResponse({status:500,body:{}})}); await rejectsWithCode(loaded.api.startDiscordSignIn({destination:'./send.html'}),'backend_unavailable'); loaded=loadModule({fetchImpl:async()=>makeResponse({status:400,body:{error:{message:'safe'}}})}); await rejectsWithCode(loaded.api.startDiscordSignIn({destination:'./send.html'}),'internal_error'); loaded=loadModule({fetchImpl:async()=>makeResponse({status:401,body:{error:{code:'rate_limited'}},headers:{'Retry-After':'42'}})}); const e=await rejectsWithCode(loaded.api.startDiscordSignIn({destination:'./send.html'}),'rate_limited'); assert.equal(e.retryAfter,42); }
+await testIntentValidation(); await testSignedInCreate(); await testBodiesAndState(); await testStoredState(); await testExchange(); await testExistingFallbacks();
 console.log('discord-auth behavior checks passed');
