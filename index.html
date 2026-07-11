@@ -33,6 +33,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="./assets/discord-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 
   <script>
@@ -163,7 +164,7 @@
               Sign in to continue
             </p>
             <p class="panel-sub">
-              Sign in with Google or an email link to continue to your selected
+              Sign in with Google, Discord, or an email link to continue to your selected
               Setfeed action.
             </p>
 
@@ -173,6 +174,10 @@
                 id="btn-google"
                 type="button"
               >Continue with Google</button>
+            </div>
+
+            <div class="actions" style="margin-top: var(--s-3); align-items: stretch;">
+              <button class="btn btn-lg btn-secondary" id="btn-discord" type="button" aria-label="Continue with Discord">Continue with Discord</button>
             </div>
 
             <div class="field" style="margin-top: var(--s-3);">
@@ -294,6 +299,7 @@
     const btnGetReceiveCode = document.getElementById("btn-get-receive-code");
     const btnGoogle = document.getElementById("btn-google");
     const btnSendLink = document.getElementById("btn-send-link");
+    const btnDiscord = document.getElementById("btn-discord");
     const btnSignout = document.getElementById("btn-signout");
     const authLabel = document.getElementById("sf-auth-label");
     const authStatus = document.getElementById("sf-auth-status");
@@ -619,6 +625,25 @@
           );
         }
       }
+    }
+
+    if (btnDiscord) {
+      btnDiscord.addEventListener("click", async (event) => {
+        event.preventDefault();
+        if (btnDiscord.disabled) return;
+        btnDiscord.disabled = true;
+        btnDiscord.setAttribute("aria-busy", "true");
+        showStatus("good", "Opening Discord sign-in…", "You will return to Setfeed after Discord authorization.");
+        try {
+          const url = await window.SetfeedDiscordAuth.startDiscordSignIn({ auth, destination: "./send.html" });
+          window.location.assign(url);
+        } catch (error) {
+          const mapped = window.SetfeedDiscordAuth.mapError(error && error.code, error && error.retryAfter);
+          showStatus("warn", mapped.title, mapped.message);
+          btnDiscord.disabled = false;
+          btnDiscord.removeAttribute("aria-busy");
+        }
+      });
     }
 
     if (btnGoogle) {
