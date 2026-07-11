@@ -340,6 +340,16 @@
 
               <button class="btn btn-lg btn-secondary" id="btn-discord" type="button" aria-label="Continue with Discord">Continue with Discord</button>
 
+              <button
+                class="btn btn-lg btn-quiet"
+                id="btn-discord-create"
+                type="button"
+              >
+                Create Setfeed account with Discord
+              </button>
+
+              <p class="help">Already linked? Continue with Discord. New to Setfeed? Create an account with Discord. Receiving from other people starts disabled.</p>
+
               <button class="btn btn-lg" id="btn-send-link" type="button">Send sign-in link</button>
             </div>
 
@@ -609,6 +619,7 @@
     const btnSendLink = document.getElementById("btn-send-link");
     const btnGoogle = document.getElementById("btn-google");
     const btnDiscord = document.getElementById("btn-discord");
+    const btnDiscordCreate = document.getElementById("btn-discord-create");
     const btnSignOut = document.getElementById("btn-sign-out");
     const btnGoInbox = document.getElementById("btn-go-inbox");
     const btnSignedSend = document.getElementById("btn-signed-send");
@@ -710,13 +721,30 @@
       btnDiscord.setAttribute("aria-busy", "true");
       setStatus("good", "Opening Discord sign-in…", "You will return to Send after Discord authorization.");
       try {
-        const url = await window.SetfeedDiscordAuth.startDiscordSignIn({ auth, destination: "./send.html#signin" });
+        const url = await window.SetfeedDiscordAuth.startDiscordSignIn({ auth, destination: "/send.html#signin", intent: "continue" });
         window.location.assign(url);
       } catch (error) {
         const mapped = window.SetfeedDiscordAuth.mapError(error && error.code, error && error.retryAfter);
         setStatus("warn", mapped.title, mapped.message);
         btnDiscord.disabled = false;
         btnDiscord.removeAttribute("aria-busy");
+      }
+    });
+
+    if (btnDiscordCreate) btnDiscordCreate.addEventListener("click", async (e) => {
+      e.preventDefault();
+      if (btnDiscordCreate.disabled) return;
+      btnDiscordCreate.disabled = true;
+      btnDiscordCreate.setAttribute("aria-busy", "true");
+      setStatus("good", "Opening Discord account creation…", "You will return to Send after Discord authorization.");
+      try {
+        const url = await window.SetfeedDiscordAuth.startDiscordSignIn({ auth, destination: "/send.html#signin", intent: "create_account" });
+        window.location.assign(url);
+      } catch (error) {
+        const mapped = window.SetfeedDiscordAuth.mapError(error && error.code, error && error.retryAfter);
+        setStatus("warn", mapped.title, mapped.message);
+        btnDiscordCreate.disabled = false;
+        btnDiscordCreate.removeAttribute("aria-busy");
       }
     });
 
