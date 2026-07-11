@@ -25,6 +25,20 @@
         <p class="panel-sub" id="message" aria-live="polite">Please wait while Setfeed verifies your Discord sign-in.</p>
         <div class="actions" style="margin-top: var(--s-3);">
           <button class="btn btn-lg btn-secondary hidden" id="restart" type="button">Start a new Discord sign-in</button>
+          <button
+            class="btn btn-lg btn-primary hidden"
+            id="create-account"
+            type="button"
+          >
+            Create Setfeed account with Discord
+          </button>
+          <button
+            class="btn btn-lg btn-secondary hidden"
+            id="continue-discord"
+            type="button"
+          >
+            Continue with Discord
+          </button>
           <a class="btn btn-lg btn-quiet" href="./">Back to Setfeed</a>
         </div>
       </section>
@@ -35,42 +49,157 @@
     const title = document.getElementById("title");
     const message = document.getElementById("message");
     const restart = document.getElementById("restart");
-    let restartDestination = window.SetfeedDiscordAuth.DEFAULT_DESTINATION;
-    function show(kind, text) { title.textContent = kind; message.textContent = text; restart.classList.remove("hidden"); }
-    restart.addEventListener("click", async () => {
-      restart.disabled = true; restart.setAttribute("aria-busy", "true");
-      try { window.location.assign(await window.SetfeedDiscordAuth.startDiscordSignIn({ auth, destination: restartDestination })); }
-      catch (error) { const mapped = window.SetfeedDiscordAuth.mapError(error && error.code, error && error.retryAfter); show(mapped.title, mapped.message); restart.disabled = false; restart.removeAttribute("aria-busy"); }
-    });
+    const createAccount = document.getElementById("create-account");
+    const continueDiscord = document.getElementById("continue-discord");
+    let restartDestination =
+      window.SetfeedDiscordAuth.DEFAULT_DESTINATION;
+    let restartIntent = "continue";
+
+    function show(text, line) {
+      title.textContent = text;
+      message.textContent = line;
+    }
+
+    let recoveryStartInFlight = false;
+
+    function recoveryButtons() {
+      return [restart, createAccount, continueDiscord];
+    }
+
+    function visibleRecoveryButtons() {
+      return recoveryButtons().filter((button) => !button.classList.contains("hidden"));
+    }
+
+    function resetRecoveryButtons() {
+      recoveryButtons().forEach((button) => {
+        button.classList.add("hidden");
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+      });
+    }
+
+    function renderRecovery(mapped) {
+      resetRecoveryButtons();
+
+      if (mapped.code === "discord_not_linked") {
+        restart.textContent = "Try Continue with Discord again";
+        restart.classList.remove("hidden");
+        createAccount.classList.remove("hidden");
+        return;
+      }
+
+      if (mapped.code === "discord_already_linked") {
+        continueDiscord.classList.remove("hidden");
+        return;
+      }
+
+      restart.textContent = restartIntent === "create_account"
+        ? "Try account creation again"
+        : "Try Continue with Discord again";
+      restart.classList.remove("hidden");
+    }
+
+    async function startFresh(button, intent) {
+      if (recoveryStartInFlight || button.disabled) return;
+      recoveryStartInFlight = true;
+      visibleRecoveryButtons().forEach((visibleButton) => { visibleButton.disabled = true; });
+      button.setAttribute("aria-busy", "true");
+      try {
+        const url = await window.SetfeedDiscordAuth.startDiscordSignIn({
+          auth,
+          destination: restartDestination,
+          intent,
+        });
+        window.location.assign(url);
+      } catch (error) {
+        recoveryStartInFlight = false;
+        const mapped = window.SetfeedDiscordAuth.mapError(error && error.code, error && error.retryAfter);
+        show(mapped.title, mapped.message);
+        renderRecovery(mapped);
+      }
+    }
+
+    restart.addEventListener("click", () => startFresh(restart, restartIntent));
+    createAccount.addEventListener("click", () => startFresh(createAccount, "create_account"));
+    continueDiscord.addEventListener("click", () => startFresh(continueDiscord, "continue"));
+
     (async function complete() {
       const parsed = window.SetfeedDiscordAuth.parseResultFragment(window.location.hash);
       history.replaceState(null, "", window.location.pathname + window.location.search);
+      const state = window.SetfeedDiscordAuth.validateStoredState();
+      if (state.ok) {
+        restartDestination = state.destination;
+        restartIntent = state.intent;
+      }
+
+      if (!state.ok) {
+        window.SetfeedDiscordAuth.clearState();
+        const mapped = window.SetfeedDiscordAuth.mapError(state.code);
+        show(mapped.title, mapped.message);
+        renderRecovery(mapped);
+        return;
+      }
+
       if (!parsed.ok) {
-        const state = window.SetfeedDiscordAuth.validateStoredState();
-        if (state.ok) restartDestination = state.destination;
         window.SetfeedDiscordAuth.clearState();
         const mapped = window.SetfeedDiscordAuth.mapError(parsed.code);
         show(mapped.title, mapped.message);
+        renderRecovery(mapped);
         return;
       }
+
+      if (restartIntent === "create_account") {
+        try {
+          const settledUser = await window.SetfeedDiscordAuth.waitForInitialAuthState(auth);
+          if (settledUser) {
+            window.SetfeedDiscordAuth.clearState();
+            const mapped = window.SetfeedDiscordAuth.mapError("active_session_changed");
+            show(mapped.title, mapped.message);
+            renderRecovery(mapped);
+            return;
+          }
+        } catch (error) {
+          window.SetfeedDiscordAuth.clearState();
+          const mapped = window.SetfeedDiscordAuth.mapError(error && error.code, error && error.retryAfter);
+          show(mapped.title, mapped.message);
+          renderRecovery(mapped);
+          return;
+        }
+      }
+
       try {
         const exchanged = await window.SetfeedDiscordAuth.exchangeDiscordResult({ auth, resultCode: parsed.resultCode });
+        if (exchanged.intent === "create_account" && auth.currentUser) {
+          window.SetfeedDiscordAuth.clearState();
+          const mapped = window.SetfeedDiscordAuth.mapError("active_session_changed");
+          show(mapped.title, mapped.message);
+          renderRecovery(mapped);
+          return;
+        }
+
         try {
           await auth.signInWithCustomToken(exchanged.firebaseCustomToken);
         } catch (_) {
           window.SetfeedDiscordAuth.clearState();
           const mapped = window.SetfeedDiscordAuth.mapError("firebase_custom_token_sign_in_failed");
           show(mapped.title, mapped.message);
+          renderRecovery(mapped);
           return;
         }
+
         const destination = exchanged.destination;
+        const intent = exchanged.intent;
         window.SetfeedDiscordAuth.clearState();
-        title.textContent = "Signed in"; message.textContent = "Redirecting you back to Setfeed…";
+        if (intent === "create_account") {
+          show("Setfeed account created", "Redirecting you back to Setfeed…");
+        } else {
+          show("Signed in", "Redirecting you back to Setfeed…");
+        }
         window.location.assign(destination);
       } catch (error) {
         const mapped = window.SetfeedDiscordAuth.mapError(error && error.code, error && error.retryAfter);
-        if (error && error.code === "firebase_custom_token_sign_in_failed") window.SetfeedDiscordAuth.clearState();
         show(mapped.title, mapped.message);
+        renderRecovery(mapped);
       }
     })();
   </script>

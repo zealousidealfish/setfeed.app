@@ -726,10 +726,18 @@
         <div class="actions">
           <button class="btn btn-lg btn-primary" id="btn-google" type="button">Continue with Google</button>
           <button class="btn btn-lg btn-secondary" id="btn-discord" type="button" aria-label="Continue with Discord">Continue with Discord</button>
+          <button
+            class="btn btn-lg btn-quiet"
+            id="btn-discord-create"
+            type="button"
+          >
+            Create Setfeed account with Discord
+          </button>
           <button class="btn btn-lg btn-quiet" id="btn-sign-out" type="button" disabled>Sign out</button>
           <span class="kbd" id="auth-pill">Not signed in</span>
         </div>
 
+        <small class="help">Already linked? Continue with Discord. New to Setfeed? Create an account with Discord. Receiving from other people starts disabled.</small>
         <small class="help">Fetch is read-only. Consume is explicit.</small>
       </div>
 
@@ -888,6 +896,7 @@
 
     const btnGoogle = document.getElementById("btn-google");
     const btnDiscord = document.getElementById("btn-discord");
+    const btnDiscordCreate = document.getElementById("btn-discord-create");
     const btnSignOut = document.getElementById("btn-sign-out");
     const authPill = document.getElementById("auth-pill");
 
@@ -902,6 +911,7 @@
 
       btnGoogle.classList.toggle("hidden", isAuthed);
       if (btnDiscord) btnDiscord.classList.toggle("hidden", isAuthed);
+      if (btnDiscordCreate) btnDiscordCreate.classList.toggle("hidden", isAuthed);
       btnSignOut.disabled = !isAuthed;
       authPill.textContent = isAuthed ? (user.email || "Signed in") : "Not signed in";
 
@@ -920,21 +930,42 @@
 
     auth.onAuthStateChanged((user) => renderAuthUI(user));
 
-    if (btnDiscord) btnDiscord.addEventListener("click", async () => {
-      if (btnDiscord.disabled) return;
-      btnDiscord.disabled = true;
-      btnDiscord.setAttribute("aria-busy", "true");
-      setStatus("good", "Opening Discord sign-in…", "You will return to Inbox after Discord authorization.");
+    function setDiscordButtonsDisabled(disabled) {
+      if (btnDiscord) btnDiscord.disabled = disabled;
+      if (btnDiscordCreate) btnDiscordCreate.disabled = disabled;
+    }
+
+    function getInboxDiscordDestination() {
+      return window.location.hash.toLowerCase().includes("hidden")
+        ? "/inbox.html#hidden"
+        : "/inbox.html";
+    }
+
+    async function startInboxDiscord(event, button, intent) {
+      if (event && typeof event.preventDefault === "function") event.preventDefault();
+      if (!button || button.disabled) return;
+      setDiscordButtonsDisabled(true);
+      button.setAttribute("aria-busy", "true");
+      setStatus(
+        "good",
+        intent === "create_account" ? "Opening Discord account creation…" : "Opening Discord sign-in…",
+        "You will return to Inbox after Discord authorization."
+      );
       try {
-        const url = await window.SetfeedDiscordAuth.startDiscordSignIn({ auth, destination: window.location.hash && window.location.hash.toLowerCase().includes("hidden") ? "./inbox.html#hidden" : "./inbox.html" });
+        const destination = getInboxDiscordDestination();
+        const url = await window.SetfeedDiscordAuth.startDiscordSignIn({ auth, destination, intent });
         window.location.assign(url);
       } catch (error) {
         const mapped = window.SetfeedDiscordAuth.mapError(error && error.code, error && error.retryAfter);
         setStatus("warn", mapped.title, mapped.message);
-        btnDiscord.disabled = false;
-        btnDiscord.removeAttribute("aria-busy");
+        setDiscordButtonsDisabled(false);
+        button.removeAttribute("aria-busy");
       }
-    });
+    }
+
+    if (btnDiscord) btnDiscord.addEventListener("click", (event) => startInboxDiscord(event, btnDiscord, "continue"));
+
+    if (btnDiscordCreate) btnDiscordCreate.addEventListener("click", (event) => startInboxDiscord(event, btnDiscordCreate, "create_account"));
 
     btnGoogle.addEventListener("click", async () => {
       try {
