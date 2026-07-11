@@ -178,6 +178,14 @@
 
             <div class="actions" style="margin-top: var(--s-3); align-items: stretch;">
               <button class="btn btn-lg btn-secondary" id="btn-discord" type="button" aria-label="Continue with Discord">Continue with Discord</button>
+              <button
+                class="btn btn-lg btn-quiet"
+                id="btn-discord-create"
+                type="button"
+              >
+                Create Setfeed account with Discord
+              </button>
+              <p class="help">Already linked? Continue with Discord. New to Setfeed? Create an account with Discord. Receiving from other people starts disabled.</p>
             </div>
 
             <div class="field" style="margin-top: var(--s-3);">
@@ -300,6 +308,7 @@
     const btnGoogle = document.getElementById("btn-google");
     const btnSendLink = document.getElementById("btn-send-link");
     const btnDiscord = document.getElementById("btn-discord");
+    const btnDiscordCreate = document.getElementById("btn-discord-create");
     const btnSignout = document.getElementById("btn-signout");
     const authLabel = document.getElementById("sf-auth-label");
     const authStatus = document.getElementById("sf-auth-status");
@@ -385,6 +394,20 @@
       try {
         localStorage.removeItem(PENDING_DESTINATION_KEY);
       } catch (_) {}
+    }
+
+    function getDiscordDestination() {
+      const pending = getPendingDestination();
+
+      if (pending === "./send.html") {
+        return "/send.html";
+      }
+
+      if (pending === "./receive.html") {
+        return "/receive.html";
+      }
+
+      return "/inbox.html";
     }
 
     function revealSignIn() {
@@ -627,44 +650,41 @@
       }
     }
 
-    if (btnDiscord) {
-  btnDiscord.addEventListener("click", async (event) => {
-    event.preventDefault();
-
-    if (btnDiscord.disabled) {
-      return;
+    function setDiscordButtonsDisabled(disabled) {
+      if (btnDiscord) btnDiscord.disabled = disabled;
+      if (btnDiscordCreate) btnDiscordCreate.disabled = disabled;
     }
 
-    btnDiscord.disabled = true;
-    btnDiscord.setAttribute("aria-busy", "true");
-
-    setAuthStatus(
-      "good",
-      "Opening Discord sign-in…",
-      "You will return to Setfeed after Discord authorization."
-    );
-
-    try {
-      const url =
-        await window.SetfeedDiscordAuth.startDiscordSignIn({
-          auth,
-          destination: "./send.html",
-        });
-
-      window.location.assign(url);
-    } catch (error) {
-      const mapped = window.SetfeedDiscordAuth.mapError(
-        error && error.code,
-        error && error.retryAfter
+    async function startHomepageDiscord(event, button, intent) {
+      event.preventDefault();
+      if (!button || button.disabled) return;
+      const destination = getDiscordDestination();
+      setDiscordButtonsDisabled(true);
+      button.setAttribute("aria-busy", "true");
+      setAuthStatus(
+        "good",
+        intent === "create_account" ? "Opening Discord account creation…" : "Opening Discord sign-in…",
+        "You will return to Setfeed after Discord authorization."
       );
-
-      setAuthStatus("warn", mapped.title, mapped.message);
-
-      btnDiscord.disabled = false;
-      btnDiscord.removeAttribute("aria-busy");
+      try {
+        const url = await window.SetfeedDiscordAuth.startDiscordSignIn({ auth, destination, intent });
+        clearPendingDestination();
+        window.location.assign(url);
+      } catch (error) {
+        const mapped = window.SetfeedDiscordAuth.mapError(error && error.code, error && error.retryAfter);
+        setAuthStatus("warn", mapped.title, mapped.message);
+        setDiscordButtonsDisabled(false);
+        button.removeAttribute("aria-busy");
+      }
     }
-  });
-}
+
+    if (btnDiscord) {
+      btnDiscord.addEventListener("click", (event) => startHomepageDiscord(event, btnDiscord, "continue"));
+    }
+
+    if (btnDiscordCreate) {
+      btnDiscordCreate.addEventListener("click", (event) => startHomepageDiscord(event, btnDiscordCreate, "create_account"));
+    }
 
     if (btnGoogle) {
       btnGoogle.addEventListener("click", (event) => {
