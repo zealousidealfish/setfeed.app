@@ -18,6 +18,7 @@
   <!-- FIREBASE (AUTH + FUNCTIONS + FIRESTORE) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="./assets/discord-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
@@ -724,6 +725,7 @@
 
         <div class="actions">
           <button class="btn btn-lg btn-primary" id="btn-google" type="button">Continue with Google</button>
+          <button class="btn btn-lg btn-secondary" id="btn-discord" type="button" aria-label="Continue with Discord">Continue with Discord</button>
           <button class="btn btn-lg btn-quiet" id="btn-sign-out" type="button" disabled>Sign out</button>
           <span class="kbd" id="auth-pill">Not signed in</span>
         </div>
@@ -885,6 +887,7 @@
     const AUTH_KEY = "sf_signed_authed";
 
     const btnGoogle = document.getElementById("btn-google");
+    const btnDiscord = document.getElementById("btn-discord");
     const btnSignOut = document.getElementById("btn-sign-out");
     const authPill = document.getElementById("auth-pill");
 
@@ -898,6 +901,7 @@
       setSignedAuthedFlag(isAuthed);
 
       btnGoogle.classList.toggle("hidden", isAuthed);
+      if (btnDiscord) btnDiscord.classList.toggle("hidden", isAuthed);
       btnSignOut.disabled = !isAuthed;
       authPill.textContent = isAuthed ? (user.email || "Signed in") : "Not signed in";
 
@@ -915,6 +919,22 @@
     }
 
     auth.onAuthStateChanged((user) => renderAuthUI(user));
+
+    if (btnDiscord) btnDiscord.addEventListener("click", async () => {
+      if (btnDiscord.disabled) return;
+      btnDiscord.disabled = true;
+      btnDiscord.setAttribute("aria-busy", "true");
+      setStatus("good", "Opening Discord sign-in…", "You will return to Inbox after Discord authorization.");
+      try {
+        const url = await window.SetfeedDiscordAuth.startDiscordSignIn({ auth, destination: window.location.hash && window.location.hash.toLowerCase().includes("hidden") ? "./inbox.html#hidden" : "./inbox.html" });
+        window.location.assign(url);
+      } catch (error) {
+        const mapped = window.SetfeedDiscordAuth.mapError(error && error.code, error && error.retryAfter);
+        setStatus("warn", mapped.title, mapped.message);
+        btnDiscord.disabled = false;
+        btnDiscord.removeAttribute("aria-busy");
+      }
+    });
 
     btnGoogle.addEventListener("click", async () => {
       try {
