@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
-const shell=read('app/assets/shell.js'),dashboard=read('app/assets/dashboard.js'),settings=read('app/assets/settings-status.js'),home=read('app/index.html'),settingsHtml=read('app/settings.html'),open=read('open-setfeed.html');
-for(const page of ['index','send','upcoming','awaiting','inbox','feed','sent','settings']) assert.ok(shell.includes(`./${page}.html`)||page==='index');
+const shell=read('app/assets/shell.js'),config=read('app/assets/config.js'),dashboard=read('app/assets/dashboard.js'),settings=read('app/assets/settings-status.js'),home=read('app/index.html'),settingsHtml=read('app/settings.html'),open=read('open-setfeed.html');
+for(const page of ['index','send','upcoming','awaiting','inbox','feed','sent','settings']) assert.ok(config.includes(`./${page}.html`),`route configuration includes ${page}`);
 assert.ok(shell.includes('./assets/dashboard.js'));
 assert.ok(shell.includes('./assets/settings-status.js'));
 assert.ok(dashboard.includes('/v1/messages?view=future&limit=100'));
