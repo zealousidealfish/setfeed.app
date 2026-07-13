@@ -22,7 +22,8 @@ includes(moduleText,'card(item,true)','contact records, not bare recipients, are
 
 for(const id of ['recipient-search-form','recipient-username','recipient-search-button','recipient-search-result','recipient-contacts','recipient-selected','recipient-clear'])includes(sendHtml,`id="${id}"`,`Send page contains ${id}`);
 includes(sendHtml,'./assets/recipients.css','Send page loads picker styles');
-includes(shellText,'document.body.dataset.appPage==="send"','picker is page-scoped');
+includes(shellText,'const page=document.body.dataset.appPage','shell reads the active page once');
+includes(shellText,'if(page==="send")','picker is page-scoped');
 includes(shellText,'./assets/recipients.js','shell loads recipient module');
 
 console.log('app recipient static checks passed');
