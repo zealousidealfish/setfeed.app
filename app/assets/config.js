@@ -13,4 +13,7 @@
   });
 
   window.SetfeedAppConfig = Object.freeze({
-    apiBaseUrl: "https://setfeed-integrations-ocsbsvnzsa-nw
+    apiBaseUrl: "https://setfeed-integrations-ocsbsvnzsa-nw.a.run.app",
+    routes
+  });
+})();
