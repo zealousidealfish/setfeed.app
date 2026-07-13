@@ -21,7 +21,7 @@
 - Supports text and the existing encrypted image attachment/session flow.
 - UI maximum schedule is seven days; the backend must independently enforce the same source-specific limit.
 - Uses existing receive-code encryption and Firebase callable functions: `getReceiveCodes`, `sendSignedCiphertext`, `createSignedAttachmentUpload`, and existing signed attachment/session calls.
-- “Send to my Inbox” retrieves the current non-anonymous Firebase account’s Secure receive code only, never puts it in a URL, never logs it, never sends it to analytics, and does not persist it after the send flow.
+- `getReceiveCodes` returns top-level `personal`, `secure`, and `rolling` objects. “Send to my Inbox” strictly validates that callable response and uses only `secure.code`; it never reads Personal or Rolling codes for this flow, never puts the Secure code in a URL, never logs it, never sends it to analytics, and does not persist it after the send flow.
 - “Send to another receive code” remains manually entered by a signed-in sender and must not expose recipient account details.
 
 ### Website private self-message
@@ -31,10 +31,10 @@
 - The first release uses same-browser device-local account-key recovery only. Clearing browser storage may make messages unreadable. Another device should use the receive-code “Send to my Inbox” path. No cross-device account-key recovery or support recovery is claimed.
 
 ## Backend API mapping
-`EncryptedSelfClient` uses the exact current website_self routes: `GET/POST /v1/crypto/account-key`, `POST /v1/self-message-drafts`, `POST /v1/self-message-drafts/:draftId/finalize`, `GET /v1/self-messages`, `GET /v1/self-messages/:messageId`, `POST /v1/self-messages/:messageId/awaiting`, `POST /v1/self-messages/:messageId/restore-upcoming`, `POST /v1/self-messages/:messageId/cancel`, `POST /v1/self-messages/:messageId/restore`, `PATCH /v1/self-messages/:messageId/placement`, and `GET/PUT /v1/notification-preferences/release-email` with body `{ "releaseEmailEnabled": boolean }`.
+`EncryptedSelfClient` uses the exact current website_self routes: `GET/POST /v1/crypto/account-key`, `POST /v1/self-message-drafts`, `POST /v1/self-message-drafts/:draftId/finalize`, `GET /v1/self-messages`, `GET /v1/self-messages/:messageId`, `POST /v1/self-messages/:messageId/awaiting`, `POST /v1/self-messages/:messageId/restore-upcoming`, `POST /v1/self-messages/:messageId/cancel`, `POST /v1/self-messages/:messageId/restore`, `PATCH /v1/self-messages/:messageId/placement`, and `GET/PUT /v1/notification-preferences/release-email` with body `{ "releaseEmailEnabled": boolean }`. List requests send `view` (not `kind`) plus optional valid `limit` and optional `cursor`; supported backend values are `upcoming`, `awaiting`, `released`, `feed`, and `cancelled`. The product label “Now” maps to backend view `released` without translating it to `now` at the API boundary.
 
 ## Authentication behavior
-The authenticated boundary rejects signed-out and anonymous accounts, obtains Firebase ID tokens without persisting them outside Firebase, supports AbortSignal and bounded timeouts, cancels tracked requests on logout/account switch, and keeps account-bound data from being reused across UIDs.
+The authenticated boundary rejects signed-out and anonymous accounts, obtains Firebase ID tokens without persisting them outside Firebase, supports AbortSignal and bounded timeouts, cancels tracked requests on logout/account switch, and keeps account-bound data from being reused across UIDs. Reads and guarded mutations opt into a one-time safe authentication retry after HTTP 401 or the canonical expired-token error; the retry forces token refresh exactly once and preserves the same method, URL, body idempotency key, and `expectedVersion`. It does not retry conflicts, rate limits, server errors, timeouts, aborts, malformed responses, cryptographic failures, or ordinary domain errors.
 
 ## Account-key lifecycle and same-browser recovery
 Account-key creation generates a random 32-byte root key locally, wraps it with a non-extractable AES-KW device wrapping key stored in IndexedDB by structured clone and bound to the authenticated Firebase UID, and sends only `cryptoVersion`, `keyWrapAlgorithm`, `recoveryWrappedRootKey`, and a body `idempotencyKey` to the backend. The server assigns `accountKeyId`; the browser never generates it.
