@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
+const shell=read('app/assets/shell.js'),dashboard=read('app/assets/dashboard.js'),settings=read('app/assets/settings-status.js'),home=read('app/index.html'),settingsHtml=read('app/settings.html'),open=read('open-setfeed.html');
+for(const page of ['index','send','upcoming','awaiting','inbox','feed','sent','settings']) assert.ok(shell.includes(`./${page}.html`)||page==='index');
+assert.ok(shell.includes('./assets/dashboard.js'));
+assert.ok(shell.includes('./assets/settings-status.js'));
+assert.ok(dashboard.includes('/v1/messages?view=future&limit=100'));
+assert.ok(dashboard.includes('/v1/messages?view=inbox&limit=100'));
+assert.ok(dashboard.includes('/v1/messages?view=feed&limit=100'));
+assert.doesNotMatch(dashboard,/\.body\b/);
+assert.ok(home.includes('id="dashboard-upcoming"'));
+assert.ok(home.includes('href="./send.html"'));
+assert.ok(settings.includes('profile.discordLinked'));
+assert.ok(settingsHtml.includes('/setfeed receiving enabled:true'));
+assert.ok(open.includes('location.replace("./app/")'));
+assert.ok(open.includes('GOOGLE_PLAY_URL'));
+console.log('final app route and contract checks passed');
