@@ -9,7 +9,7 @@
   const STATE_TTL_MS = 10 * 60 * 1000;
   const VERIFIER_PATTERN = /^[A-Za-z0-9_-]{43}$/;
   const RESULT_PATTERN = /^[A-Za-z0-9_-]{16,256}$/;
-  const ALLOWED_DESTINATIONS = new Set(["/", "/index.html", "/send.html", "/send.html#signin", "/inbox.html", "/inbox.html#hidden", "/receive.html", "/discord-link.html", "/app/", "/app/index.html", "/app/send.html", "/app/upcoming.html", "/app/awaiting.html", "/app/inbox.html", "/app/sent.html", "/app/settings.html"]);
+  const ALLOWED_DESTINATIONS = new Set(["/", "/index.html", "/send.html", "/send.html#signin", "/inbox.html", "/inbox.html#hidden", "/receive.html", "/discord-link.html", "/app/", "/app/index.html", "/app/send.html", "/app/upcoming.html", "/app/awaiting.html", "/app/inbox.html", "/app/feed.html", "/app/sent.html", "/app/settings.html"]);
   const DEFAULT_DESTINATION = "/inbox.html";
   const errorMessages = {
     access_denied: ["Sign-in cancelled", "Discord sign-in was cancelled. You can start again when you are ready."],
