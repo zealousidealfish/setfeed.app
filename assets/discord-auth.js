@@ -9,7 +9,7 @@
   const STATE_TTL_MS = 10 * 60 * 1000;
   const VERIFIER_PATTERN = /^[A-Za-z0-9_-]{43}$/;
   const RESULT_PATTERN = /^[A-Za-z0-9_-]{16,256}$/;
-  const ALLOWED_DESTINATIONS = new Set(["/", "/index.html", "/send.html", "/send.html#signin", "/inbox.html", "/inbox.html#hidden", "/receive.html", "/discord-link.html"]);
+  const ALLOWED_DESTINATIONS = new Set(["/", "/index.html", "/send.html", "/send.html#signin", "/inbox.html", "/inbox.html#hidden", "/receive.html", "/discord-link.html", "/app/", "/app/index.html", "/app/send.html", "/app/upcoming.html", "/app/awaiting.html", "/app/inbox.html", "/app/feed.html", "/app/sent.html", "/app/settings.html"]);
   const DEFAULT_DESTINATION = "/inbox.html";
   const errorMessages = {
     access_denied: ["Sign-in cancelled", "Discord sign-in was cancelled. You can start again when you are ready."],
@@ -33,7 +33,7 @@
     internal_error: ["Service unavailable", "Setfeed could not complete Discord sign-in right now. Try again later."],
     missing_result: ["Restart required", "The Discord sign-in result was missing or malformed. Start a new Discord sign-in."],
     missing_verifier: ["Restart required", "This tab no longer has the Discord sign-in verifier. Start a new Discord sign-in."],
-    malformed_verifier: ["Restart required", "The Discord sign-in verifier was invalid. Start a new Discord sign-in."],
+    malformed_verifier: ["Restart required", "This Discord sign-in verifier was invalid. Start a new Discord sign-in."],
     stale_verifier: ["Sign-in expired", "This Discord sign-in is too old. Start a new Discord sign-in."],
     unsafe_destination: ["Safe redirect blocked", "Setfeed blocked an unsafe return destination. Start again from the page you want to use."],
     network_failure: ["Network issue", "Setfeed could not reach the Discord sign-in service. Check your connection and start again."],

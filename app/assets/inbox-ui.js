@@ -1,0 +1,13 @@
+(function(global){
+"use strict";
+const data=global.SetfeedInboxData;if(!data)return;
+let state={items:[],hasMore:false},loading=false,busy="";const q=id=>document.getElementById(id);
+function note(text,bad){const el=q("inbox-status");if(el){el.textContent=text||"";el.classList.toggle("app-error",!!bad);}}
+function fmt(value){return new Intl.DateTimeFormat(undefined,{dateStyle:"medium",timeStyle:"short"}).format(new Date(value));}
+function card(message){const article=document.createElement("article"),title=document.createElement("h3"),time=document.createElement("time"),body=document.createElement("p"),actions=document.createElement("div");article.className="message-card";title.textContent=message.senderDisplayName?`From ${message.senderDisplayName}`:"From another Setfeed user";time.dateTime=message.releasedAt||message.deliverAt;time.textContent=fmt(message.releasedAt||message.deliverAt);body.className="message-body";body.textContent=message.body;actions.className="app-actions";for(const [label,placement] of [["Move to Feed","feed"],["Hide","hidden"]]){const button=document.createElement("button");button.type="button";button.className=placement==="feed"?"btn btn-primary":"btn btn-quiet";button.textContent=label;button.disabled=busy===message.id;button.onclick=()=>move(message,placement);actions.append(button);}article.append(title,time,body,actions);return article;}
+function draw(){const list=q("inbox-list"),empty=q("inbox-empty"),more=q("inbox-more"),count=q("inbox-count");if(list)list.replaceChildren(...state.items.map(card));if(empty)empty.hidden=state.items.length>0||loading;if(more)more.hidden=!state.hasMore;if(count)count.textContent=`${state.items.length} released message${state.items.length===1?"":"s"}`;}
+async function load(reset){if(loading)return;loading=true;draw();try{note("Loading…",false);await data.load(reset);note("",false);}catch(error){note(error&&error.message||"Inbox could not be loaded.",true);}finally{loading=false;draw();}}
+async function move(message,placement){if(busy)return;busy=message.id;draw();try{await data.setPlacement(message,placement);note(placement==="feed"?"Moved to Feed.":"Message hidden.",false);}catch(error){note(error&&error.message||"Message could not be updated.",true);}finally{busy="";draw();}}
+function bind(){const refresh=q("inbox-refresh"),more=q("inbox-more");if(refresh)refresh.onclick=()=>load(true);if(more)more.onclick=()=>load(false);data.subscribe(value=>{state=value;draw();});}
+global.SetfeedInboxUI={load,move};if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
+})(window);

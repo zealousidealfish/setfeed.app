@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Awaiting · Setfeed</title>
+  <meta name="description" content="Manage Setfeeds awaiting Discord release notifications.">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="./assets/app.css">
+  <link rel="stylesheet" href="./assets/message-lists.css">
+  <script src="./assets/config.js"></script>
+  <script defer src="./assets/shell.js"></script>
+</head>
+<body class="page-bg" data-app-page="awaiting" data-app-title="Awaiting" data-app-description="Messages marked here can notify you in Discord when they open.">
+  <div id="setfeed-app"></div>
+  <div id="app-page-content">
+    <section class="app-panel">
+      <div class="message-list-toolbar">
+        <div>
+          <h2>Awaiting messages</h2>
+          <p id="messages-count" class="help">0 scheduled messages</p>
+        </div>
+        <button class="btn btn-quiet" id="messages-refresh" type="button">Refresh</button>
+      </div>
+      <p class="help message-list-note">Setfeed confirms Discord notification availability whenever a message is marked Awaiting. Message contents remain unavailable until release.</p>
+      <p id="messages-status" class="help" role="status" aria-live="polite"></p>
+      <div id="messages-list" class="message-list" aria-label="Awaiting messages"></div>
+      <div id="messages-empty" class="app-empty">No messages are marked Awaiting.</div>
+      <div class="message-list-footer"><button class="btn btn-quiet" id="messages-more" type="button" hidden>Load more</button></div>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Upcoming · Setfeed</title>
+  <meta name="description" content="View scheduled Setfeed messages.">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="./assets/app.css">
+  <link rel="stylesheet" href="./assets/message-lists.css">
+  <script src="./assets/config.js"></script>
+  <script defer src="./assets/shell.js"></script>
+</head>
+<body class="page-bg" data-app-page="upcoming" data-app-title="Upcoming" data-app-description="See what is scheduled without revealing message contents early.">
+  <div id="setfeed-app"></div>
+  <div id="app-page-content">
+    <section class="app-panel">
+      <div class="message-list-toolbar">
+        <div>
+          <h2>Upcoming messages</h2>
+          <p id="messages-count" class="help">0 scheduled messages</p>
+        </div>
+        <button class="btn btn-quiet" id="messages-refresh" type="button">Refresh</button>
+      </div>
+      <p class="help message-list-note">Only scheduling metadata is shown. Message contents remain unavailable until release.</p>
+      <p id="messages-status" class="help" role="status" aria-live="polite"></p>
+      <div id="messages-list" class="message-list" aria-label="Upcoming messages"></div>
+      <div id="messages-empty" class="app-empty">No upcoming messages.</div>
+      <div class="message-list-footer"><button class="btn btn-quiet" id="messages-more" type="button" hidden>Load more</button></div>
+    </section>
+  </div>
+</body>
+</html>

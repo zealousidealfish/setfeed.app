@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Send · Setfeed</title>
+  <meta name="description" content="Send a delayed Setfeed to another account.">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="./assets/app.css">
+  <link rel="stylesheet" href="./assets/recipients.css">
+  <link rel="stylesheet" href="./assets/compose.css">
+  <script src="./assets/config.js"></script>
+  <script defer src="./assets/shell.js"></script>
+</head>
+<body class="page-bg" data-app-page="send" data-app-title="Send" data-app-description="Schedule a private message for another Setfeed account.">
+  <div id="setfeed-app"></div>
+  <div id="app-page-content" class="app-grid">
+    <section class="app-panel">
+      <h2>Choose a recipient</h2>
+      <form id="recipient-search-form" class="app-form">
+        <div class="field">
+          <label for="recipient-username">Setfeed username</label>
+          <input id="recipient-username" autocomplete="off" minlength="3" maxlength="24" placeholder="username" required>
+        </div>
+        <div class="app-actions">
+          <button class="btn btn-primary" id="recipient-search-button" type="submit">Find recipient</button>
+        </div>
+        <p id="recipient-message" class="help" role="status" aria-live="polite"></p>
+      </form>
+      <div id="recipient-search-result" class="app-recipient-list" aria-label="Search result"></div>
+    </section>
+
+    <section class="app-panel">
+      <h2>Contacts</h2>
+      <p id="recipient-contacts-message" class="help" role="status" aria-live="polite"></p>
+      <div id="recipient-contacts" class="app-recipient-list"></div>
+      <div id="recipient-contacts-empty" class="app-empty">No saved contacts are available.</div>
+    </section>
+
+    <section class="app-panel" id="recipient-selected" hidden>
+      <h2>Selected recipient</h2>
+      <p id="recipient-selected-name"></p>
+      <div class="app-actions">
+        <button class="btn btn-quiet" id="recipient-clear" type="button">Choose someone else</button>
+      </div>
+    </section>
+
+    <section class="app-panel">
+      <h2>Message and delivery</h2>
+      <p class="help">Messages may contain up to 2,000 characters and can be scheduled from 10 minutes to one year ahead.</p>
+      <form id="compose-form" class="app-form">
+        <fieldset id="compose-fields" disabled>
+          <div class="field">
+            <label for="compose-preset">Starting point</label>
+            <select id="compose-preset" required>
+              <option value="">Loading presets…</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="compose-body">Message</label>
+            <textarea id="compose-body" rows="7" maxlength="2000" required></textarea>
+            <p class="help app-compose-count" id="compose-count">0 / 2000</p>
+          </div>
+
+          <div class="app-compose-schedule">
+            <div class="field">
+              <label for="compose-date">Delivery date</label>
+              <input id="compose-date" type="date" required>
+            </div>
+            <div class="field">
+              <label for="compose-time">Delivery time</label>
+              <input id="compose-time" type="time" step="60" required>
+            </div>
+            <div class="field app-compose-zone">
+              <label for="compose-timezone">Time zone</label>
+              <input id="compose-timezone" autocomplete="off" maxlength="64" placeholder="Europe/London" required>
+            </div>
+          </div>
+
+          <div class="app-actions">
+            <button class="btn btn-primary" id="compose-submit" type="submit">Schedule Setfeed</button>
+          </div>
+        </fieldset>
+        <p id="compose-message" class="help" role="status" aria-live="polite">Choose a recipient to continue.</p>
+      </form>
+    </section>
+
+    <section class="app-panel app-compose-success" id="compose-success" hidden aria-live="polite">
+      <h2>Scheduled</h2>
+      <p id="compose-success-text"></p>
+      <div class="app-actions">
+        <a class="btn btn-secondary" href="./sent.html">View Sent</a>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
