@@ -50,10 +50,10 @@ const allowed = [
 
 for (const destination of allowed) {
   assert.equal(sanitizeDestination(destination), destination, `${destination} remains an exact safe return path`);
-  assert.equal(sanitizeDestination(`https://setfeed.app${destination}`), destination, `${destination} accepts an exact same-origin URL`);
 }
 
 for (const unsafe of [
+  'https://setfeed.app/app/',
   'https://example.com/app/',
   '//example.com/app/',
   'javascript:alert(1)',
