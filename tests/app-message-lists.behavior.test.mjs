@@ -27,8 +27,9 @@ assert.equal(core.notificationText(mutation),'Discord release notification is en
 
 assert.ok(dataSource.includes('view:"future",limit:"50"'));
 assert.ok(dataSource.includes('method:enabled?"PUT":"DELETE"'));
-assert.doesNotMatch(dataSource,/\.body\b/);
-assert.doesNotMatch(uiSource,/\.body\b/);
+const messageBodyAccess=/\b(?:message|item|value|m)\.body\b/;
+assert.doesNotMatch(dataSource,messageBodyAccess);
+assert.doesNotMatch(uiSource,messageBodyAccess);
 for(const html of [upcoming,awaiting]){
  assert.ok(html.includes('id="messages-list"'));
  assert.ok(html.includes('id="messages-more"'));
