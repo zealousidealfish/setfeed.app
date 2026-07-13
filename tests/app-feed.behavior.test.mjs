@@ -19,7 +19,7 @@ assert.ok(uiSource.includes('["Hide","hidden"]'));
 assert.ok(uiSource.includes('body.textContent=m.body'));
 assert.ok(configSource.includes('feed: "./feed.html"'));
 assert.ok(shellSource.includes('["feed","Feed"]'));
-assert.ok(shellSource.includes('page==="feed"'));
+assert.match(shellSource,/if\([A-Za-z_$][\w$]*==="feed"\)/,'Feed controller is page-scoped');
 assert.ok(feedHtml.includes('id="feed-list"'));
 assert.ok(feedHtml.includes('id="feed-more"'));
 assert.ok(inboxHtml.includes('href="./feed.html"'));
