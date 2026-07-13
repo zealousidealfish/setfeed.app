@@ -21,6 +21,7 @@ jobs:
           - tests/app-api-client.behavior.test.mjs
           - tests/app-compose.behavior.test.mjs
           - tests/app-dashboard.behavior.test.mjs
+          - tests/app-deployment.static.test.mjs
           - tests/app-feed.behavior.test.mjs
           - tests/app-final.static.test.mjs
           - tests/app-inbox-sent.behavior.test.mjs
