@@ -3,7 +3,7 @@ on:
   pull_request:
   push:
 jobs:
-  tests:
+  syntax:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -12,5 +12,30 @@ jobs:
           node-version: '24'
       - name: Syntax check encrypted foundation module
         run: node --check assets/encrypted-self.js
-      - name: Run browser-module tests
-        run: for t in tests/*.mjs; do node "$t"; done
+  browser-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - tests/app-api-client.behavior.test.mjs
+          - tests/app-compose.behavior.test.mjs
+          - tests/app-dashboard.behavior.test.mjs
+          - tests/app-feed.behavior.test.mjs
+          - tests/app-final.static.test.mjs
+          - tests/app-inbox-sent.behavior.test.mjs
+          - tests/app-message-lists.behavior.test.mjs
+          - tests/app-recipients.static.test.mjs
+          - tests/discord-auth-app-destinations.test.mjs
+          - tests/discord-auth.behavior.test.mjs
+          - tests/discord-auth.static.test.mjs
+          - tests/discord-link.static.test.mjs
+          - tests/discord-oauth-complete.behavior.test.mjs
+          - tests/encrypted-self-foundation.test.mjs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Run ${{ matrix.test }}
+        run: node "${{ matrix.test }}"
