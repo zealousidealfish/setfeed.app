@@ -1,3 +1,32 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Setfeed encrypted text foundation</title><link rel="stylesheet" href="./styles.css"><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="./assets/encrypted-self.js"></script></head><body><main class="wrap" data-encrypted-self-private data-clarity-mask="true"><section class="card"><h1>Encrypted text foundation</h1><p id="feature-state">Disabled by default. Backend capability, UI visibility, and rollout flags are separate.</p><button id="setup-key" disabled>Set up account key</button><textarea id="compose-text" autocomplete="off" spellcheck="false" placeholder="Technical compose text; not persisted" disabled></textarea><input id="schedule-at" type="datetime-local" disabled><button id="reserve-finalize" disabled>Encrypt and schedule</button><pre id="progress" aria-live="polite">feature_disabled</pre><section><h2>Metadata lists</h2><button data-list="upcoming" disabled>Upcoming</button><button data-list="awaiting" disabled>Awaiting</button><button data-list="released" disabled>Released/Now</button><button data-list="feed" disabled>Feed</button><button data-list="cancelled" disabled>Cancelled</button><div id="lists"></div></section><section><h2>Release email preference</h2><button id="release-email" disabled>Toggle release email preference</button></section></section></main><script>
-const flags=window.SetfeedEncryptedSelf.FLAGS; document.getElementById('feature-state').textContent = (flags.uiVisible.encryptedSelfViewing||flags.uiVisible.encryptedSelfComposition||flags.uiVisible.releaseEmailSettings) ? 'Technical controls enabled by rollout.' : 'feature_disabled';
-</script></body></html>
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Setfeed encrypted text foundation</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="./assets/encrypted-self.js"></script>
+</head>
+<body>
+  <main class="wrap" data-encrypted-self-private data-clarity-mask="true">
+    <section class="card">
+      <h1>Encrypted text foundation</h1>
+      <p id="feature-state">feature_disabled</p>
+      <p class="panel-sub">Website private self-messages are encrypted text only and recoverable only in this browser in this version. Clearing browser storage may make them unreadable. For another device, use the receive-code “Send to my Inbox” path.</p>
+      <button id="setup-key" disabled>Set up same-browser account key</button>
+      <textarea id="compose-text" autocomplete="off" spellcheck="false" placeholder="Technical compose text; not persisted" disabled></textarea>
+      <label>Schedule instant and timezone <input id="schedule-at" type="datetime-local" disabled></label>
+      <button id="reserve-finalize" disabled>Encrypt and schedule website_self text</button>
+      <pre id="progress" aria-live="polite">feature_disabled</pre>
+      <section><h2>Metadata lists</h2><button data-list="upcoming" disabled>Upcoming</button><button data-list="awaiting" disabled>Awaiting</button><button data-list="released" disabled>Released/Now</button><button data-list="feed" disabled>Feed</button><button data-list="cancelled" disabled>Cancelled</button><div id="lists"></div></section>
+      <section><h2>Release email preference</h2><button id="release-email" disabled>Toggle release email preference</button><p>Recipient-owned. Legacy receive-code release-email support is backend_bridge_required until confirmed.</p></section>
+    </section>
+  </main>
+  <script>
+    const flags=window.SetfeedEncryptedSelf.CONFIG;
+    document.getElementById('feature-state').textContent=(flags.ui.encryptedSelfViewing||flags.ui.encryptedSelfComposition||flags.ui.releaseEmailSettings)?'Technical controls enabled by rollout.':'feature_disabled';
+  </script>
+</body>
+</html>

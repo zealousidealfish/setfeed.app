@@ -1,0 +1,16 @@
+name: Static site tests
+on:
+  pull_request:
+  push:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Syntax check encrypted foundation module
+        run: node --check assets/encrypted-self.js
+      - name: Run browser-module tests
+        run: for t in tests/*.mjs; do node "$t"; done
