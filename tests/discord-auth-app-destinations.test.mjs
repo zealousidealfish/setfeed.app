@@ -44,6 +44,7 @@ const allowed = [
   '/app/upcoming.html',
   '/app/awaiting.html',
   '/app/inbox.html',
+  '/app/feed.html',
   '/app/sent.html',
   '/app/settings.html',
 ];
