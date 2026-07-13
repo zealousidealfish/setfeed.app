@@ -7,6 +7,7 @@
     upcoming: "./upcoming.html",
     awaiting: "./awaiting.html",
     inbox: "./inbox.html",
+    feed: "./feed.html",
     sent: "./sent.html",
     settings: "./settings.html",
     websiteHome: "../index.html"
