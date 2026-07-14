@@ -3,6 +3,8 @@ import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 
 const source = readFileSync(new URL('../app/assets/api.js', import.meta.url), 'utf8');
+const shellSource = readFileSync(new URL('../app/assets/shell.js', import.meta.url), 'utf8');
+const appCssSource = readFileSync(new URL('../app/assets/app.css', import.meta.url), 'utf8');
 
 class HeadersMock {
   constructor(values = {}) {
@@ -107,6 +109,51 @@ function load(fetchImpl, timeoutMs = 50) {
   });
   assert.equal(await loaded.client.delete('/v1/test'), null);
 }
+
+{
+  const requiredReceiver = {
+    calls: 0,
+    async fetch(_url, init) {
+      assert.equal(this, requiredReceiver);
+      this.calls += 1;
+      assert.equal(init.headers.Authorization, 'Bearer token');
+      return response(200, { profile: { username: 'bound-user' } });
+    },
+  };
+  const windowObject = {
+    window: null,
+    fetch: requiredReceiver.fetch,
+  };
+  windowObject.window = windowObject;
+  const context = {
+    window: windowObject,
+    AbortController,
+    setTimeout,
+    clearTimeout,
+    Date,
+    JSON,
+    Error,
+  };
+  vm.runInNewContext(source, context, { filename: 'app/assets/api.js' });
+  const client = new windowObject.SetfeedJsonApiClient({
+    baseUrl: 'https://api.example',
+    getUser: () => ({ uid: 'u1', isAnonymous: false, async getIdToken() { return 'token'; } }),
+  });
+  await assert.rejects(client.get('/v1/profile'), (error) => error.code === 'backend_unavailable');
+
+  windowObject.fetch = requiredReceiver.fetch.bind(requiredReceiver);
+  const fixedClient = new windowObject.SetfeedJsonApiClient({
+    baseUrl: 'https://api.example',
+    getUser: () => ({ uid: 'u1', isAnonymous: false, async getIdToken() { return 'token'; } }),
+  });
+  assert.equal((await fixedClient.get('/v1/profile')).profile.username, 'bound-user');
+  assert.equal(requiredReceiver.calls, 1);
+}
+
+assert.ok(shellSource.includes('window.fetch = window.fetch.bind(window)'));
+assert.ok(shellSource.includes('document.body.classList.add("app-shell-ready")'));
+assert.ok(shellSource.includes('Account error: ${text}'));
+assert.match(appCssSource, /body:not\(\.app-shell-ready\)>#app-page-content\{visibility:hidden\}/);
 
 await assert.rejects(load(async () => response(200, {})).client.get('https://evil.example'), (error) => error.code === 'invalid_request');
 

@@ -31,7 +31,7 @@ includes(appCss,'.app-auth-panel{max-width:620px;margin-bottom:var(--s-4)}','sig
 for(const id of ['recipient-search-form','recipient-username','recipient-search-button','recipient-search-result','recipient-contacts','recipient-selected','recipient-clear'])includes(sendHtml,`id="${id}"`,`Send page contains ${id}`);
 includes(sendHtml,'./assets/recipients.css','Send page loads picker styles');
 includes(shellText,'document.body.dataset.appPage','shell reads the active page');
-assert.match(shellText,/if\([A-Za-z_$][\w$]*==="send"\)/,'picker is page-scoped');
+assert.match(shellText,/if\s*\(\s*[A-Za-z_$][\w$]*\s*===\s*"send"\s*\)/,'picker is page-scoped');
 includes(shellText,'./assets/recipients.js','shell loads recipient module');
 
 console.log('app recipient static checks passed');
